@@ -162,7 +162,6 @@ export default function App() {
               <VideoView
                 player={player}
                 style={StyleSheet.absoluteFill}
-                allowsFullscreen
                 allowsPictureInPicture
                 contentFit="contain"
                 onFullscreenExit={() => {}}
@@ -269,7 +268,7 @@ const styles = StyleSheet.create({
     position: 'relative', justifyContent: 'center', alignItems: 'center',
   },
   overlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(8,12,18,0.85)',
     alignItems: 'center', justifyContent: 'center', gap: 12,
   },
