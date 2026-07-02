@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, FlatList,
   StyleSheet, SafeAreaView, StatusBar, ActivityIndicator,
@@ -45,6 +45,9 @@ export default function App() {
   const [hasError, setHasError]     = useState(false);
   const errorTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const [focusedCat, setFocusedCat] = useState<string | null>(null);
+  const [focusedCh, setFocusedCh]   = useState<string | null>(null);
+
   const player = useVideoPlayer(currentUrl || '', (p) => {
     p.loop = false;
     if (currentUrl) p.play();
@@ -72,12 +75,28 @@ export default function App() {
     if (currentUrl) loadChannel(currentUrl, currentName);
   }, [currentUrl, currentName, loadChannel]);
 
+  useEffect(() => {
+    // Auto-start default channel (Louga TV)
+    const defaultIdx = channelsAll.findIndex(ch => ch.name.toLowerCase().includes('louga'));
+    const fallbackIdx = channelsAll.findIndex(ch => ch.category === 'senegal');
+    const startIdx = defaultIdx >= 0 ? defaultIdx : fallbackIdx;
+    if (startIdx >= 0) {
+      loadChannel(channelsAll[startIdx].url, channelsAll[startIdx].name);
+    }
+  }, [loadChannel]);
+
   const renderCat = ({ item }: { item: typeof CATEGORIES[0] }) => {
     const isActive = currentCat === item.key;
     return (
       <TouchableOpacity
-        style={[styles.catBtn, isActive && { backgroundColor: C.primaryDim, borderColor: 'rgba(99,102,241,0.4)' }]}
+        style={[
+          styles.catBtn,
+          isActive && { backgroundColor: C.primaryDim, borderColor: 'rgba(99,102,241,0.4)' },
+          isTV && focusedCat === item.key && styles.tvFocused
+        ]}
         onPress={() => { setCurrentCat(item.key); setSearch(''); }}
+        onFocus={() => setFocusedCat(item.key)}
+        onBlur={() => setFocusedCat(null)}
         activeOpacity={0.7}
       >
         <Ionicons
@@ -94,8 +113,14 @@ export default function App() {
     const isActive = item.url === currentUrl;
     return (
       <TouchableOpacity
-        style={[styles.chItem, isActive && styles.chItemActive]}
+        style={[
+          styles.chItem,
+          isActive && styles.chItemActive,
+          isTV && focusedCh === item.url && styles.tvFocused
+        ]}
         onPress={() => loadChannel(item.url, item.name)}
+        onFocus={() => setFocusedCh(item.url)}
+        onBlur={() => setFocusedCh(null)}
         activeOpacity={0.7}
       >
         <View style={[styles.chDot, isActive && { backgroundColor: C.accent }]} />
@@ -116,7 +141,7 @@ export default function App() {
         <View style={styles.logo}>
           <Ionicons name="tv" size={20} color={C.primary} />
           <Text style={styles.logoText}>
-            Stream<Text style={{ color: '#818cf8' }}>TV</Text>
+            Loud<Text style={{ color: '#818cf8' }}>StreamTV</Text>
           </Text>
           <View style={styles.liveBadge}>
             <View style={styles.liveDot} />
@@ -288,4 +313,5 @@ const styles = StyleSheet.create({
   chItemActive: { backgroundColor: 'rgba(99,102,241,0.12)' },
   chDot: { width: 5, height: 5, borderRadius: 3, backgroundColor: C.border },
   chName: { flex: 1, color: '#94a3b8', fontSize: 12 },
+  tvFocused: { borderColor: C.primary, borderWidth: 1, backgroundColor: 'rgba(99,102,241,0.05)' },
 });
