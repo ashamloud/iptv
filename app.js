@@ -43,6 +43,26 @@ const chList      = document.getElementById('ch-list');
 const chCount     = document.getElementById('ch-count');
 const searchEl    = document.getElementById('search');
 const catsEl      = document.getElementById('cats');
+const playerBox   = document.getElementById('player-box');
+const fsIconExpand = document.getElementById('fs-icon-expand');
+const fsIconShrink = document.getElementById('fs-icon-shrink');
+
+/* ── Fullscreen ── */
+function toggleFullscreen() {
+    const target = playerBox;
+    if (!document.fullscreenElement) {
+        target.requestFullscreen().catch(() => {});
+    } else {
+        document.exitFullscreen();
+    }
+}
+document.addEventListener('fullscreenchange', () => {
+    const isFs = !!document.fullscreenElement;
+    fsIconExpand.style.display = isFs ? 'none'  : 'block';
+    fsIconShrink.style.display = isFs ? 'block' : 'none';
+});
+// Double-clic sur le player = plein écran
+playerBox.addEventListener('dblclick', () => toggleFullscreen());
 
 /* ── Player state helpers ── */
 function showLoader() {
@@ -78,6 +98,7 @@ function loadChannel(idx) {
     video.style.display = 'none'; video.src = '';
     iframe.style.display = 'none'; iframe.src = 'about:blank';
     showLoader();
+    playerBox.classList.add('playing');
 
     // Now playing text
     nowPlaying.textContent = ch.name;
