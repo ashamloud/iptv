@@ -455,6 +455,7 @@ const channels = [
     { id: 706, name: "Bridge TV orig", url: "https://stream8.cinerama.uz/1424/tracks-v1a1/mono.m3u8", type: "hls", category: "music" },
     { id: 707, name: "Инсайт ТВ UHD", url: "https://s06.watcher.uz/124/video.m3u8?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjb250cmFjdF9pZCI6MjcwMTc3LCJsb2dpbiI6InR2LTI3MDE3NyIsInRlbXBvcmFyeSI6ZmFsc2UsImlzX29hdXRoIjpmYWxzZSwiY3JlYXRlZF90aW1lIjoxNjUwMjgzMDI3fQ.LadLj4b6plIxTGCWntQQqsQGZ3R9EsvwhaXQd1sur2g%3A15", type: "hls", category: "autres" },
     { id: 709, name: "Red Bull TV (Sport/Extrême)", url: "https://rbmn-live.akamaized.net/hls/live/590964/BoRB-AT/master.m3u8", type: "hls", category: "sport" },
+    { id: 714, name: "RTS 1 (Sénégal)", url: "https://rts-rts1.playlayer.net/hls/main.m3u8", type: "hls", category: "senegal" },
     { id: 715, name: "A2i TV (Sénégal)", url: "https://stream.sen-gt.com/A2itv/myStream/playlist.m3u8", type: "hls", category: "senegal" },
     { id: 716, name: "Louga TV (Sénégal)", url: "https://stream.sen-gt.com/Mbacke/myStream/playlist.m3u8", type: "hls", category: "senegal" },
     { id: 717, name: "2M Monde (1080p)", url: "https://stream-lb.livemediama.com/2m/hls/master.m3u8", type: "hls", category: "autres" },

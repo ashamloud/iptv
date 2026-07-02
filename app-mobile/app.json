@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "StreamTV",
-    "slug": "streamtv-iptv",
+    "name": "LoudStreamTV",
+    "slug": "loudstreamtv",
     "version": "1.0.0",
     "orientation": "default",
     "icon": "./assets/images/icon.png",
-    "scheme": "streamtv",
+    "scheme": "loudstreamtv",
     "userInterfaceStyle": "dark",
     "ios": {
       "icon": "./assets/expo.icon",
