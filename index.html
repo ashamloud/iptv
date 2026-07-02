@@ -3,68 +3,113 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title> DijaStreamTV</title>
-    <meta name="description" content="Lecteur IPTV gratuit - regardez des centaines de chaînes en direct">
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📺</text></svg>">
+    <title>LoudStreamTV — Chaînes en Direct</title>
+    <meta name="description" content="Regardez des centaines de chaînes TV en direct gratuitement sur StreamTV">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%236366f1'><path d='M21 6.375c0 2.692-4.03 4.875-9 4.875S3 9.067 3 6.375 7.03 1.5 12 1.5s9 2.183 9 4.875z'/><path d='M12 12.75c2.685 0 5.19-.586 7.078-1.609a8.283 8.283 0 001.897-1.384c.016.121.025.244.025.368C21 12.817 16.97 15 12 15s-9-2.183-9-4.875c0-.124.009-.247.025-.368a8.285 8.285 0 001.897 1.384C6.809 12.164 9.315 12.75 12 12.75z'/><path d='M12 16.5c2.685 0 5.19-.586 7.078-1.609a8.282 8.282 0 001.897-1.384c.016.121.025.244.025.368 0 2.692-4.03 4.875-9 4.875s-9-2.183-9-4.875c0-.124.009-.247.025-.368a8.284 8.284 0 001.897 1.384C6.809 15.914 9.315 16.5 12 16.5z'/></svg>">
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        surface: { DEFAULT: '#0f1623', 2: '#161f2e', 3: '#1e2d42' },
+                        brand: { DEFAULT: '#6366f1', light: '#818cf8', dim: 'rgba(99,102,241,0.15)' },
+                        live: '#ef4444',
+                    },
+                    fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] }
+                }
+            }
+        }
+    </script>
     <link rel="stylesheet" href="style.css">
 </head>
-<body>
+<body class="font-sans bg-[#080c12] text-slate-100 h-dvh flex flex-col overflow-hidden">
 
-<header>
-    <div class="logo">
-        <div class="logo-dot"></div>
-        DijaStreamTV
+<!-- HEADER -->
+<header class="stv-header flex-shrink-0 flex items-center justify-between px-5 py-3 gap-4">
+    <a href="#" class="flex items-center gap-2.5 select-none">
+        <svg class="w-7 h-7 text-brand" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M2 7a2 2 0 012-2h16a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V7zm2 0v10h16V7H4z"/>
+            <path d="M8 11.5l5 3-5 3v-6z"/>
+        </svg>
+        <span class="font-bold text-base tracking-tight text-white">Stream<span class="text-brand-light">TV</span></span>
+        <span class="live-badge">LIVE</span>
+    </a>
+
+    <div id="now-playing" class="hidden sm:block text-xs text-slate-400 truncate max-w-xs">
+        Sélectionnez une chaîne
     </div>
-    <div style="display: flex; align-items: center; gap: 1rem; flex: 1; justify-content: flex-end;">
-        <div id="now-playing">Sélectionnez une chaîne</div>
-        <a href="#" onclick="alert('L\'application Android/TV est en cours de développement ! Revenez bientôt.')" class="download-btn">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-            App Android / TV
-        </a>
-    </div>
+
+    <a href="#" id="download-btn" onclick="alert('Application Android/TV en cours de développement. Revenez bientôt !')"
+       class="stv-btn flex items-center gap-2 text-xs font-semibold">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 16v-8m0 8l-3-3m3 3l3-3M6 20h12"/>
+        </svg>
+        App Android / TV
+    </a>
 </header>
 
-<div class="layout">
-    <div class="player-wrap">
-        <div id="player-box">
-            <div id="player-placeholder">
-                <div class="ph-icon">📺</div>
-                <p>Choisissez une chaîne pour démarrer</p>
+<!-- MAIN LAYOUT -->
+<div class="flex flex-1 overflow-hidden">
+
+    <!-- PLAYER -->
+    <div class="flex-1 flex items-stretch bg-black min-w-0 relative">
+        <div id="player-box" class="w-full h-full relative">
+            <div id="player-placeholder" class="absolute inset-0 flex flex-col items-center justify-center gap-3">
+                <svg class="w-16 h-16 text-slate-700" fill="none" stroke="currentColor" stroke-width="1" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M2 7a2 2 0 012-2h16a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V7zm2 0v10h16V7H4zm6 4.5l5 3-5 3v-6z"/>
+                </svg>
+                <p class="text-slate-600 text-sm">Choisissez une chaîne pour démarrer</p>
             </div>
-            <div id="loader">
-                <div class="spinner"></div>
-                <p>Chargement...</p>
+            <div id="loader" class="stv-overlay hidden">
+                <div class="stv-spinner"></div>
+                <p class="text-slate-400 text-xs mt-3">Chargement en cours...</p>
             </div>
-            <div id="error-msg">
-                <div class="err-icon">⚠️</div>
-                <p id="error-text">Impossible de charger cette chaîne.</p>
-                <button class="retry-btn" onclick="retryChannel()">↻ Réessayer</button>
+            <div id="error-msg" class="stv-overlay hidden text-center px-8">
+                <svg class="w-10 h-10 text-red-500 mx-auto mb-3" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/>
+                </svg>
+                <p id="error-text" class="text-slate-300 text-sm mb-4">Chaîne indisponible ou géo-bloquée.</p>
+                <button class="stv-btn text-xs" onclick="retryChannel()">
+                    <svg class="w-3.5 h-3.5 inline mr-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"/>
+                    </svg>
+                    Réessayer
+                </button>
             </div>
             <iframe id="video-iframe" allowfullscreen></iframe>
             <video id="hls-video" controls playsinline></video>
         </div>
     </div>
 
-    <div class="sidebar">
-        <div class="search-wrap">
-            <div class="search-inner">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+    <!-- SIDEBAR -->
+    <aside class="stv-sidebar flex-shrink-0 flex flex-col overflow-hidden">
+        <!-- Search -->
+        <div class="px-3 py-3 border-b border-surface-3">
+            <div class="relative">
+                <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500 pointer-events-none" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 15.803 7.5 7.5 0 0016.803 15.803z"/>
                 </svg>
-                <input type="text" id="search" placeholder="Rechercher..." autocomplete="off">
+                <input type="text" id="search" placeholder="Rechercher une chaîne..."
+                       class="stv-search w-full pl-9 pr-3 py-2 text-xs">
             </div>
         </div>
-        <div class="cats" id="cats"></div>
-        <div id="ch-count"></div>
-        <div id="ch-list"></div>
-    </div>
+
+        <!-- Category pills -->
+        <div id="cats" class="stv-cats flex gap-1.5 px-3 py-2.5 overflow-x-auto border-b border-surface-3 flex-shrink-0"></div>
+
+        <!-- Count -->
+        <div id="ch-count" class="px-3 py-1.5 text-[11px] text-slate-500 flex-shrink-0"></div>
+
+        <!-- List -->
+        <div id="ch-list" class="flex-1 overflow-y-auto px-2 pb-3 stv-scroll"></div>
+    </aside>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-
-    <script src="channels.js"></script>
-    <script src="app.js"></script>
+<script src="channels.js"></script>
+<script src="app.js"></script>
 </body>
 </html>
