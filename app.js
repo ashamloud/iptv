@@ -187,8 +187,8 @@ searchEl.addEventListener('input', e => {
 /* ── Init ── */
 buildCats();
 renderList('');
-// Chaîne par défaut : RTS 1 (Sénégal)
-const defaultIdx = channels.findIndex(ch => ch.name.toLowerCase().includes('rts 1') || ch.name.toLowerCase().includes('rts1'));
+// Chaîne par défaut : Louga TV (Sénégal)
+const defaultIdx = channels.findIndex(ch => ch.name.toLowerCase().includes('louga'));
 const fallbackIdx = channels.findIndex(ch => ch.category === 'senegal');
 const startIdx = defaultIdx >= 0 ? defaultIdx : fallbackIdx;
 if (startIdx >= 0) loadChannel(startIdx);
