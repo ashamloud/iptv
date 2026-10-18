@@ -185,19 +185,25 @@
     // ── Détection et résolution de l'URL du flux avec proxy intelligent ──
     function resolveStreamUrl(rawUrl, stage = 0, channel = null) {
         if (!rawUrl) return '';
-        if (rawUrl.startsWith('/') && window.location.protocol === 'file:') {
-            return `http://localhost:8080${rawUrl}`;
-        }
-        if (rawUrl.startsWith('/') || rawUrl.startsWith('data:') || rawUrl.startsWith('blob:')) {
-            return rawUrl;
-        }
 
+        const isPort8080 = (window.location.port === '8080');
         const isLocalHost = (
             window.location.hostname === 'localhost' ||
             window.location.hostname === '127.0.0.1' ||
-            window.location.port === '8080'
+            window.location.hostname === '[::1]'
         );
         const isFileProtocol = (window.location.protocol === 'file:');
+        const fallbackLocalHost = (window.location.hostname && window.location.hostname !== '') ? window.location.hostname : '127.0.0.1';
+
+        if (rawUrl.startsWith('/')) {
+            if (isPort8080 || (!isLocalHost && !isFileProtocol)) {
+                return rawUrl;
+            }
+            return `http://${fallbackLocalHost}:8080${rawUrl}`;
+        }
+        if (rawUrl.startsWith('data:') || rawUrl.startsWith('blob:')) {
+            return rawUrl;
+        }
 
         let extraParams = '';
         if (channel) {
@@ -210,10 +216,15 @@
         }
 
         // Détection du point d'entrée proxy :
-        // - En local (server.py) : /proxy
-        // - En fichier local : http://localhost:8080/proxy
-        // - En production / déploiement Vercel : /api/proxy
-        const proxyBase = isLocalHost ? '/proxy' : (isFileProtocol ? 'http://localhost:8080/proxy' : '/api/proxy');
+        // - En direct sur server.py (port 8080) : /proxy
+        // - En Live Server (ex: port 5500) ou en fichier local : http://127.0.0.1:8080/proxy
+        // - En production (Vercel ou hébergement cloud) : /api/proxy
+        let proxyBase = '/api/proxy';
+        if (isPort8080) {
+            proxyBase = '/proxy';
+        } else if (isLocalHost || isFileProtocol) {
+            proxyBase = `http://${fallbackLocalHost}:8080/proxy`;
+        }
 
         // Stage 0 : Proxy optimisé (Local ou Vercel Serverless) avec réécriture M3U8
         if (stage === 0) {
