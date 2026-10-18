@@ -843,7 +843,12 @@
     // ── Plein Écran & Mode Cinéma ──
     function toggleFullscreen() {
         if (!document.fullscreenElement) {
-            playerContainer.requestFullscreen().catch(err => {
+            playerContainer.requestFullscreen().then(() => {
+                // Sur smartphone : basculer automatiquement en mode paysage
+                if (screen.orientation && screen.orientation.lock) {
+                    screen.orientation.lock('landscape').catch(() => {});
+                }
+            }).catch(err => {
                 console.warn('Plein écran non supporté :', err);
             });
         } else {
@@ -855,6 +860,9 @@
         const isFs = !!document.fullscreenElement;
         if (fsExpandIcon) fsExpandIcon.style.display = isFs ? 'none' : 'block';
         if (fsShrinkIcon) fsShrinkIcon.style.display = isFs ? 'block' : 'none';
+        if (!isFs && screen.orientation && screen.orientation.unlock) {
+            screen.orientation.unlock().catch(() => {});
+        }
     });
 
     function toggleTheaterMode() {
@@ -935,8 +943,32 @@
         };
     }
 
+    let controlsHideTimeout = null;
+    function showPlayerControlsTemporarily() {
+        if (!playerContainer) return;
+        playerContainer.classList.add('show-controls');
+        if (controlsHideTimeout) clearTimeout(controlsHideTimeout);
+        controlsHideTimeout = setTimeout(() => {
+            playerContainer.classList.remove('show-controls');
+        }, 4000);
+    }
+
     if (playerContainer) {
         playerContainer.ondblclick = toggleFullscreen;
+
+        // Support tactile : tap pour afficher/masquer les contrôles sur smartphone
+        playerContainer.addEventListener('click', (e) => {
+            if (e.target.closest('button') || e.target.closest('input') || e.target.closest('a') || e.target.closest('.quality-selector')) {
+                showPlayerControlsTemporarily();
+                return;
+            }
+            if (playerContainer.classList.contains('show-controls')) {
+                playerContainer.classList.remove('show-controls');
+                if (controlsHideTimeout) clearTimeout(controlsHideTimeout);
+            } else {
+                showPlayerControlsTemporarily();
+            }
+        });
     }
 
     // Réessayer / Flux de secours
@@ -1334,14 +1366,26 @@
             btn.addEventListener('click', () => setQualityLevel(btn.dataset.level));
         });
 
-        // Écouteur de défilement pour le chargement infini (60 FPS avec 7 358 chaînes)
+        // Écouteurs de défilement pour le chargement infini (Desktop & Mobile)
+        const checkScrollAndLoadMore = (container) => {
+            if (!container) return;
+            if (container.scrollTop + container.clientHeight >= container.scrollHeight - 350) {
+                renderNextBatch();
+            }
+        };
+
         if (channelListEl) {
-            channelListEl.addEventListener('scroll', () => {
-                if (channelListEl.scrollTop + channelListEl.clientHeight >= channelListEl.scrollHeight - 350) {
-                    renderNextBatch();
-                }
-            }, { passive: true });
+            channelListEl.addEventListener('scroll', () => checkScrollAndLoadMore(channelListEl), { passive: true });
         }
+        const appMainEl = document.querySelector('.app-main');
+        if (appMainEl) {
+            appMainEl.addEventListener('scroll', () => checkScrollAndLoadMore(appMainEl), { passive: true });
+        }
+        window.addEventListener('scroll', () => {
+            if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 400) {
+                renderNextBatch();
+            }
+        }, { passive: true });
 
         // Chaîne par défaut : Première vraie chaîne active (TF1 FHD ou premier canal)
         const defaultIndex = channels.findIndex(ch => ch.category === 'francophone' && !ch.name.startsWith('###'));
