@@ -246,10 +246,11 @@ class BOKKStreamProxyHandler(SimpleHTTPRequestHandler):
                 self.wfile.write(b"Impossible de contacter l'API RTS")
                 return
 
-        # ── Cache HIT pour les segments vidéo ──
+        # ── Cache HIT pour les segments vidéo (HLS uniquement, pas de flux continu /live/) ──
         target_lower_ext = target_url.lower().split('?')[0]
         if (any(target_lower_ext.endswith(ext) for ext in SEGMENT_EXTENSIONS)
-                and not self.headers.get('Range') and not is_head):
+                and not self.headers.get('Range') and not is_head
+                and '/live/' not in target_lower_ext):
             cached_data, cached_ct = segment_cache_get(target_url)
             if cached_data is not None:
                 try:
@@ -342,18 +343,19 @@ class BOKKStreamProxyHandler(SimpleHTTPRequestHandler):
                 if custom_ua:
                     extra_q += f"&ua={urllib.parse.quote(custom_ua, safe='')}"
 
-                # Détection ultra-robuste de playlist M3U8
+                # Détection de playlist M3U8
                 target_lower = target_url.lower()
                 final_lower = final_url.lower()
                 is_m3u8_url = (
                     '.m3u8' in target_lower or
                     '.m3u8' in final_lower or
                     'mpegurl' in content_type.lower() or
-                    'm3u' in content_type.lower()
+                    'm3u' in content_type.lower() or
+                    'text/' in content_type.lower()
                 )
 
-                # Si c'est potentiellement une playlist ou du texte
-                if is_m3u8_url or 'text' in content_type.lower() or 'application' in content_type.lower():
+                # Si c'est une playlist M3U8
+                if is_m3u8_url:
                     raw_data = resp.read()
 
                     # Décompression GZIP si nécessaire
@@ -370,7 +372,8 @@ class BOKKStreamProxyHandler(SimpleHTTPRequestHandler):
                         data.startswith(b'#EXTM3U') or
                         b'#EXTINF' in data[:500] or
                         b'#EXT-X-' in data[:500] or
-                        is_m3u8_url
+                        '.m3u8' in target_lower or
+                        '.m3u8' in final_lower
                     )
 
                     if is_real_m3u8:
@@ -422,15 +425,25 @@ class BOKKStreamProxyHandler(SimpleHTTPRequestHandler):
 
                 # Segment ou flux vidéo binaire (.ts, .aac, .m4s, etc.)
                 out_type = content_type if content_type else 'video/mp2t'
+                content_length = resp.headers.get('Content-Length')
                 content_range = resp.headers.get('Content-Range')
 
+                cl_int = None
+                if content_length:
+                    try:
+                        cl_int = int(content_length)
+                    except ValueError:
+                        pass
+
                 # ── Vérifier si ce segment est cacheable ──
+                # RÈGLE CRUCIALE : Seuls les vrais petits segments HLS (Content-Length fini <= 10 MB, hors /live/)
+                # peuvent être lus d'un coup. Un flux MPEG-TS live continu n'a pas de Content-Length
+                # et DOIT être streamé par blocs de 64 KB en direct sous peine de bloquer indéfiniment !
                 target_lower_check = target_url.lower().split('?')[0]
                 is_segment = any(target_lower_check.endswith(ext) for ext in SEGMENT_EXTENSIONS)
-                no_range = not self.headers.get('Range')  # Ne pas cacher les requêtes Range partielles
+                no_range = not self.headers.get('Range')
 
-                if is_segment and no_range:
-                    # Lire tout le segment en mémoire pour le mettre en cache
+                if is_segment and no_range and cl_int is not None and cl_int <= 10 * 1024 * 1024 and '/live/' not in target_lower_check:
                     try:
                         seg_data = resp.read()
                         segment_cache_put(target_url, seg_data, out_type)
@@ -445,8 +458,7 @@ class BOKKStreamProxyHandler(SimpleHTTPRequestHandler):
                     except (ConnectionResetError, BrokenPipeError, ConnectionAbortedError, OSError):
                         pass
                 else:
-                    # Streaming direct par blocs de 64 KB (flux live ou requête Range)
-                    content_length = resp.headers.get('Content-Length')
+                    # Streaming continu direct par blocs de 64 KB (flux live MPEG-TS, radio ou gros fichier)
                     self.send_response(status_code)
                     self.send_header('Content-Type', out_type)
                     if content_length:
