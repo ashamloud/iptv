@@ -6,7 +6,9 @@ const RTS_CHANNELS = {
     'rts2': 32,
     'rts3': 42,
     'rts4': 51,
-    'rts5': 52
+    'rts5': 52,
+    'sentv': 2,
+    'leraltv': 35
 };
 const rtsCache = {};
 
