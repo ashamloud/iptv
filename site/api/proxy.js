@@ -42,12 +42,14 @@ module.exports = async function handler(req, res) {
     res.setHeader('Access-Control-Max-Age', '86400');
 
     if (req.method === 'OPTIONS') {
-        return res.status(200).end();
+        res.statusCode = 200;
+        return res.end();
     }
 
-    let targetUrl = req.query.url;
+    let targetUrl = (req.query && req.query.url) ? req.query.url : null;
     if (!targetUrl) {
-        return res.status(400).send("Paramètre 'url' manquant.");
+        res.statusCode = 400;
+        return res.end("Paramètre 'url' manquant.");
     }
 
     // 2. Résolution dynamique des chaînes officielles RTS
@@ -56,7 +58,8 @@ module.exports = async function handler(req, res) {
         if (resolved) {
             targetUrl = resolved;
         } else {
-            return res.status(502).send("Impossible de contacter le serveur officiel RTS.");
+            res.statusCode = 502;
+            return res.end("Impossible de contacter le serveur officiel RTS.");
         }
     }
 
@@ -123,9 +126,12 @@ module.exports = async function handler(req, res) {
                 return `/api/proxy?url=${encodeURIComponent(resolved)}${extraQ}`;
             });
 
+            const body = Buffer.from(rewritten.join('\n'), 'utf-8');
+            res.statusCode = 200;
             res.setHeader('Content-Type', 'application/vnd.apple.mpegurl; charset=utf-8');
+            res.setHeader('Content-Length', body.length);
             res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-            return res.status(200).send(rewritten.join('\n'));
+            return res.end(body);
         }
 
         // Segment ou flux vidéo binaire (.ts, .aac, .m4s, etc.)
@@ -136,8 +142,7 @@ module.exports = async function handler(req, res) {
         const cr = fetchRes.headers.get('content-range');
         if (cr) res.setHeader('Content-Range', cr);
         res.setHeader('Accept-Ranges', 'bytes');
-        res.setHeader('Cache-Control', 'public, max-age=3600');
-        res.status(fetchRes.status);
+        res.statusCode = fetchRes.status;
 
         const reader = fetchRes.body.getReader();
         while (true) {
@@ -147,6 +152,7 @@ module.exports = async function handler(req, res) {
         }
         res.end();
     } catch (err) {
-        return res.status(502).send(`Erreur de connexion au flux distant: ${err.message}`);
+        res.statusCode = 502;
+        return res.end(`Erreur de connexion au flux distant: ${err.message}`);
     }
 };
