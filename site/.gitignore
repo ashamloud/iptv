@@ -13,3 +13,12 @@ scan_*.py
 debug_*.py
 yt_cids*.json
 acan_channels.json
+
+# M3U source playlists (déjà intégrées dans channels.js)
+fr.m3u
+fra.m3u
+*.m3u
+
+# Script de build dev-only
+build_channels.py
+start-server.ps1
