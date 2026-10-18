@@ -71,7 +71,7 @@ module.exports = async function handler(req, res) {
 
         if (req.query.ref) {
             headers['Referer'] = req.query.ref;
-        } else if ('2m_monde' in targetUrl.toLowerCase()) {
+        } else if (targetUrl.toLowerCase().includes('2m_monde') || targetUrl.toLowerCase().includes('radio2m.ma')) {
             headers['Referer'] = 'http://www.radio2m.ma/';
         }
 
@@ -79,11 +79,19 @@ module.exports = async function handler(req, res) {
             headers['Range'] = req.headers.range;
         }
 
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+        req.on('close', () => {
+            controller.abort();
+        });
+
         const fetchRes = await fetch(targetUrl, {
             headers,
             redirect: 'follow',
-            signal: AbortSignal.timeout(6000)
+            signal: controller.signal
         });
+        clearTimeout(timeoutId);
 
         const contentType = fetchRes.headers.get('content-type') || '';
         const finalUrl = fetchRes.url || targetUrl;
