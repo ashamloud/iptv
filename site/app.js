@@ -209,26 +209,23 @@
             }
         }
 
-        // Stage 0 : Sur serveur local BOKK TV (ou fichier local avec serveur actif)
+        // Détection du point d'entrée proxy :
+        // - En local (server.py) : /proxy
+        // - En fichier local : http://localhost:8080/proxy
+        // - En production / déploiement Vercel : /api/proxy
+        const proxyBase = isLocalHost ? '/proxy' : (isFileProtocol ? 'http://localhost:8080/proxy' : '/api/proxy');
+
+        // Stage 0 : Proxy optimisé (Local ou Vercel Serverless) avec réécriture M3U8
         if (stage === 0) {
-            if (isLocalHost) {
-                return `/proxy?url=${encodeURIComponent(rawUrl)}${extraParams}`;
-            }
-            if (isFileProtocol) {
-                return `http://localhost:8080/proxy?url=${encodeURIComponent(rawUrl)}${extraParams}`;
-            }
-            if (window.location.protocol === 'https:' && rawUrl.startsWith('http://')) {
-                return `https://corsproxy.io/?url=${encodeURIComponent(rawUrl)}`;
-            }
-            return rawUrl;
+            return `${proxyBase}?url=${encodeURIComponent(rawUrl)}${extraParams}`;
         }
 
-        // Stage 1 : Essai direct
+        // Stage 1 : Tentative directe si déjà en HTTPS
         if (stage === 1) {
-            if (isLocalHost || isFileProtocol) {
+            if (rawUrl.startsWith('https://')) {
                 return rawUrl;
             }
-            return `https://corsproxy.io/?url=${encodeURIComponent(rawUrl)}`;
+            return `${proxyBase}?url=${encodeURIComponent(rawUrl)}${extraParams}`;
         }
 
         // Stage 2 : Proxy public de secours
@@ -356,11 +353,18 @@
                 hlsInstance = new Hls({
                     enableWorker: true,
                     lowLatencyMode: true,
-                    backBufferLength: 30,
-                    manifestLoadingMaxRetry: 4,
-                    manifestLoadingRetryDelay: 1000,
-                    levelLoadingMaxRetry: 4,
-                    fragLoadingMaxRetry: 4,
+                    backBufferLength: 8,
+                    maxBufferLength: 10,
+                    maxMaxBufferLength: 16,
+                    maxBufferSize: 25 * 1000 * 1000,
+                    manifestLoadingTimeOut: 3500,
+                    manifestLoadingMaxRetry: 1,
+                    manifestLoadingRetryDelay: 500,
+                    levelLoadingTimeOut: 3500,
+                    levelLoadingMaxRetry: 1,
+                    fragLoadingTimeOut: 5000,
+                    fragLoadingMaxRetry: 1,
+                    startFragPrefetch: true,
                     progressive: true
                 });
 
@@ -380,12 +384,6 @@
                         switch (data.type) {
                             case Hls.ErrorTypes.NETWORK_ERROR:
                                 console.warn(`[BOKK TV] Erreur réseau HLS (Stage ${retryStage}) sur ${finalUrl}`);
-                                if (retryStage === 0 && hlsInstance) {
-                                    try {
-                                        hlsInstance.startLoad();
-                                        return;
-                                    } catch (e) {}
-                                }
                                 destroyActivePlayer();
                                 if (channel.fallbackUrl && !useFallback && channel.fallbackUrl !== channel.url) {
                                     loadChannel(index, true, 0);

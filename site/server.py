@@ -177,18 +177,18 @@ class BOKKStreamProxyHandler(SimpleHTTPRequestHandler):
             req = urllib.request.Request(target_url, headers=headers)
 
             try:
-                resp = STREAM_OPENER.open(req, timeout=12)
+                resp = STREAM_OPENER.open(req, timeout=5)
             except urllib.error.HTTPError as he:
                 # Si 403 avec referer, retenter sans referer
                 if he.code == 403 and 'Referer' in headers and not custom_ref:
                     del headers['Referer']
                     req2 = urllib.request.Request(target_url, headers=headers)
-                    resp = STREAM_OPENER.open(req2, timeout=12)
+                    resp = STREAM_OPENER.open(req2, timeout=5)
                 elif he.code == 403 and 'User-Agent' in headers and ua != USER_AGENT:
                     # Retenter avec User-Agent Chrome classique
                     headers['User-Agent'] = USER_AGENT
                     req2 = urllib.request.Request(target_url, headers=headers)
-                    resp = STREAM_OPENER.open(req2, timeout=12)
+                    resp = STREAM_OPENER.open(req2, timeout=5)
                 else:
                     raise he
 

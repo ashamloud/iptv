@@ -4,3 +4,12 @@ __pycache__/
 *.log
 .DS_Store
 Thumbs.db
+
+# Temporary scratch & debug scripts
+check_*.py
+explore_*.py
+fetch_*.py
+scan_*.py
+debug_*.py
+yt_cids*.json
+acan_channels.json

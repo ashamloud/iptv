@@ -30,9 +30,11 @@ const CAT_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
   senegal:     'location-outline',
   sport:       'trophy-outline',
   francophone: 'document-text-outline',
-  arab:        'language-outline',
-  news:        'newspaper-outline',
+  cinema:      'film-outline',
+  religion:    'moon-outline',
   music:       'musical-notes-outline',
+  news:        'newspaper-outline',
+  arab:        'language-outline',
   autres:      'tv-outline',
 };
 
@@ -141,7 +143,7 @@ export default function App() {
         <View style={styles.logo}>
           <Ionicons name="tv" size={20} color={C.primary} />
           <Text style={styles.logoText}>
-            Loud<Text style={{ color: '#818cf8' }}>StreamTV</Text>
+            BOKK<Text style={{ color: '#818cf8' }}> TV</Text>
           </Text>
           <View style={styles.liveBadge}>
             <View style={styles.liveDot} />

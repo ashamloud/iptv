@@ -7,9 +7,13 @@
       "source": "/(.*)",
       "headers": [
         { "key": "Access-Control-Allow-Origin", "value": "*" },
-        { "key": "Access-Control-Allow-Methods", "value": "GET, OPTIONS" },
-        { "key": "X-Frame-Options", "value": "SAMEORIGIN" }
+        { "key": "Access-Control-Allow-Methods", "value": "GET, HEAD, OPTIONS" },
+        { "key": "Access-Control-Allow-Headers", "value": "*" }
       ]
     }
+  ],
+  "routes": [
+    { "src": "/api/proxy", "dest": "/api/proxy.js" },
+    { "src": "/(.*)", "dest": "/$1" }
   ]
 }
