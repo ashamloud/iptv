@@ -734,6 +734,7 @@
             `;
 
             btn.onclick = () => {
+                userManuallySelectedCategory = true;
                 currentCategory = cat.key;
                 document.querySelectorAll('.cat-pill').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
@@ -742,6 +743,13 @@
 
             categoriesBar.appendChild(btn);
         });
+
+        const activePill = categoriesBar.querySelector('.cat-pill.active');
+        if (activePill) {
+            setTimeout(() => {
+                activePill.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
+            }, 100);
+        }
     }
 
     function getCategoryCount(catKey) {
@@ -1347,7 +1355,7 @@
                 console.error(err);
                 showToast('Erreur lors du chargement. Vérifiez l\'URL ou importez le fichier .m3u directement.');
             } finally {
-                btnLoadM3uUrl.textContent = 'Recharger la playlist MegaTV en ligne';
+                btnLoadM3uUrl.textContent = 'Charger la playlist M3U';
                 btnLoadM3uUrl.disabled = false;
             }
         };
@@ -1396,6 +1404,104 @@
         };
     }
 
+    // ── Détection automatique du pays de l'utilisateur ──
+    let userManuallySelectedCategory = false;
+
+    function detectUserCountry() {
+        try {
+            // 1. Fuseau horaire (instantané et 100% fiable côté client)
+            const tz = (Intl.DateTimeFormat().resolvedOptions().timeZone || '').toLowerCase();
+            if (tz.includes('dakar') || tz.includes('senegal')) {
+                return 'senegal';
+            }
+            if (tz.includes('paris') || tz.includes('brussels') || tz.includes('abidjan') || 
+                tz.includes('bamako') || tz.includes('conakry') || tz.includes('ouagadougou') ||
+                tz.includes('douala') || tz.includes('libreville') || tz.includes('kinshasa') ||
+                tz.includes('lome') || tz.includes('cotonou') || tz.includes('niamey')) {
+                return 'francophone';
+            }
+            if (tz.includes('madrid') || tz.includes('canary')) {
+                return 'espagne';
+            }
+            if (tz.includes('rome')) {
+                return 'italie';
+            }
+            if (tz.includes('berlin') || tz.includes('vienna')) {
+                return 'allemagne';
+            }
+            if (tz.includes('tirane') || tz.includes('pristina')) {
+                return 'albanie';
+            }
+            if (tz.includes('london') || tz.includes('new_york') || tz.includes('chicago') || 
+                tz.includes('los_angeles') || tz.includes('denver') || tz.includes('toronto') ||
+                tz.includes('sydney') || tz.includes('auckland') || tz.includes('dublin')) {
+                return 'uk';
+            }
+
+            // 2. Langue du navigateur
+            const lang = (navigator.language || (navigator.languages && navigator.languages[0]) || '').toLowerCase();
+            if (lang.includes('-sn') || lang.startsWith('wo')) return 'senegal';
+            if (lang.startsWith('fr')) return 'francophone';
+            if (lang.startsWith('es')) return 'espagne';
+            if (lang.startsWith('it')) return 'italie';
+            if (lang.startsWith('de')) return 'allemagne';
+            if (lang.startsWith('sq')) return 'albanie';
+            if (lang.startsWith('en')) return 'uk';
+        } catch (e) {
+            console.warn('[BOKK TV] Erreur détection pays synchrone :', e);
+        }
+        return 'senegal'; // Par défaut : Sénégal
+    }
+
+    async function autoDetectUserCountryAsync() {
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 3000);
+            const res = await fetch('https://ipwho.is/', { signal: controller.signal });
+            clearTimeout(timeoutId);
+            if (res.ok) {
+                const data = await res.json();
+                const code = (data.country_code || '').toUpperCase();
+                console.log('[BOKK TV] Pays détecté par IP :', code, data.country);
+                let detected = null;
+                if (code === 'SN') detected = 'senegal';
+                else if (['FR', 'BE', 'CH', 'LU', 'MC', 'CI', 'ML', 'GN', 'BF', 'BJ', 'TG', 'CM', 'GA', 'CD', 'CG', 'DZ', 'MA', 'TN'].includes(code)) {
+                    detected = 'francophone';
+                } else if (['US', 'GB', 'UK', 'CA', 'AU', 'NZ', 'IE'].includes(code)) {
+                    detected = 'uk';
+                } else if (['ES', 'MX', 'AR', 'CO', 'CL', 'PE'].includes(code)) {
+                    detected = 'espagne';
+                } else if (code === 'IT') {
+                    detected = 'italie';
+                } else if (['DE', 'AT'].includes(code)) {
+                    detected = 'allemagne';
+                } else if (['AL', 'XK'].includes(code)) {
+                    detected = 'albanie';
+                }
+
+                if (detected && detected !== currentCategory && !userManuallySelectedCategory) {
+                    console.log(`[BOKK TV] Mise à jour automatique de la catégorie vers : ${detected}`);
+                    currentCategory = detected;
+                    renderCategories();
+                    renderChannelList(true);
+                    playFirstChannelOfCategory(detected);
+                }
+            }
+        } catch (e) {
+            // Déjà géré par la détection synchrone
+        }
+    }
+
+    function playFirstChannelOfCategory(catKey) {
+        let chIdx = channels.findIndex(ch => ch.category === catKey && !ch.name.startsWith('###'));
+        if (chIdx < 0) {
+            chIdx = channels.findIndex(ch => !ch.name.startsWith('###'));
+        }
+        if (chIdx >= 0) {
+            loadChannel(chIdx);
+        }
+    }
+
     // ── Initialisation ──
     function init() {
         if (isGridView && btnViewGrid && btnViewList) {
@@ -1403,10 +1509,19 @@
             btnViewList.classList.remove('active');
         }
 
+        // Détection automatique du pays de l'utilisateur par défaut
+        currentCategory = detectUserCountry();
+
         applyCustomChannels();
         populateBouquetFilter();
         renderCategories();
         renderChannelList(true);
+
+        // Lancement immédiat de la première chaîne du pays détecté
+        playFirstChannelOfCategory(currentCategory);
+
+        // Affinement asynchrone par géolocalisation IP
+        autoDetectUserCountryAsync();
 
         // ── Mesure de la vitesse réseau au démarrage ──
         measureNetworkSpeed();
@@ -1434,18 +1549,12 @@
             appMainEl.addEventListener('scroll', () => checkScrollAndLoadMore(appMainEl), { passive: true });
         }
         window.addEventListener('scroll', () => {
-            if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 400) {
+            const docHeight = Math.max(document.documentElement.scrollHeight, document.body.scrollHeight, document.body.offsetHeight);
+            const scrollPos = window.innerHeight + window.scrollY;
+            if (scrollPos >= docHeight - 600) {
                 renderNextBatch();
             }
         }, { passive: true });
-
-        // Chaîne par défaut : Première vraie chaîne active (TF1 FHD ou premier canal)
-        const defaultIndex = channels.findIndex(ch => ch.category === 'francophone' && !ch.name.startsWith('###'));
-        const startIdx = defaultIndex >= 0 ? defaultIndex : channels.findIndex(ch => !ch.name.startsWith('###'));
-        const finalStart = startIdx >= 0 ? startIdx : 0;
-        if (channels[finalStart]) {
-            loadChannel(finalStart);
-        }
     }
 
     // Lancement au chargement du DOM
