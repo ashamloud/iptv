@@ -22,9 +22,11 @@ import ssl
 import json
 import gzip
 import time
+import threading
 import urllib.request
 import urllib.parse
 from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
+from collections import OrderedDict
 
 PORT = 8080
 SITE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -38,6 +40,51 @@ STREAM_OPENER = urllib.request.build_opener(
     urllib.request.HTTPCookieProcessor(COOKIE_JAR),
     urllib.request.HTTPSHandler(context=SSL_CONTEXT)
 )
+
+# ── Cache mémoire pour les segments vidéo (.ts, .m4s, .aac) ──
+# Évite de re-télécharger le même segment depuis le serveur source
+SEGMENT_CACHE = OrderedDict()   # {url: {'data': bytes, 'ct': str, 'time': float}}
+SEGMENT_CACHE_LOCK = threading.Lock()
+SEGMENT_CACHE_MAX_BYTES = 50 * 1024 * 1024  # 50 MB max
+SEGMENT_CACHE_TTL = 12  # secondes
+SEGMENT_CACHE_CURRENT_BYTES = 0
+
+SEGMENT_EXTENSIONS = ('.ts', '.m4s', '.aac', '.mp4', '.fmp4')
+
+
+def segment_cache_get(url):
+    with SEGMENT_CACHE_LOCK:
+        entry = SEGMENT_CACHE.get(url)
+        if entry and (time.time() - entry['time'] < SEGMENT_CACHE_TTL):
+            SEGMENT_CACHE.move_to_end(url)  # LRU: marquer comme récent
+            return entry['data'], entry['ct']
+        return None, None
+
+
+def segment_cache_put(url, data, ct):
+    global SEGMENT_CACHE_CURRENT_BYTES
+    with SEGMENT_CACHE_LOCK:
+        size = len(data)
+        # Éviction LRU si on dépasse la limite
+        while SEGMENT_CACHE_CURRENT_BYTES + size > SEGMENT_CACHE_MAX_BYTES and SEGMENT_CACHE:
+            _, old = SEGMENT_CACHE.popitem(last=False)
+            SEGMENT_CACHE_CURRENT_BYTES -= len(old['data'])
+        SEGMENT_CACHE[url] = {'data': data, 'ct': ct, 'time': time.time()}
+        SEGMENT_CACHE.move_to_end(url)
+        SEGMENT_CACHE_CURRENT_BYTES += size
+
+
+# ── Cache GZIP pour les fichiers statiques (JS/CSS/HTML) ──
+STATIC_GZIP_CACHE = {}   # {filepath: (mtime, gzip_bytes)}
+STATIC_GZIP_LOCK = threading.Lock()
+
+GZIPPABLE_TYPES = {
+    '.js':   'application/javascript; charset=utf-8',
+    '.css':  'text/css; charset=utf-8',
+    '.html': 'text/html; charset=utf-8',
+    '.json': 'application/json; charset=utf-8',
+    '.txt':  'text/plain; charset=utf-8',
+}
 
 # Cache pour les tokens RTS pour éviter de spammer l'API à chaque segment
 RTS_CHANNELS = {
@@ -102,7 +149,70 @@ class BOKKStreamProxyHandler(SimpleHTTPRequestHandler):
         parsed = urllib.parse.urlparse(self.path)
         if parsed.path == '/proxy':
             self.handle_proxy(parsed, is_head=False)
+        elif parsed.path == '/speedtest':
+            # Endpoint test de vitesse : renvoie un blob aléatoire de 200 KB
+            payload = os.urandom(200 * 1024)
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/octet-stream')
+            self.send_header('Content-Length', str(len(payload)))
+            self.send_header('Cache-Control', 'no-store')
+            self.end_headers()
+            try:
+                self.wfile.write(payload)
+            except (ConnectionResetError, BrokenPipeError, OSError):
+                pass
         else:
+            self.handle_static_with_gzip(parsed.path)
+
+    def handle_static_with_gzip(self, url_path):
+        """Sert les fichiers statiques avec compression GZIP si le client le supporte."""
+        # Nettoyer le chemin (sécurité basique)
+        safe_path = urllib.parse.unquote(url_path.split('?')[0])
+        if '..' in safe_path:
+            super().do_GET()
+            return
+
+        ext = os.path.splitext(safe_path)[1].lower()
+        if ext not in GZIPPABLE_TYPES:
+            super().do_GET()
+            return
+
+        accept_enc = self.headers.get('Accept-Encoding', '')
+        if 'gzip' not in accept_enc:
+            super().do_GET()
+            return
+
+        # Chemin physique du fichier
+        filepath = os.path.join(SITE_DIR, safe_path.lstrip('/'))
+        if not os.path.isfile(filepath):
+            super().do_GET()
+            return
+
+        try:
+            mtime = os.path.getmtime(filepath)
+            with STATIC_GZIP_LOCK:
+                cached = STATIC_GZIP_CACHE.get(filepath)
+                if cached and cached[0] == mtime:
+                    gz_data = cached[1]
+                else:
+                    with open(filepath, 'rb') as f:
+                        raw = f.read()
+                    gz_data = gzip.compress(raw, compresslevel=6)
+                    STATIC_GZIP_CACHE[filepath] = (mtime, gz_data)
+
+            content_type = GZIPPABLE_TYPES[ext]
+            self.send_response(200)
+            self.send_header('Content-Type', content_type)
+            self.send_header('Content-Encoding', 'gzip')
+            self.send_header('Content-Length', str(len(gz_data)))
+            self.send_header('Vary', 'Accept-Encoding')
+            self.send_header('Cache-Control', 'public, max-age=300')
+            self.end_headers()
+            try:
+                self.wfile.write(gz_data)
+            except (ConnectionResetError, BrokenPipeError, OSError):
+                pass
+        except Exception:
             super().do_GET()
 
     def end_headers(self):
@@ -135,6 +245,25 @@ class BOKKStreamProxyHandler(SimpleHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(b"Impossible de contacter l'API RTS")
                 return
+
+        # ── Cache HIT pour les segments vidéo ──
+        target_lower_ext = target_url.lower().split('?')[0]
+        if (any(target_lower_ext.endswith(ext) for ext in SEGMENT_EXTENSIONS)
+                and not self.headers.get('Range') and not is_head):
+            cached_data, cached_ct = segment_cache_get(target_url)
+            if cached_data is not None:
+                try:
+                    self.send_response(200)
+                    self.send_header('Content-Type', cached_ct or 'video/mp2t')
+                    self.send_header('Content-Length', str(len(cached_data)))
+                    self.send_header('Accept-Ranges', 'bytes')
+                    self.send_header('Cache-Control', 'public, max-age=10')
+                    self.send_header('X-Cache', 'HIT')
+                    self.end_headers()
+                    self.wfile.write(cached_data)
+                    return
+                except (ConnectionResetError, BrokenPipeError, OSError):
+                    return
 
         try:
             # Récupérer d'éventuels paramètres ref et ua personnalisés
@@ -293,28 +422,48 @@ class BOKKStreamProxyHandler(SimpleHTTPRequestHandler):
 
                 # Segment ou flux vidéo binaire (.ts, .aac, .m4s, etc.)
                 out_type = content_type if content_type else 'video/mp2t'
-                content_length = resp.headers.get('Content-Length')
                 content_range = resp.headers.get('Content-Range')
 
-                self.send_response(status_code)
-                self.send_header('Content-Type', out_type)
-                if content_length:
-                    self.send_header('Content-Length', content_length)
-                if content_range:
-                    self.send_header('Content-Range', content_range)
-                self.send_header('Accept-Ranges', 'bytes')
-                self.send_header('Cache-Control', 'public, max-age=3600')
-                self.end_headers()
+                # ── Vérifier si ce segment est cacheable ──
+                target_lower_check = target_url.lower().split('?')[0]
+                is_segment = any(target_lower_check.endswith(ext) for ext in SEGMENT_EXTENSIONS)
+                no_range = not self.headers.get('Range')  # Ne pas cacher les requêtes Range partielles
 
-                # Streaming continu fluide par blocs de 64 KB
-                try:
-                    while True:
-                        chunk = resp.read(65536)
-                        if not chunk:
-                            break
-                        self.wfile.write(chunk)
-                except (ConnectionResetError, BrokenPipeError, ConnectionAbortedError, OSError):
-                    pass
+                if is_segment and no_range:
+                    # Lire tout le segment en mémoire pour le mettre en cache
+                    try:
+                        seg_data = resp.read()
+                        segment_cache_put(target_url, seg_data, out_type)
+                        self.send_response(status_code)
+                        self.send_header('Content-Type', out_type)
+                        self.send_header('Content-Length', str(len(seg_data)))
+                        self.send_header('Accept-Ranges', 'bytes')
+                        self.send_header('Cache-Control', 'public, max-age=10')
+                        self.send_header('X-Cache', 'MISS')
+                        self.end_headers()
+                        self.wfile.write(seg_data)
+                    except (ConnectionResetError, BrokenPipeError, ConnectionAbortedError, OSError):
+                        pass
+                else:
+                    # Streaming direct par blocs de 64 KB (flux live ou requête Range)
+                    content_length = resp.headers.get('Content-Length')
+                    self.send_response(status_code)
+                    self.send_header('Content-Type', out_type)
+                    if content_length:
+                        self.send_header('Content-Length', content_length)
+                    if content_range:
+                        self.send_header('Content-Range', content_range)
+                    self.send_header('Accept-Ranges', 'bytes')
+                    self.send_header('Cache-Control', 'public, max-age=3600')
+                    self.end_headers()
+                    try:
+                        while True:
+                            chunk = resp.read(65536)
+                            if not chunk:
+                                break
+                            self.wfile.write(chunk)
+                    except (ConnectionResetError, BrokenPipeError, ConnectionAbortedError, OSError):
+                        pass
 
         except urllib.error.HTTPError as e:
             try:

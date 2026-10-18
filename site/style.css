@@ -1185,3 +1185,51 @@ body.theater-mode .app-sidebar {
         max-height: 60vh;
     }
 }
+
+/* ── Sélecteur de qualité ── */
+.quality-selector {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: rgba(0, 0, 0, 0.45);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: var(--radius-full);
+    padding: 3px 5px;
+    backdrop-filter: blur(8px);
+}
+
+.quality-btn {
+    background: transparent;
+    border: none;
+    color: rgba(255,255,255,0.55);
+    font-family: 'Inter', sans-serif;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    padding: 3px 9px;
+    border-radius: var(--radius-full);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    line-height: 1;
+}
+
+.quality-btn:hover {
+    background: rgba(255,255,255,0.1);
+    color: #fff;
+}
+
+.quality-btn.active {
+    background: var(--brand);
+    color: #fff;
+    box-shadow: 0 0 8px rgba(99,102,241,0.5);
+}
+
+/* ── Badge vitesse réseau ── */
+.net-speed-badge {
+    font-size: 0.65rem !important;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+}
+.net-speed-badge.speed-fast  { background: rgba(16,185,129,0.2); color: #10b981; }
+.net-speed-badge.speed-ok    { background: rgba(245,158,11,0.2);  color: #f59e0b; }
+.net-speed-badge.speed-slow  { background: rgba(239,68,68,0.2);   color: #ef4444; }

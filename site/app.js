@@ -140,6 +140,12 @@
     const btnRetry       = document.getElementById('btn-retry');
     const btnFallback    = document.getElementById('btn-fallback');
 
+    // Qualité et réseau
+    const qualitySelectorEl = document.getElementById('quality-selector');
+    const netSpeedBadge     = document.getElementById('net-speed-badge');
+    let   estimatedBwKbps   = 500;   // estimation initiale prudente (500 Kbps)
+    let   forcedQuality     = -1;    // -1 = auto, 0..n = index level HLS.js
+
     // ── Masquer/Afficher les états du lecteur ──
     function showPlayerLoader() {
         if (loaderEl) loaderEl.classList.add('active');
@@ -179,6 +185,101 @@
                 mpegtsInstance.destroy();
             } catch (e) {}
             mpegtsInstance = null;
+        }
+    }
+
+    // ── Détecteur de vitesse réseau ──
+    // Mesure la bande passante réelle en téléchargeant un fichier test
+    async function measureNetworkSpeed() {
+        try {
+            const isPort8080 = window.location.port === '8080';
+            const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+            const isFile  = window.location.protocol === 'file:';
+
+            let testUrl;
+            if (isPort8080) {
+                testUrl = '/speedtest';
+            } else if (isLocal || isFile) {
+                testUrl = `http://${window.location.hostname || '127.0.0.1'}:8080/speedtest`;
+            } else {
+                // En production: pas de serveur local, on utilise navigator.connection si dispo
+                if (navigator.connection && navigator.connection.downlink) {
+                    const mbps = navigator.connection.downlink;
+                    estimatedBwKbps = Math.round(mbps * 1000);
+                    _applySpeedBadge(estimatedBwKbps);
+                }
+                return;
+            }
+
+            const t0 = performance.now();
+            const resp = await fetch(testUrl, { cache: 'no-store' });
+            if (!resp.ok) return;
+            const buf = await resp.arrayBuffer();
+            const elapsed = (performance.now() - t0) / 1000; // secondes
+            const bytes = buf.byteLength;
+            const kbps = Math.round((bytes * 8) / elapsed / 1000);
+
+            estimatedBwKbps = kbps;
+            _applySpeedBadge(kbps);
+            console.log(`[BOKK TV] Vitesse connexion mesurée : ${kbps} Kbps`);
+
+            // Ajuster l'estimation ABR initiale de HLS.js si un flux est en cours
+            if (hlsInstance) {
+                // Ne pas changer le level forcé manuellement
+                if (forcedQuality === -1) {
+                    hlsInstance.bandwidthEstimate = kbps * 1000;
+                }
+            }
+        } catch (e) {
+            console.warn('[BOKK TV] Mesure vitesse impossible :', e.message);
+        }
+    }
+
+    function _applySpeedBadge(kbps) {
+        if (!netSpeedBadge) return;
+        let label, cls;
+        if (kbps >= 4000) {
+            label = `⚡ ${Math.round(kbps / 1000 * 10) / 10} Mbps`;
+            cls = 'speed-fast';
+        } else if (kbps >= 1000) {
+            label = `🟡 ${Math.round(kbps / 1000 * 10) / 10} Mbps`;
+            cls = 'speed-ok';
+        } else {
+            label = `🔴 ${kbps} Kbps`;
+            cls = 'speed-slow';
+        }
+        netSpeedBadge.textContent = label;
+        netSpeedBadge.className = `badge-tag net-speed-badge ${cls}`;
+        netSpeedBadge.style.display = '';
+    }
+
+    // ── Contrôle manuel de la qualité HLS ──
+    function setQualityLevel(levelKey) {
+        forcedQuality = levelKey;
+        document.querySelectorAll('.quality-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.level === String(levelKey));
+        });
+
+        if (!hlsInstance) return;
+        const levels = hlsInstance.levels || [];
+
+        if (levelKey === -1 || levelKey === '-1') {
+            // Mode AUTO : ABR reprend le contrôle
+            hlsInstance.currentLevel = -1;
+            hlsInstance.nextLevel    = -1;
+            showToast('Qualité : Auto (ABR)');
+        } else if (levelKey === 'sd') {
+            // SD : choisir le niveau de plus faible débit
+            const sdIdx = 0;
+            hlsInstance.currentLevel = sdIdx;
+            hlsInstance.loadLevel    = sdIdx;
+            showToast('🟡 Qualité forcée : Définition Standard');
+        } else if (levelKey === 'hd') {
+            // HD : choisir le niveau de plus haut débit
+            const hdIdx = Math.max(0, levels.length - 1);
+            hlsInstance.currentLevel = hdIdx;
+            hlsInstance.loadLevel    = hdIdx;
+            showToast('🟮 Qualité forcée : Haute Définition');
         }
     }
 
@@ -400,8 +501,24 @@
                 hlsInstance.loadSource(finalUrl);
                 hlsInstance.attachMedia(videoEl);
 
-                hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
+                hlsInstance.on(Hls.Events.MANIFEST_PARSED, (_, data) => {
                     clearPlayerOverlays();
+
+                    // Afficher le sélecteur de qualité si plusieurs niveaux disponibles
+                    if (qualitySelectorEl) {
+                        qualitySelectorEl.style.display = data.levels && data.levels.length > 1 ? 'flex' : 'none';
+                    }
+
+                    // Appliquer la qualité précédemment choisie sur la nouvelle source
+                    if (forcedQuality !== -1) {
+                        setTimeout(() => setQualityLevel(forcedQuality), 200);
+                    } else {
+                        // En auto, donner à HLS.js notre estimation réseau mesurée
+                        if (estimatedBwKbps < 2000) {
+                            hlsInstance.bandwidthEstimate = estimatedBwKbps * 1000;
+                        }
+                    }
+
                     videoEl.play().catch(() => {
                         console.log('[BOKK TV] Autoplay bloqué, attente interaction.');
                         clearPlayerOverlays();
@@ -1206,6 +1323,16 @@
         populateBouquetFilter();
         renderCategories();
         renderChannelList(true);
+
+        // ── Mesure de la vitesse réseau au démarrage ──
+        measureNetworkSpeed();
+        // Re-mesure toutes les 2 minutes pour s'adapter aux changements
+        setInterval(measureNetworkSpeed, 120000);
+
+        // ── Boutons qualité ──
+        document.querySelectorAll('.quality-btn').forEach(btn => {
+            btn.addEventListener('click', () => setQualityLevel(btn.dataset.level));
+        });
 
         // Écouteur de défilement pour le chargement infini (60 FPS avec 7 358 chaînes)
         if (channelListEl) {
