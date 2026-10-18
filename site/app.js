@@ -342,6 +342,10 @@
     }
 
     // ── Détection et résolution de l'URL du flux avec proxy intelligent ──
+    // CF_WORKER_BASE : URL de votre Cloudflare Worker (proxy CDN edge).
+    // Déployez cloudflare_worker.js sur https://workers.cloudflare.com pour activer.
+    const CF_WORKER_BASE = ''; // ex: 'https://bokk-tv-proxy.votrenom.workers.dev'
+
     function resolveStreamUrl(rawUrl, stage = 0, channel = null) {
         if (!rawUrl) return '';
 
@@ -374,10 +378,10 @@
             }
         }
 
-        // Détection du point d'entrée proxy :
-        // - En direct sur server.py (port 8080) : /proxy
-        // - En Live Server (ex: port 5500) ou en fichier local : http://127.0.0.1:8080/proxy
-        // - En production (Vercel ou hébergement cloud) : /api/proxy
+        // Proxy de base selon l'environnement :
+        // - server.py (port 8080) : /proxy
+        // - Live Server local : http://127.0.0.1:8080/proxy
+        // - Vercel production : /api/proxy
         let proxyBase = '/api/proxy';
         if (isPort8080) {
             proxyBase = '/proxy';
@@ -385,21 +389,31 @@
             proxyBase = `http://${fallbackLocalHost}:8080/proxy`;
         }
 
-        // Stage 0 : Proxy optimisé (Local ou Vercel Serverless) avec réécriture M3U8
+        // Stage 0 : Proxy principal (Vercel /api/proxy ou server.py local)
         if (stage === 0) {
             return `${proxyBase}?url=${encodeURIComponent(rawUrl)}${extraParams}`;
         }
 
-        // Stage 1 : Tentative directe si déjà en HTTPS
+        // Stage 1 : Flux direct si déjà HTTPS (évite une couche proxy inutile)
         if (stage === 1) {
             if (rawUrl.startsWith('https://')) {
                 return rawUrl;
             }
+            // Pour les URLs HTTP, repasser par le proxy (même proxy, mais déjà essayé une fois)
             return `${proxyBase}?url=${encodeURIComponent(rawUrl)}${extraParams}`;
         }
 
-        // Stage 2 : Proxy public de secours
-        if (stage >= 2) {
+        // Stage 2 : Cloudflare Worker (si configuré) — IPs edge non bloquées
+        if (stage === 2) {
+            if (CF_WORKER_BASE) {
+                return `${CF_WORKER_BASE}/proxy?url=${encodeURIComponent(rawUrl)}`;
+            }
+            // Sinon corsproxy.io
+            return `https://corsproxy.io/?url=${encodeURIComponent(rawUrl)}`;
+        }
+
+        // Stage 3 : corsproxy.io en dernier recours
+        if (stage >= 3) {
             return `https://corsproxy.io/?url=${encodeURIComponent(rawUrl)}`;
         }
 
@@ -496,16 +510,13 @@
                     console.warn(`[BOKK TV] Erreur MPEG-TS (${type}, ${detail}, Stage ${retryStage}) sur ${finalUrl}`);
                     destroyActivePlayer();
 
-                    // 1. Si un fallback M3U8 existe, basculer immédiatement en HLS
+                    // Fallback M3U8 en priorité
                     if (channel.fallbackUrl && (channel.fallbackUrl.includes('.m3u8') || channel.fallbackUrl !== channel.url) && !useFallback) {
-                        console.log('[BOKK TV] Bascule MPEG-TS vers flux HLS de secours...');
+                        console.log('[BOKK TV] Bascule MPEG-TS → HLS...');
                         loadChannel(index, true, 0);
-                    } else if (retryStage === 0) {
-                        console.log('[BOKK TV] Tentative suivante Stage 1...');
-                        loadChannel(index, useFallback, 1);
-                    } else if (retryStage === 1) {
-                        console.log('[BOKK TV] Tentative suivante Stage 2...');
-                        loadChannel(index, useFallback, 2);
+                    } else if (retryStage < 3) {
+                        console.log(`[BOKK TV] Stage ${retryStage + 1}...`);
+                        loadChannel(index, useFallback, retryStage + 1);
                     } else {
                         showPlayerError('Ce flux est temporairement indisponible.');
                     }
@@ -583,10 +594,8 @@
                                 destroyActivePlayer();
                                 if (channel.fallbackUrl && !useFallback && channel.fallbackUrl !== channel.url) {
                                     loadChannel(index, true, 0);
-                                } else if (retryStage === 0) {
-                                    loadChannel(index, useFallback, 1);
-                                } else if (retryStage === 1) {
-                                    loadChannel(index, useFallback, 2);
+                                } else if (retryStage < 3) {
+                                    loadChannel(index, useFallback, retryStage + 1);
                                 } else {
                                     showPlayerError('Ce flux est temporairement indisponible.');
                                 }
@@ -609,6 +618,8 @@
                                 destroyActivePlayer();
                                 if (channel.fallbackUrl && !useFallback && channel.fallbackUrl !== channel.url) {
                                     loadChannel(index, true, 0);
+                                } else if (retryStage < 3) {
+                                    loadChannel(index, useFallback, retryStage + 1);
                                 } else {
                                     showPlayerError('Ce flux est temporairement indisponible.');
                                 }
