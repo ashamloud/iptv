@@ -29,11 +29,11 @@ function nodeFetch(url, extraHeaders, maxRedirects) {
                 path:     parsed.pathname + parsed.search,
                 method:   'GET',
                 headers: Object.assign({
-                    'User-Agent': 'VLC/3.0.18 LibVLC/3.0.18',
+                    'User-Agent': 'IPTVSmartersPro',
                     'Accept':     '*/*',
                     'Connection': 'keep-alive'
                 }, extraHeaders || {}),
-                timeout: 15000
+                timeout: 20000
             };
             const req = mod.request(options, (res) => {
                 if ([301,302,307,308].includes(res.statusCode) && res.headers.location && maxRedirects > 0) {
@@ -136,8 +136,8 @@ module.exports = async function handler(req, res) {
 
         if (isM3u8) {
             const buf  = await streamToBuffer(upstream);
-            const text = buf.toString('utf-8');
-            const extraQ = req.query.ref ? `&ref=${encodeURIComponent(req.query.ref)}` : '';
+            const extraRef = req.query.ref || targetUrl;
+            const extraQ = `&ref=${encodeURIComponent(extraRef)}&ua=IPTVSmartersPro`;
             const rewritten = text.split(/\r?\n/).map(line => {
                 const t = line.trim();
                 if (!t) return line;

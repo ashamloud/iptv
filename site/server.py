@@ -271,8 +271,7 @@ class BOKKStreamProxyHandler(SimpleHTTPRequestHandler):
             custom_ref = qs.get('ref', [None])[0]
             custom_ua = qs.get('ua', [None])[0]
 
-            # En-têtes style VLC (standard IPTV universel)
-            # Ne JAMAIS forcer de Referer bidon car les CDN (CloudFront, Akamai, etc.) bloquent le hotlinking
+            # En-têtes pour IPTV : IPTVSmartersPro est le client universellement accepté par Xtream Codes / MegaTV
             referer = None
             if custom_ref:
                 referer = custom_ref
@@ -285,10 +284,10 @@ class BOKKStreamProxyHandler(SimpleHTTPRequestHandler):
 
             if custom_ua:
                 ua = custom_ua
-            elif 'megatv' in target_url.lower():
-                ua = 'VLC/3.0.18 LibVLC/3.0.18'
+            elif 'megatv' in target_url.lower() or ':80/live/' in target_url.lower() or ':8080/live/' in target_url.lower():
+                ua = 'IPTVSmartersPro'
             else:
-                ua = 'VLC/3.0.18 LibVLC/3.0.18'
+                ua = 'IPTVSmartersPro'
 
             headers = {
                 'User-Agent': ua,
@@ -307,18 +306,18 @@ class BOKKStreamProxyHandler(SimpleHTTPRequestHandler):
             req = urllib.request.Request(target_url, headers=headers)
 
             try:
-                resp = STREAM_OPENER.open(req, timeout=5)
+                resp = STREAM_OPENER.open(req, timeout=20)
             except urllib.error.HTTPError as he:
-                # Si 403 avec referer, retenter sans referer
-                if he.code == 403 and 'Referer' in headers and not custom_ref:
+                # Si 401 ou 403, retenter avec IPTVSmartersPro et sans referer superflu
+                if he.code in (401, 403) and 'Referer' in headers and not custom_ref:
                     del headers['Referer']
+                    headers['User-Agent'] = 'IPTVSmartersPro'
                     req2 = urllib.request.Request(target_url, headers=headers)
-                    resp = STREAM_OPENER.open(req2, timeout=5)
-                elif he.code == 403 and 'User-Agent' in headers and ua != USER_AGENT:
-                    # Retenter avec User-Agent Chrome classique
+                    resp = STREAM_OPENER.open(req2, timeout=20)
+                elif he.code in (401, 403) and 'User-Agent' in headers and ua != USER_AGENT:
                     headers['User-Agent'] = USER_AGENT
                     req2 = urllib.request.Request(target_url, headers=headers)
-                    resp = STREAM_OPENER.open(req2, timeout=5)
+                    resp = STREAM_OPENER.open(req2, timeout=20)
                 else:
                     raise he
 
@@ -336,12 +335,12 @@ class BOKKStreamProxyHandler(SimpleHTTPRequestHandler):
                     self.end_headers()
                     return
 
-                # Paramètres additionnels à propager dans les sous-playlists et segments
-                extra_q = ""
-                if custom_ref or referer:
-                    extra_q += f"&ref={urllib.parse.quote(referer, safe='')}"
-                if custom_ua:
-                    extra_q += f"&ua={urllib.parse.quote(custom_ua, safe='')}"
+                # Paramètres additionnels à propager dans les sous-playlists et segments :
+                # MegaTV et Xtream Codes nécessitent l'URL de la playlist comme Referer pour autoriser les segments /hlsr/...
+                actual_ref = custom_ref or referer or final_url
+                extra_q = f"&ref={urllib.parse.quote(actual_ref, safe='')}"
+                actual_ua = custom_ua or ua
+                extra_q += f"&ua={urllib.parse.quote(actual_ua, safe='')}"
 
                 # Détection de playlist M3U8
                 target_lower = target_url.lower()
@@ -443,39 +442,25 @@ class BOKKStreamProxyHandler(SimpleHTTPRequestHandler):
                 is_segment = any(target_lower_check.endswith(ext) for ext in SEGMENT_EXTENSIONS)
                 no_range = not self.headers.get('Range')
 
-                if is_segment and no_range and cl_int is not None and cl_int <= 10 * 1024 * 1024 and '/live/' not in target_lower_check:
-                    try:
-                        seg_data = resp.read()
-                        segment_cache_put(target_url, seg_data, out_type)
-                        self.send_response(status_code)
-                        self.send_header('Content-Type', out_type)
-                        self.send_header('Content-Length', str(len(seg_data)))
-                        self.send_header('Accept-Ranges', 'bytes')
-                        self.send_header('Cache-Control', 'public, max-age=10')
-                        self.send_header('X-Cache', 'MISS')
-                        self.end_headers()
-                        self.wfile.write(seg_data)
-                    except (ConnectionResetError, BrokenPipeError, ConnectionAbortedError, OSError):
-                        pass
-                else:
-                    # Streaming continu direct par blocs de 64 KB (flux live MPEG-TS, radio ou gros fichier)
-                    self.send_response(status_code)
-                    self.send_header('Content-Type', out_type)
-                    if content_length:
-                        self.send_header('Content-Length', content_length)
-                    if content_range:
-                        self.send_header('Content-Range', content_range)
-                    self.send_header('Accept-Ranges', 'bytes')
-                    self.send_header('Cache-Control', 'public, max-age=3600')
-                    self.end_headers()
-                    try:
-                        while True:
-                            chunk = resp.read(65536)
-                            if not chunk:
-                                break
-                            self.wfile.write(chunk)
-                    except (ConnectionResetError, BrokenPipeError, ConnectionAbortedError, OSError):
-                        pass
+                # Streaming continu direct par blocs de 64 KB (segments HLS et flux live MPEG-TS)
+                # Envoi immédiat des en-têtes HTTP au navigateur pour éviter les timeouts Hls.js
+                self.send_response(status_code)
+                self.send_header('Content-Type', out_type)
+                if content_length:
+                    self.send_header('Content-Length', content_length)
+                if content_range:
+                    self.send_header('Content-Range', content_range)
+                self.send_header('Accept-Ranges', 'bytes')
+                self.send_header('Cache-Control', 'public, max-age=10')
+                self.end_headers()
+                try:
+                    while True:
+                        chunk = resp.read(65536)
+                        if not chunk:
+                            break
+                        self.wfile.write(chunk)
+                except (ConnectionResetError, BrokenPipeError, ConnectionAbortedError, OSError):
+                    pass
 
         except urllib.error.HTTPError as e:
             try:

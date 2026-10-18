@@ -342,9 +342,8 @@
     }
 
     // ── Détection et résolution de l'URL du flux avec proxy intelligent ──
-    // CF_WORKER_BASE : URL de votre Cloudflare Worker (proxy CDN edge).
-    // Déployez cloudflare_worker.js sur https://workers.cloudflare.com pour activer.
-    const CF_WORKER_BASE = ''; // ex: 'https://bokk-tv-proxy.votrenom.workers.dev'
+    // CF_WORKER_BASE : Cloudflare Worker proxy CDN (300+ edge locations mondiales).
+    const CF_WORKER_BASE = 'https://bokk-tv-proxy.pgueye866.workers.dev';
 
     function resolveStreamUrl(rawUrl, stage = 0, channel = null) {
         if (!rawUrl) return '';
@@ -389,32 +388,36 @@
             proxyBase = `http://${fallbackLocalHost}:8080/proxy`;
         }
 
+        // Détection flux MegaTV HTTP (port 80) — bloqué par Vercel ET Cloudflare datacenters.
+        // On court-circuite directement vers corsproxy.io dès le Stage 1.
+        const isMegaTvHttp = rawUrl.startsWith('http://') &&
+            (rawUrl.includes('megatv5074.com') || rawUrl.includes(':80/live/') || rawUrl.includes(':8080/live/'));
+
         // Stage 0 : Proxy principal (Vercel /api/proxy ou server.py local)
         if (stage === 0) {
             return `${proxyBase}?url=${encodeURIComponent(rawUrl)}${extraParams}`;
         }
 
-        // Stage 1 : Flux direct si déjà HTTPS (évite une couche proxy inutile)
+        // Stage 1 : Cloudflare Worker si configuré
         if (stage === 1) {
-            if (rawUrl.startsWith('https://')) {
-                return rawUrl;
+            if (CF_WORKER_BASE) {
+                return `${CF_WORKER_BASE}/proxy?url=${encodeURIComponent(rawUrl)}${extraParams}`;
             }
-            // Pour les URLs HTTP, repasser par le proxy (même proxy, mais déjà essayé une fois)
             return `${proxyBase}?url=${encodeURIComponent(rawUrl)}${extraParams}`;
         }
 
-        // Stage 2 : Cloudflare Worker (si configuré) — IPs edge non bloquées
+        // Stage 2 : Flux direct si HTTPS, sinon proxy principal
         if (stage === 2) {
-            if (CF_WORKER_BASE) {
-                return `${CF_WORKER_BASE}/proxy?url=${encodeURIComponent(rawUrl)}`;
-            }
-            // Sinon corsproxy.io
-            return `https://corsproxy.io/?url=${encodeURIComponent(rawUrl)}`;
+            if (rawUrl.startsWith('https://')) return rawUrl;
+            return `${proxyBase}?url=${encodeURIComponent(rawUrl)}${extraParams}`;
         }
 
-        // Stage 3 : corsproxy.io en dernier recours
+        // Stage 3 : dernier recours
         if (stage >= 3) {
-            return `https://corsproxy.io/?url=${encodeURIComponent(rawUrl)}`;
+            if (CF_WORKER_BASE) {
+                return `${CF_WORKER_BASE}/proxy?url=${encodeURIComponent(rawUrl)}${extraParams}`;
+            }
+            return `${proxyBase}?url=${encodeURIComponent(rawUrl)}${extraParams}`;
         }
 
         return rawUrl;
@@ -453,14 +456,19 @@
         const activeUrl = (useFallback && channel.fallbackUrl) ? channel.fallbackUrl : channel.url;
         const lowerUrl = (activeUrl || '').toLowerCase().split('?')[0];
 
-        // Détection ultra-précise du type de flux IPTV
+        // Détection ultra-précise du type de flux IPTV :
+        // Les flux se terminant par .ts DOIVENT être lus avec mpegts.js (pas Hls.js !)
         let streamType = 'hls';
         if (activeUrl.includes('embed') || activeUrl.includes('youtube.com') || activeUrl.includes('dailymotion.com')) {
             streamType = 'embed';
-        } else if (lowerUrl.endsWith('.m3u8') || activeUrl.toLowerCase().includes('.m3u8') || channel.type === 'hls') {
-            streamType = 'hls';
-        } else if (lowerUrl.endsWith('.ts') || lowerUrl.endsWith('.mpegts') || channel.type === 'ts') {
+        } else if (lowerUrl.endsWith('.ts') || lowerUrl.endsWith('.mpegts')) {
             streamType = 'ts';
+        } else if (lowerUrl.endsWith('.m3u8') || activeUrl.toLowerCase().includes('.m3u8')) {
+            streamType = 'hls';
+        } else if (channel.type === 'ts') {
+            streamType = 'ts';
+        } else if (channel.type === 'hls') {
+            streamType = 'hls';
         }
 
         const finalUrl = resolveStreamUrl(activeUrl, retryStage, channel);
