@@ -311,12 +311,17 @@
                 }, {
                     enableWorker: true,
                     lazyLoad: false,
+                    // ── Buffer généreux pour connexions lentes ──
                     liveBufferLatencyChasing: true,
-                    liveBufferLatencyMaxLatency: 3.5,
-                    liveBufferLatencyMinRemain: 1.0,
+                    liveBufferLatencyMaxLatency: 10.0,  // tolère jusqu'à 10s de retard
+                    liveBufferLatencyMinRemain: 3.0,    // garde 3s de buffer minimum
+                    // ── Stash buffer plus grand pour absorber les pics de latence ──
+                    enableStashBuffer: true,
+                    stashInitialSize: 512,              // 512 KB de stash initial
+                    // ── Nettoyage auto pour éviter les fuites mémoire ──
                     autoCleanupSourceBuffer: true,
-                    enableStashBuffer: false,
-                    stashInitialSize: 128
+                    autoCleanupMaxBackwardDuration: 30,
+                    autoCleanupMinBackwardDuration: 15
                 });
 
                 mpegtsInstance.attachMediaElement(videoEl);
@@ -363,20 +368,33 @@
             if (typeof Hls !== 'undefined' && Hls.isSupported()) {
                 hlsInstance = new Hls({
                     enableWorker: true,
-                    lowLatencyMode: true,
-                    backBufferLength: 8,
-                    maxBufferLength: 10,
-                    maxMaxBufferLength: 16,
-                    maxBufferSize: 25 * 1000 * 1000,
-                    manifestLoadingTimeOut: 3500,
-                    manifestLoadingMaxRetry: 1,
-                    manifestLoadingRetryDelay: 500,
-                    levelLoadingTimeOut: 3500,
-                    levelLoadingMaxRetry: 1,
-                    fragLoadingTimeOut: 5000,
-                    fragLoadingMaxRetry: 1,
+                    // ── Mode: standard (non low-latency) pour plus de stabilité ──
+                    lowLatencyMode: false,
+                    // ── Buffer: accumule plus avant de lire pour éviter les freezes ──
+                    backBufferLength: 30,
+                    maxBufferLength: 30,          // 30s de buffer (au lieu de 10s)
+                    maxMaxBufferLength: 60,        // jusqu'à 60s si réseau lent
+                    maxBufferSize: 60 * 1000 * 1000, // 60 MB max buffer
+                    // ── Délais réseau tolérants pour connexions lentes ──
+                    manifestLoadingTimeOut: 10000,
+                    manifestLoadingMaxRetry: 3,
+                    manifestLoadingRetryDelay: 1000,
+                    levelLoadingTimeOut: 10000,
+                    levelLoadingMaxRetry: 3,
+                    fragLoadingTimeOut: 20000,    // 20s par segment (connexions très lentes)
+                    fragLoadingMaxRetry: 6,       // 6 tentatives avant abandon
+                    fragLoadingRetryDelay: 1000,
+                    // ── ABR aggressif : baisse vite la qualité pour éviter les pauses ──
+                    abrEwmaDefaultEstimate: 500000,  // Estime départ 500 kbps (prudent)
+                    abrBandWidthFactor: 0.85,        // utilise 85% de la bande passante mesurée
+                    abrBandWidthUpFactor: 0.7,       // monte en qualité doucement
+                    startLevel: -1,                  // -1 = auto (choisit le niveau adapté)
+                    // ── Préchargement pour démarrage plus rapide ──
                     startFragPrefetch: true,
-                    progressive: true
+                    progressive: true,
+                    // ── Récupération automatique après stall ──
+                    nudgeMaxRetry: 5,
+                    maxStarvationDelay: 4
                 });
 
                 hlsInstance.loadSource(finalUrl);
