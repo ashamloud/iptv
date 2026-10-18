@@ -188,6 +188,64 @@
         }
     }
 
+    // ── Gestionnaire de lecture automatique infaillible (Bypass Autoplay Policy) ──
+    let userHasInteracted = false;
+    let mutedAutoplayToastShown = false;
+
+    function enableAudioOnFirstGesture() {
+        userHasInteracted = true;
+        if (videoEl && videoEl.muted) {
+            videoEl.muted = false;
+            videoEl.volume = 1.0;
+            if (volHighIcon) volHighIcon.style.display = 'block';
+            if (volMutedIcon) volMutedIcon.style.display = 'none';
+            if (volumeSlider) volumeSlider.value = 1;
+        }
+        window.removeEventListener('click', enableAudioOnFirstGesture, true);
+        window.removeEventListener('touchstart', enableAudioOnFirstGesture, true);
+        window.removeEventListener('keydown', enableAudioOnFirstGesture, true);
+    }
+    window.addEventListener('click', enableAudioOnFirstGesture, true);
+    window.addEventListener('touchstart', enableAudioOnFirstGesture, true);
+    window.addEventListener('keydown', enableAudioOnFirstGesture, true);
+
+    function attemptAutoPlay(playerEngine = null) {
+        clearPlayerOverlays();
+
+        const doPlay = () => {
+            if (playerEngine && typeof playerEngine.play === 'function') {
+                return playerEngine.play();
+            }
+            return videoEl.play();
+        };
+
+        const promise = doPlay();
+        if (promise && typeof promise.then === 'function') {
+            promise.then(() => {
+                clearPlayerOverlays();
+            }).catch(() => {
+                // Le navigateur bloque l'autoplay avec son : on démarre en sourdine pour forcer la lecture immédiate sans rester sur pause
+                console.log('[BOKK TV] Autoplay avec son restreint par le navigateur. Démarrage automatique sans pause...');
+                videoEl.muted = true;
+                const promiseMuted = doPlay();
+                if (promiseMuted && typeof promiseMuted.then === 'function') {
+                    promiseMuted.then(() => {
+                        clearPlayerOverlays();
+                        if (!mutedAutoplayToastShown && !userHasInteracted) {
+                            mutedAutoplayToastShown = true;
+                            showToast('🔇 Lecture automatique active — Touchez pour le son');
+                        }
+                    }).catch(e => {
+                        console.warn('[BOKK TV] Échec lecture automatique :', e);
+                        clearPlayerOverlays();
+                    });
+                } else {
+                    clearPlayerOverlays();
+                }
+            });
+        }
+    }
+
     // ── Détecteur de vitesse réseau ──
     // Mesure la bande passante réelle en téléchargeant un fichier test
     async function measureNetworkSpeed() {
@@ -432,12 +490,7 @@
                     clearPlayerOverlays();
                 }, { once: true });
 
-                mpegtsInstance.play().then(() => {
-                    clearPlayerOverlays();
-                }).catch(() => {
-                    console.log('[BOKK TV] Autoplay bloqué, attente interaction utilisateur.');
-                    clearPlayerOverlays();
-                });
+                attemptAutoPlay(mpegtsInstance);
 
                 mpegtsInstance.on(mpegts.Events.ERROR, (type, detail, info) => {
                     console.warn(`[BOKK TV] Erreur MPEG-TS (${type}, ${detail}, Stage ${retryStage}) sur ${finalUrl}`);
@@ -519,10 +572,7 @@
                         }
                     }
 
-                    videoEl.play().catch(() => {
-                        console.log('[BOKK TV] Autoplay bloqué, attente interaction.');
-                        clearPlayerOverlays();
-                    });
+                    attemptAutoPlay(videoEl);
                 });
 
                 hlsInstance.on(Hls.Events.ERROR, (_, data) => {
@@ -569,8 +619,7 @@
             } else if (videoEl.canPlayType('application/vnd.apple.mpegurl')) {
                 videoEl.src = finalUrl;
                 videoEl.addEventListener('loadedmetadata', () => {
-                    clearPlayerOverlays();
-                    videoEl.play().catch(() => {});
+                    attemptAutoPlay(videoEl);
                 }, { once: true });
             } else {
                 showPlayerError('Votre navigateur ne prend pas en charge la lecture de ce flux.');
@@ -750,7 +799,10 @@
             </button>
         `;
 
-        card.onclick = () => loadChannel(ch.index);
+        card.onclick = () => {
+            enableAudioOnFirstGesture();
+            loadChannel(ch.index);
+        };
 
         const favBtn = card.querySelector('.card-fav-btn');
         if (favBtn) {
