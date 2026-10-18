@@ -100,6 +100,21 @@ module.exports = async function handler(req, res) {
 
         const contentType = fetchRes.headers.get('content-type') || '';
         const finalUrl = fetchRes.url || targetUrl;
+
+        if (req.query && req.query.debug === '1') {
+            const sampleText = await fetchRes.text();
+            res.statusCode = 200;
+            res.setHeader('Content-Type', 'application/json');
+            return res.end(JSON.stringify({
+                fetchStatus: fetchRes.status,
+                fetchOk: fetchRes.ok,
+                finalUrl: finalUrl,
+                contentType: contentType,
+                headers: Object.fromEntries(fetchRes.headers.entries()),
+                bodyLength: sampleText.length,
+                sample: sampleText.slice(0, 300)
+            }));
+        }
         const isM3u8 = (
             contentType.toLowerCase().includes('mpegurl') ||
             contentType.toLowerCase().includes('m3u') ||
