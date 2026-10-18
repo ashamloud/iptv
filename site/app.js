@@ -492,17 +492,17 @@
                 }, {
                     enableWorker: true,
                     lazyLoad: false,
-                    // ── Buffer généreux pour connexions lentes ──
-                    liveBufferLatencyChasing: true,
-                    liveBufferLatencyMaxLatency: 10.0,  // tolère jusqu'à 10s de retard
-                    liveBufferLatencyMinRemain: 3.0,    // garde 3s de buffer minimum
-                    // ── Stash buffer plus grand pour absorber les pics de latence ──
+                    // ── Buffer ultra-stable pour connexions 1-5 Mbps (évite les saccades) ──
+                    liveBufferLatencyChasing: false,   // Ne pas forcer l'accélération vidéo qui fait ramer
+                    liveBufferLatencyMaxLatency: 30.0,  // tolère jusqu'à 30s de retard pour bufferiser confortablement
+                    liveBufferLatencyMinRemain: 6.0,    // garde 6s de vidéo d'avance minimum
+                    // ── Stash buffer plus grand pour absorber les à-coups ──
                     enableStashBuffer: true,
-                    stashInitialSize: 512,              // 512 KB de stash initial
+                    stashInitialSize: 1024,             // 1 MB de stash
                     // ── Nettoyage auto pour éviter les fuites mémoire ──
                     autoCleanupSourceBuffer: true,
-                    autoCleanupMaxBackwardDuration: 30,
-                    autoCleanupMinBackwardDuration: 15
+                    autoCleanupMaxBackwardDuration: 60,
+                    autoCleanupMinBackwardDuration: 30
                 });
 
                 mpegtsInstance.attachMediaElement(videoEl);
@@ -541,33 +541,35 @@
             if (typeof Hls !== 'undefined' && Hls.isSupported()) {
                 hlsInstance = new Hls({
                     enableWorker: true,
-                    // ── Mode: standard (non low-latency) pour plus de stabilité ──
                     lowLatencyMode: false,
-                    // ── Buffer: accumule plus avant de lire pour éviter les freezes ──
+                    // ── Buffer profond pour connexions 1-5 Mbps : zéro freeze ──
+                    liveSyncDurationCount: 4,          // garde 4 segments d'avance (stabilité totale)
+                    liveMaxLatencyDurationCount: 8,    // marge confortable pour fluctuations de débit
                     backBufferLength: 30,
-                    maxBufferLength: 30,          // 30s de buffer (au lieu de 10s)
-                    maxMaxBufferLength: 60,        // jusqu'à 60s si réseau lent
-                    maxBufferSize: 60 * 1000 * 1000, // 60 MB max buffer
-                    // ── Délais réseau tolérants pour connexions lentes ──
-                    manifestLoadingTimeOut: 10000,
-                    manifestLoadingMaxRetry: 3,
+                    maxBufferLength: 45,               // 45s de buffer vidéo
+                    maxMaxBufferLength: 90,             // jusqu'à 90s si nécessaire
+                    maxBufferSize: 80 * 1000 * 1000,    // 80 MB max buffer
+                    maxBufferHole: 0.8,                // saute les micro-coupures sans freezer
+                    highBufferWatchdogPeriod: 2,
+                    // ── Délais réseau tolérants (évite d'avorter un segment en cours de téléchargement) ──
+                    manifestLoadingTimeOut: 15000,
+                    manifestLoadingMaxRetry: 4,
                     manifestLoadingRetryDelay: 1000,
-                    levelLoadingTimeOut: 10000,
-                    levelLoadingMaxRetry: 3,
-                    fragLoadingTimeOut: 20000,    // 20s par segment (connexions très lentes)
-                    fragLoadingMaxRetry: 6,       // 6 tentatives avant abandon
+                    levelLoadingTimeOut: 15000,
+                    levelLoadingMaxRetry: 4,
+                    fragLoadingTimeOut: 60000,         // 60s par segment (indispensable pour les flux 3-5 Mbps)
+                    fragLoadingMaxRetry: 6,            // 6 tentatives
                     fragLoadingRetryDelay: 1000,
-                    // ── ABR aggressif : baisse vite la qualité pour éviter les pauses ──
-                    abrEwmaDefaultEstimate: 500000,  // Estime départ 500 kbps (prudent)
-                    abrBandWidthFactor: 0.85,        // utilise 85% de la bande passante mesurée
-                    abrBandWidthUpFactor: 0.7,       // monte en qualité doucement
-                    startLevel: -1,                  // -1 = auto (choisit le niveau adapté)
-                    // ── Préchargement pour démarrage plus rapide ──
+                    // ── ABR préventif : démarre léger ──
+                    abrEwmaDefaultEstimate: 400000,    // 400 kbps
+                    abrBandWidthFactor: 0.80,          // n'utilise que 80% du débit pour garder de la marge
+                    abrBandWidthUpFactor: 0.6,
+                    startLevel: -1,
+                    // ── Préchargement fluide ──
                     startFragPrefetch: true,
                     progressive: true,
-                    // ── Récupération automatique après stall ──
-                    nudgeMaxRetry: 5,
-                    maxStarvationDelay: 4
+                    nudgeMaxRetry: 8,
+                    maxStarvationDelay: 5
                 });
 
                 hlsInstance.loadSource(finalUrl);

@@ -34,10 +34,7 @@ SITE_DIR = os.path.dirname(os.path.abspath(__file__))
 SSL_CONTEXT = ssl._create_unverified_context()
 USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
 
-import http.cookiejar
-COOKIE_JAR = http.cookiejar.CookieJar()
 STREAM_OPENER = urllib.request.build_opener(
-    urllib.request.HTTPCookieProcessor(COOKIE_JAR),
     urllib.request.HTTPSHandler(context=SSL_CONTEXT)
 )
 
@@ -448,6 +445,8 @@ class BOKKStreamProxyHandler(SimpleHTTPRequestHandler):
                 self.send_header('Content-Type', out_type)
                 if content_length:
                     self.send_header('Content-Length', content_length)
+                else:
+                    self.send_header('Connection', 'close')
                 if content_range:
                     self.send_header('Content-Range', content_range)
                 self.send_header('Accept-Ranges', 'bytes')
