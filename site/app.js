@@ -194,20 +194,30 @@
 
     function enableAudioOnFirstGesture() {
         userHasInteracted = true;
+        // Unmute video on every interaction (handles channel switches after first load)
         if (videoEl && videoEl.muted) {
             videoEl.muted = false;
-            videoEl.volume = 1.0;
+            videoEl.volume = parseFloat(localStorage.getItem('bokk_volume') || '1');
             if (volHighIcon) volHighIcon.style.display = 'block';
             if (volMutedIcon) volMutedIcon.style.display = 'none';
-            if (volumeSlider) volumeSlider.value = 1;
+            if (volumeSlider) volumeSlider.value = videoEl.volume;
         }
-        window.removeEventListener('click', enableAudioOnFirstGesture, true);
-        window.removeEventListener('touchstart', enableAudioOnFirstGesture, true);
-        window.removeEventListener('keydown', enableAudioOnFirstGesture, true);
     }
+    // Keep listeners always active (not removed) so every channel switch gets unmuted
     window.addEventListener('click', enableAudioOnFirstGesture, true);
     window.addEventListener('touchstart', enableAudioOnFirstGesture, true);
     window.addEventListener('keydown', enableAudioOnFirstGesture, true);
+
+    // Restore unmuted state immediately when loading a channel if user already interacted
+    function ensureUnmuted() {
+        if (userHasInteracted && videoEl && videoEl.muted) {
+            videoEl.muted = false;
+            videoEl.volume = parseFloat(localStorage.getItem('bokk_volume') || '1');
+            if (volHighIcon) volHighIcon.style.display = 'block';
+            if (volMutedIcon) volMutedIcon.style.display = 'none';
+            if (volumeSlider) volumeSlider.value = videoEl.volume;
+        }
+    }
 
     function attemptAutoPlay(playerEngine = null) {
         clearPlayerOverlays();
@@ -358,29 +368,17 @@
         const fallbackLocalHost = (window.location.hostname && window.location.hostname !== '') ? window.location.hostname : '127.0.0.1';
 
         if (rawUrl.startsWith('/')) {
-            if (isPort8080 || (!isLocalHost && !isFileProtocol)) {
-                return rawUrl;
-            }
+            if (isPort8080 || (!isLocalHost && !isFileProtocol)) return rawUrl;
             return `http://${fallbackLocalHost}:8080${rawUrl}`;
         }
-        if (rawUrl.startsWith('data:') || rawUrl.startsWith('blob:')) {
-            return rawUrl;
-        }
+        if (rawUrl.startsWith('data:') || rawUrl.startsWith('blob:')) return rawUrl;
 
         let extraParams = '';
         if (channel) {
-            if (channel.referrer) {
-                extraParams += `&ref=${encodeURIComponent(channel.referrer)}`;
-            }
-            if (channel.userAgent) {
-                extraParams += `&ua=${encodeURIComponent(channel.userAgent)}`;
-            }
+            if (channel.referrer) extraParams += `&ref=${encodeURIComponent(channel.referrer)}`;
+            if (channel.userAgent) extraParams += `&ua=${encodeURIComponent(channel.userAgent)}`;
         }
 
-        // Proxy de base selon l'environnement :
-        // - server.py (port 8080) : /proxy
-        // - Live Server local : http://127.0.0.1:8080/proxy
-        // - Vercel production : /api/proxy
         let proxyBase = '/api/proxy';
         if (isPort8080) {
             proxyBase = '/proxy';
@@ -388,39 +386,35 @@
             proxyBase = `http://${fallbackLocalHost}:8080/proxy`;
         }
 
-        // Détection flux MegaTV HTTP (port 80) — bloqué par Vercel ET Cloudflare datacenters.
-        // On court-circuite directement vers corsproxy.io dès le Stage 1.
+        // ── MegaTV HTTP (megatv5074.com) : bloqué par Vercel.
+        // En production (non-local), on route DIRECTEMENT vers le CF Worker dès le Stage 0.
         const isMegaTvHttp = rawUrl.startsWith('http://') &&
-            (rawUrl.includes('megatv5074.com') || rawUrl.includes(':80/live/') || rawUrl.includes(':8080/live/'));
+            (rawUrl.includes('megatv5074.com') || rawUrl.includes('megatv'));
+        const isProduction = !isPort8080 && !isLocalHost && !isFileProtocol;
 
-        // Stage 0 : Proxy principal (Vercel /api/proxy ou server.py local)
-        if (stage === 0) {
-            return `${proxyBase}?url=${encodeURIComponent(rawUrl)}${extraParams}`;
+        if (isMegaTvHttp && isProduction && CF_WORKER_BASE) {
+            // Toujours CF Worker pour MegaTV en production, quel que soit le stage
+            return `${CF_WORKER_BASE}/proxy?url=${encodeURIComponent(rawUrl)}${extraParams}`;
         }
 
-        // Stage 1 : Cloudflare Worker si configuré
+        // Stage 0 : Proxy principal
+        if (stage === 0) return `${proxyBase}?url=${encodeURIComponent(rawUrl)}${extraParams}`;
+
+        // Stage 1 : Cloudflare Worker
         if (stage === 1) {
-            if (CF_WORKER_BASE) {
-                return `${CF_WORKER_BASE}/proxy?url=${encodeURIComponent(rawUrl)}${extraParams}`;
-            }
+            if (CF_WORKER_BASE) return `${CF_WORKER_BASE}/proxy?url=${encodeURIComponent(rawUrl)}${extraParams}`;
             return `${proxyBase}?url=${encodeURIComponent(rawUrl)}${extraParams}`;
         }
 
-        // Stage 2 : Flux direct si HTTPS, sinon proxy principal
+        // Stage 2 : Direct HTTPS ou proxy
         if (stage === 2) {
             if (rawUrl.startsWith('https://')) return rawUrl;
             return `${proxyBase}?url=${encodeURIComponent(rawUrl)}${extraParams}`;
         }
 
-        // Stage 3 : dernier recours
-        if (stage >= 3) {
-            if (CF_WORKER_BASE) {
-                return `${CF_WORKER_BASE}/proxy?url=${encodeURIComponent(rawUrl)}${extraParams}`;
-            }
-            return `${proxyBase}?url=${encodeURIComponent(rawUrl)}${extraParams}`;
-        }
-
-        return rawUrl;
+        // Stage 3+ : CF Worker dernier recours
+        if (CF_WORKER_BASE) return `${CF_WORKER_BASE}/proxy?url=${encodeURIComponent(rawUrl)}${extraParams}`;
+        return `${proxyBase}?url=${encodeURIComponent(rawUrl)}${extraParams}`;
     }
 
     // ── Chargement d'une chaîne (Support Dual Engine MPEG-TS & HLS) ──
@@ -458,6 +452,7 @@
 
         updateFavButtons();
         highlightActiveChannel();
+        ensureUnmuted();   // ← Rétablir le son si l'utilisateur avait déjà interagi
 
         const activeUrl = (useFallback && channel.fallbackUrl) ? channel.fallbackUrl : channel.url;
         const lowerUrl = (activeUrl || '').toLowerCase().split('?')[0];
