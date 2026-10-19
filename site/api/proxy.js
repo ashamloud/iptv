@@ -12,7 +12,10 @@ const RTS_CHANNELS = {
     'rts4':    51,
     'rts5':    52,
     'sentv':    2,
-    'leraltv': 35
+    '2stv':    29,
+    'leraltv': 35,
+    'walftv':  33,
+    'walf':    33
 };
 const rtsCache = {};
 
@@ -136,6 +139,7 @@ module.exports = async function handler(req, res) {
 
         if (isM3u8) {
             const buf  = await streamToBuffer(upstream);
+            const text = buf.toString('utf-8');
             const extraRef = req.query.ref || targetUrl;
             const extraQ = `&ref=${encodeURIComponent(extraRef)}&ua=IPTVSmartersPro`;
             const rewritten = text.split(/\r?\n/).map(line => {

@@ -446,7 +446,13 @@
         showPlayerLoader();
         if (nowPlayingTitle) nowPlayingTitle.textContent = channel.name;
         if (playerName) playerName.textContent = channel.name;
-        if (playerLogo) playerLogo.src = channel.logo || 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg"/>';
+        if (playerLogo) {
+            playerLogo.src = getValidChannelLogo(channel);
+            playerLogo.onerror = function() {
+                this.onerror = null;
+                this.src = generateLogoBadgeSvg(channel.name, channel.category);
+            };
+        }
         if (playerCat) playerCat.textContent = channel.category.toUpperCase();
         if (playerBadge) playerBadge.textContent = channel.badge || 'HD';
 
@@ -493,12 +499,12 @@
                     enableWorker: true,
                     lazyLoad: false,
                     // ── Buffer ultra-stable pour connexions 1-5 Mbps (évite les saccades) ──
-                    liveBufferLatencyChasing: false,   // Ne pas forcer l'accélération vidéo qui fait ramer
-                    liveBufferLatencyMaxLatency: 30.0,  // tolère jusqu'à 30s de retard pour bufferiser confortablement
-                    liveBufferLatencyMinRemain: 6.0,    // garde 6s de vidéo d'avance minimum
-                    // ── Stash buffer plus grand pour absorber les à-coups ──
+                    liveBufferLatencyChasing: false,   // Ne JAMAIS accélérer la vidéo (cause n°1 des saccades)
+                    liveBufferLatencyMaxLatency: 45.0,  // tolère jusqu'à 45s de retard pour bufferiser confortablement
+                    liveBufferLatencyMinRemain: 8.0,    // garde 8s de vidéo d'avance minimum
+                    // ── Stash buffer adapté pour démarrage rapide et régularité ──
                     enableStashBuffer: true,
-                    stashInitialSize: 1024,             // 1 MB de stash
+                    stashInitialSize: 384,              // 384 KB pour démarrer vite sans buffer underrun
                     // ── Nettoyage auto pour éviter les fuites mémoire ──
                     autoCleanupSourceBuffer: true,
                     autoCleanupMaxBackwardDuration: 60,
@@ -535,41 +541,44 @@
                 videoEl.play().catch(() => {});
             }
         } else {
-            // ── LECTEUR HLS (.M3U8) ──
+            // ── LECTEUR HLS (.M3U8) OPTIMISÉ CONNEXION FAIBLE ──
             videoEl.style.display = 'block';
 
             if (typeof Hls !== 'undefined' && Hls.isSupported()) {
                 hlsInstance = new Hls({
                     enableWorker: true,
                     lowLatencyMode: false,
-                    // ── Buffer profond pour connexions 1-5 Mbps : zéro freeze ──
-                    liveSyncDurationCount: 4,          // garde 4 segments d'avance (stabilité totale)
-                    liveMaxLatencyDurationCount: 8,    // marge confortable pour fluctuations de débit
+                    // ── Démarrage fluide immédiat sur profil léger ──
+                    startLevel: 0,                     // Démarre sur le profil le plus léger pour 0 freeze au lancement
+                    capLevelToPlayerSize: true,        // Ne pas charger du 1080p inutile si l'écran affiche en 720p
+                    // ── Buffer profond pour connexions modestes : absorption totale des chutes de débit ──
+                    liveSyncDurationCount: 4,          // 4 segments d'avance
+                    liveMaxLatencyDurationCount: 10,   // marge généreuse pour absorber les baisses
                     backBufferLength: 30,
-                    maxBufferLength: 45,               // 45s de buffer vidéo
-                    maxMaxBufferLength: 90,             // jusqu'à 90s si nécessaire
-                    maxBufferSize: 80 * 1000 * 1000,    // 80 MB max buffer
-                    maxBufferHole: 0.8,                // saute les micro-coupures sans freezer
+                    maxBufferLength: 60,               // 60s de buffer vidéo d'avance
+                    maxMaxBufferLength: 120,           // jusqu'à 2 minutes si nécessaire
+                    maxBufferSize: 90 * 1000 * 1000,
+                    maxBufferHole: 1.0,                // saute immédiatement les micro-trous sans pause
                     highBufferWatchdogPeriod: 2,
-                    // ── Délais réseau tolérants (évite d'avorter un segment en cours de téléchargement) ──
-                    manifestLoadingTimeOut: 15000,
-                    manifestLoadingMaxRetry: 4,
+                    // ── Délais réseau très tolérants pour connexions lentes ──
+                    manifestLoadingTimeOut: 30000,
+                    manifestLoadingMaxRetry: 5,
                     manifestLoadingRetryDelay: 1000,
-                    levelLoadingTimeOut: 15000,
-                    levelLoadingMaxRetry: 4,
-                    fragLoadingTimeOut: 60000,         // 60s par segment (indispensable pour les flux 3-5 Mbps)
-                    fragLoadingMaxRetry: 6,            // 6 tentatives
+                    levelLoadingTimeOut: 30000,
+                    levelLoadingMaxRetry: 5,
+                    fragLoadingTimeOut: 60000,         // 60s par segment (évite d'annuler les téléchargements lents)
+                    fragLoadingMaxRetry: 6,
                     fragLoadingRetryDelay: 1000,
-                    // ── ABR préventif : démarre léger ──
-                    abrEwmaDefaultEstimate: 400000,    // 400 kbps
-                    abrBandWidthFactor: 0.80,          // n'utilise que 80% du débit pour garder de la marge
-                    abrBandWidthUpFactor: 0.6,
-                    startLevel: -1,
+                    // ── ABR conservateur pour connexion ~2.5 Mbps ──
+                    abrEwmaDefaultEstimate: 1800000,   // estimation réaliste 1.8 Mbps
+                    abrBandWidthFactor: 0.70,          // n'utilise que 70% de la bande passante estimée
+                    abrBandWidthUpFactor: 0.50,        // ne monte en qualité que si le débit est vraiment solide
+                    abrMaxWithRealBitrate: true,
                     // ── Préchargement fluide ──
                     startFragPrefetch: true,
                     progressive: true,
-                    nudgeMaxRetry: 8,
-                    maxStarvationDelay: 5
+                    nudgeMaxRetry: 10,
+                    maxStarvationDelay: 6
                 });
 
                 hlsInstance.loadSource(finalUrl);
@@ -789,6 +798,68 @@
         });
     }
 
+    // ── Générateur de badge SVG personnalisé haute fidélité pour chaînes sans logo ──
+    const LOGO_PALETTES = [
+        ['#4f46e5', '#7c3aed'], // Indigo / Violet
+        ['#059669', '#10b981'], // Vert émeraude (Sport)
+        ['#dc2626', '#f97316'], // Rouge / Orange
+        ['#2563eb', '#06b6d4'], // Bleu / Cyan (News/Général)
+        ['#7c2d12', '#d97706'], // Ambre / Bronze
+        ['#be185d', '#ec4899'], // Rose / Framboise (Cinéma/Séries)
+        ['#047857', '#eab308']  // Sénégal (Vert/Jaune)
+    ];
+
+    function getChannelInitials(name) {
+        if (!name) return 'TV';
+        let clean = name.replace(/^(FR\s*[-:|]\s*|SN\s*[-:|]\s*|UK\s*[-:|]\s*|US\s*[-:|]\s*)/i, '')
+                        .replace(/\((Officiel|HD|FHD|4K|Direct)[^)]*\)/gi, '')
+                        .replace(/\b(FHD|HD|HEVC|4K|UHD|SD|H265|RAW|1080p|720p)\b/gi, '')
+                        .trim();
+        if (!clean) clean = name;
+        const words = clean.split(/[\s\-_.:/]+/).filter(w => w.length > 0);
+        if (words.length === 1) {
+            return words[0].slice(0, 3).toUpperCase();
+        }
+        if (words.length >= 2) {
+            const first = words[0];
+            if (first.length <= 3 && /^[A-Z0-9+]+$/i.test(first)) {
+                return (first + (words[1] ? words[1][0] : '')).slice(0, 4).toUpperCase();
+            }
+            return (words[0][0] + words[1][0]).toUpperCase();
+        }
+        return clean.slice(0, 3).toUpperCase();
+    }
+
+    function generateLogoBadgeSvg(name, category = '') {
+        const initials = getChannelInitials(name);
+        let hash = 0;
+        for (let i = 0; i < (name || '').length; i++) {
+            hash = (hash << 5) - hash + name.charCodeAt(i);
+            hash |= 0;
+        }
+        const palIdx = Math.abs(hash) % LOGO_PALETTES.length;
+        const [c1, c2] = LOGO_PALETTES[palIdx];
+        
+        const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+            <defs>
+                <linearGradient id="g_${Math.abs(hash)}" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="${c1}"/>
+                    <stop offset="100%" stop-color="${c2}"/>
+                </linearGradient>
+            </defs>
+            <rect width="100" height="100" rx="22" fill="url(#g_${Math.abs(hash)})"/>
+            <text x="50" y="58" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="${initials.length > 3 ? '25' : (initials.length > 2 ? '29' : '36')}" font-weight="800" fill="#ffffff" text-anchor="middle" letter-spacing="-0.5">${initials}</text>
+        </svg>`;
+        return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
+    }
+
+    function getValidChannelLogo(ch) {
+        if (!ch || !ch.logo || ch.logo.includes('go4.pw') || ch.logo.trim() === '') {
+            return generateLogoBadgeSvg(ch ? ch.name : '', ch ? ch.category : '');
+        }
+        return ch.logo;
+    }
+
     // ── Création d'une carte de chaîne ──
     function createChannelCard(ch) {
         // En-tête de section (ex: ##### FRANCE GENERAL FHD #####)
@@ -804,14 +875,16 @@
         card.dataset.index = ch.index;
 
         const isFav = isFavorite(ch.id);
+        const logoSrc = getValidChannelLogo(ch);
+        const fallbackSvg = generateLogoBadgeSvg(ch.name, ch.category);
 
         card.innerHTML = `
             <div class="card-logo-wrap">
-                <img class="card-logo" src="${ch.logo || ''}" alt="${ch.name}" loading="lazy" onerror="this.src='data:image/svg+xml,<svg xmlns=\\'http://www.w3.org/2000/svg\\' viewBox=\\'0 0 24 24\\' fill=\\'%236366f1\\'><circle cx=\\'12\\' cy=\\'12\\' r=\\'10\\'/></svg>'">
+                <img class="card-logo" src="${logoSrc}" alt="${ch.name}" loading="lazy" onerror="this.onerror=null;this.src='${fallbackSvg}';">
             </div>
             <div class="card-content">
                 <div class="card-top">
-                    <span class="card-title">${ch.name}</span>
+                    <span class="card-title" title="${ch.name}">${ch.name}</span>
                     <span class="card-badge">${ch.badge || 'HD'}</span>
                 </div>
                 <div class="card-subtitle">${ch.group || ch.desc || ch.category}</div>
@@ -1087,12 +1160,16 @@
     }
 
     // ── Basculer entre Vue Liste et Vue Grille ──
+    const appSidebar = document.getElementById('app-sidebar');
+
     if (btnViewList) {
         btnViewList.onclick = () => {
             isGridView = false;
             localStorage.setItem('bokk_tv_view', 'list');
             btnViewList.classList.add('active');
             if (btnViewGrid) btnViewGrid.classList.remove('active');
+            document.body.classList.remove('grid-view-active');
+            if (appSidebar) appSidebar.classList.remove('grid-expanded');
             renderChannelList();
         };
     }
@@ -1103,6 +1180,8 @@
             localStorage.setItem('bokk_tv_view', 'grid');
             btnViewGrid.classList.add('active');
             if (btnViewList) btnViewList.classList.remove('active');
+            document.body.classList.add('grid-view-active');
+            if (appSidebar) appSidebar.classList.add('grid-expanded');
             renderChannelList();
         };
     }
@@ -1525,9 +1604,11 @@
 
     // ── Initialisation ──
     function init() {
-        if (isGridView && btnViewGrid && btnViewList) {
-            btnViewGrid.classList.add('active');
-            btnViewList.classList.remove('active');
+        if (isGridView) {
+            if (btnViewGrid) btnViewGrid.classList.add('active');
+            if (btnViewList) btnViewList.classList.remove('active');
+            document.body.classList.add('grid-view-active');
+            if (appSidebar) appSidebar.classList.add('grid-expanded');
         }
 
         // Détection automatique du pays de l'utilisateur par défaut

@@ -90,7 +90,11 @@ RTS_CHANNELS = {
     'rts3': 42,
     'rts4': 51,
     'rts5': 52,
-    'sentv': 2
+    'sentv': 2,
+    '2stv': 29,
+    'leraltv': 35,
+    'walftv': 33,
+    'walf': 33
 }
 RTS_TOKEN_CACHE = {}
 

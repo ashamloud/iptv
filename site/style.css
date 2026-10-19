@@ -865,15 +865,21 @@ h1, h2, h3, .brand-text {
     color: var(--gold);
 }
 
-/* ── Grid View Mode ── */
+/* ── Grid View Mode (Moderne, Aéré, Typographie Lisible) ── */
+.app-sidebar.grid-expanded,
+body.grid-view-active .app-sidebar {
+    width: 540px !important;
+}
+
 .channel-list-scroll.grid-mode {
     display: grid !important;
-    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-    gap: 8px !important;
+    grid-template-columns: repeat(auto-fill, minmax(145px, 1fr)) !important;
+    gap: 10px !important;
     align-content: flex-start !important;
     box-sizing: border-box !important;
     width: 100% !important;
     max-width: 100% !important;
+    padding: 10px !important;
     overflow-x: hidden !important;
 }
 
@@ -886,38 +892,78 @@ h1, h2, h3, .brand-text {
     overflow: hidden !important;
     text-overflow: ellipsis !important;
     white-space: nowrap !important;
+    font-size: 0.72rem !important;
+    padding: 6px 10px !important;
+    margin: 4px 0 !important;
 }
 
 .channel-list-scroll.grid-mode .channel-card {
+    display: flex !important;
     flex-direction: column !important;
-    align-items: flex-start !important;
-    padding: 10px !important;
-    gap: 6px !important;
+    align-items: center !important;
+    text-align: center !important;
+    padding: 10px 8px 8px !important;
+    gap: 8px !important;
     min-width: 0 !important;
     max-width: 100% !important;
     width: 100% !important;
+    background: var(--bg-surface-elevated) !important;
+    border: 1px solid var(--border-subtle) !important;
+    border-radius: var(--radius-md) !important;
     box-sizing: border-box !important;
     overflow: hidden !important;
     position: relative !important;
+    cursor: pointer !important;
+    transition: transform var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast) !important;
+}
+
+.channel-list-scroll.grid-mode .channel-card:hover {
+    transform: translateY(-2px) !important;
+    background: var(--bg-card-hover) !important;
+    border-color: var(--border-glow) !important;
+    box-shadow: 0 8px 20px rgba(99, 102, 241, 0.2) !important;
+}
+
+.channel-list-scroll.grid-mode .channel-card.active {
+    background: rgba(99, 102, 241, 0.16) !important;
+    border-color: var(--brand) !important;
+    box-shadow: 0 0 16px rgba(99, 102, 241, 0.35) !important;
+}
+
+.channel-list-scroll.grid-mode .channel-card.active::before {
+    display: none !important;
 }
 
 .channel-list-scroll.grid-mode .card-logo-wrap {
     width: 100% !important;
-    height: 64px !important;
-    border-radius: var(--radius-md) !important;
+    height: 68px !important;
+    border-radius: var(--radius-sm) !important;
+    background: rgba(255, 255, 255, 0.03) !important;
+    border: 1px solid rgba(255, 255, 255, 0.06) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    overflow: hidden !important;
     box-sizing: border-box !important;
 }
 
 .channel-list-scroll.grid-mode .card-logo {
+    max-width: 85% !important;
+    max-height: 85% !important;
+    width: auto !important;
+    height: auto !important;
     object-fit: contain !important;
-    padding: 4px !important;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5)) !important;
 }
 
 .channel-list-scroll.grid-mode .card-content {
     width: 100% !important;
     min-width: 0 !important;
     max-width: 100% !important;
-    overflow: hidden !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    gap: 3px !important;
     box-sizing: border-box !important;
 }
 
@@ -927,42 +973,60 @@ h1, h2, h3, .brand-text {
     max-width: 100% !important;
     display: flex !important;
     align-items: center !important;
-    gap: 4px !important;
+    justify-content: center !important;
     box-sizing: border-box !important;
-    overflow: hidden !important;
 }
 
 .channel-list-scroll.grid-mode .card-title {
-    flex: 1 1 0 !important;
+    font-size: 0.8rem !important;
+    font-weight: 600 !important;
+    color: var(--text-primary) !important;
+    width: 100% !important;
     min-width: 0 !important;
     max-width: 100% !important;
-    width: 0 !important;
+    line-height: 1.25 !important;
+    text-align: center !important;
+    white-space: normal !important;
+    display: -webkit-box !important;
+    -webkit-line-clamp: 2 !important;
+    -webkit-box-orient: vertical !important;
     overflow: hidden !important;
     text-overflow: ellipsis !important;
-    white-space: nowrap !important;
-    display: block !important;
+}
+
+.channel-list-scroll.grid-mode .channel-card.active .card-title {
+    color: var(--brand-light) !important;
 }
 
 .channel-list-scroll.grid-mode .card-badge {
-    flex-shrink: 0 !important;
+    position: absolute !important;
+    top: 6px !important;
+    left: 6px !important;
+    font-size: 0.58rem !important;
+    padding: 1px 4px !important;
+    border-radius: 3px !important;
+    background: rgba(0, 0, 0, 0.6) !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    z-index: 2 !important;
 }
 
 .channel-list-scroll.grid-mode .card-subtitle {
-    min-width: 0 !important;
-    max-width: 100% !important;
-    width: 100% !important;
+    font-size: 0.68rem !important;
+    color: var(--text-muted) !important;
+    white-space: nowrap !important;
     overflow: hidden !important;
     text-overflow: ellipsis !important;
-    white-space: nowrap !important;
-    display: block !important;
+    max-width: 100% !important;
 }
 
 .channel-list-scroll.grid-mode .card-fav-btn {
     position: absolute !important;
-    top: 6px !important;
-    right: 6px !important;
-    width: 28px !important;
-    height: 28px !important;
+    top: 4px !important;
+    right: 4px !important;
+    width: 26px !important;
+    height: 26px !important;
+    border-radius: 50% !important;
+    background: rgba(0, 0, 0, 0.55) !important;
     z-index: 2 !important;
 }
 
@@ -1241,7 +1305,7 @@ body.theater-mode .app-sidebar {
     html {
         height: auto !important;
         min-height: 100% !important;
-        overflow-x: hidden !important;
+        overflow-x: clip !important;
         overflow-y: scroll !important;
         -webkit-overflow-scrolling: touch !important;
     }
@@ -1249,7 +1313,7 @@ body.theater-mode .app-sidebar {
     body {
         height: auto !important;
         min-height: 100% !important;
-        overflow-x: hidden !important;
+        overflow-x: clip !important;
         overflow-y: visible !important;
         display: block !important;
         position: static !important;
@@ -1261,17 +1325,17 @@ body.theater-mode .app-sidebar {
     .app-sidebar,
     .channel-list-scroll {
         touch-action: pan-y !important;
-        overflow-x: hidden !important;
+        overflow-x: clip !important;
         max-width: 100% !important;
         box-sizing: border-box !important;
     }
 
-    /* ── HEADER MOBILE ── */
+    /* ── HEADER MOBILE (DÉFILE NATURELLEMENT POUR LIBÉRER L'ESPACE) ── */
     .app-header {
-        position: sticky;
-        top: 0;
-        z-index: 110;
-        height: 52px;
+        position: relative !important;
+        top: auto !important;
+        z-index: 50;
+        height: 50px;
         padding: 0 12px;
         padding-top: env(safe-area-inset-top, 0);
     }
@@ -1346,21 +1410,21 @@ body.theater-mode .app-sidebar {
         box-sizing: border-box !important;
     }
 
-    /* ── LECTEUR VIDÉO MOBILE (STICKY PINNÉ SOUS LE HEADER EN 16:9) ── */
+    /* ── LECTEUR VIDÉO MOBILE (STICKY PINNÉ TOUT EN HAUT À TOP: 0) ── */
     .player-container {
         position: -webkit-sticky !important;
         position: sticky !important;
-        top: 52px !important;
-        z-index: 95 !important;
+        top: 0 !important;
+        z-index: 100 !important;
         width: 100% !important;
         aspect-ratio: 16 / 9 !important;
         height: auto !important;
         min-height: unset !important;
-        max-height: 42vh !important;
+        max-height: 40vh !important;
         flex: none !important;
         background: #000 !important;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.8) !important;
+        border-bottom: 2px solid rgba(99, 102, 241, 0.4) !important;
+        box-shadow: 0 6px 24px rgba(0, 0, 0, 0.9) !important;
     }
 
     .player-placeholder {
@@ -1514,17 +1578,14 @@ body.theater-mode .app-sidebar {
         box-sizing: border-box;
     }
 
-    /* Catégories défilantes horizontalement sur mobile */
+    /* Catégories défilantes horizontalement sur mobile (défilement naturel sous le lecteur) */
     .categories-bar {
-        position: -webkit-sticky !important;
-        position: sticky !important;
-        top: calc(52px + 42vw) !important;
-        z-index: 85 !important;
+        position: relative !important;
+        top: auto !important;
+        z-index: 5 !important;
         padding: 8px 12px !important;
         gap: 6px !important;
-        background: rgba(10, 16, 28, 0.98) !important;
-        backdrop-filter: blur(20px) !important;
-        -webkit-backdrop-filter: blur(20px) !important;
+        background: rgba(10, 16, 28, 0.95) !important;
         border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
         overflow-x: auto !important;
         -webkit-overflow-scrolling: touch !important;
