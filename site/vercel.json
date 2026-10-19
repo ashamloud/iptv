@@ -2,6 +2,15 @@
   "version": 2,
   "cleanUrls": true,
   "name": "bokk-tv",
+  "functions": {
+    "api/proxy.js": {
+      "maxDuration": 30,
+      "memory": 512
+    }
+  },
+  "rewrites": [
+    { "source": "/proxy", "destination": "/api/proxy" }
+  ],
   "headers": [
     {
       "source": "/(.*)",
