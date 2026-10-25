@@ -1,4 +1,4 @@
-﻿// ═══════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════
 // BOKK TV — Application Controller
 // HLS.js Engine, Channel Navigation, Favorites, Player Controls & UI
 // ═══════════════════════════════════════════════════════════════
@@ -374,10 +374,10 @@
         if (rawUrl.startsWith('data:') || rawUrl.startsWith('blob:')) return rawUrl;
 
         let extraParams = '';
-        if (channel) {
-            if (channel.referrer) extraParams += `&ref=${encodeURIComponent(channel.referrer)}`;
-            if (channel.userAgent) extraParams += `&ua=${encodeURIComponent(channel.userAgent)}`;
-        }
+        const isMegaTv = rawUrl.includes('megatv') || rawUrl.includes(':80/live/') || rawUrl.includes(':8080/live/');
+        const ua = (channel && channel.userAgent) ? channel.userAgent : (isMegaTv ? 'IPTVSmartersPro' : 'IPTVSmartersPro');
+        extraParams += `&ua=${encodeURIComponent(ua)}`;
+        if (channel && channel.referrer) extraParams += `&ref=${encodeURIComponent(channel.referrer)}`;
 
         const isProduction = !isPort8080 && !isLocalHost && !isFileProtocol;
 
@@ -579,7 +579,33 @@
                     attemptAutoPlay(videoEl);
                 });
 
+                // ── Sélection automatique de la piste audio compatible (ex: TF1 FHD avec Dolby/E-AC3) ──
+                hlsInstance.on(Hls.Events.AUDIO_TRACKS_UPDATED, (_, data) => {
+                    if (data && data.audioTracks && data.audioTracks.length > 1) {
+                        const tracks = data.audioTracks;
+                        const aacIndex = tracks.findIndex(t => {
+                            const n = (t.name || '').toLowerCase();
+                            const c = (t.audioCodec || '').toLowerCase();
+                            return c.includes('mp4a') || c.includes('aac') || n.includes('stereo') || n.includes('aac') || (!n.includes('dolby') && !n.includes('5.1') && !c.includes('ec-3') && !c.includes('ac-3'));
+                        });
+                        if (aacIndex !== -1 && aacIndex !== hlsInstance.audioTrack) {
+                            console.log(`[BOKK TV] Bascule automatique piste audio compatible (index ${aacIndex}, ${tracks[aacIndex].name || tracks[aacIndex].audioCodec})`);
+                            hlsInstance.audioTrack = aacIndex;
+                        }
+                    }
+                });
+
                 hlsInstance.on(Hls.Events.ERROR, (_, data) => {
+                    // Si le navigateur rejette un codec audio spécifique (ex: E-AC3 Dolby)
+                    if (data.details === 'bufferAddCodecError' && data.mimeType && data.mimeType.includes('audio')) {
+                        console.warn('[BOKK TV] Codec audio incompatible avec le navigateur, essai piste alternative...');
+                        if (hlsInstance.audioTracks && hlsInstance.audioTracks.length > 1) {
+                            const nextTrack = (hlsInstance.audioTrack + 1) % hlsInstance.audioTracks.length;
+                            hlsInstance.audioTrack = nextTrack;
+                            return;
+                        }
+                    }
+
                     if (data.fatal) {
                         switch (data.type) {
                             case Hls.ErrorTypes.NETWORK_ERROR:
