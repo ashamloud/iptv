@@ -351,9 +351,9 @@
         }
     }
 
-    // ── Détection et résolution de l'URL du flux avec proxy intelligent ──
-    // CF_WORKER_BASE : Cloudflare Worker proxy CDN (300+ edge locations mondiales).
-    const CF_WORKER_BASE = 'https://bokk-tv-proxy.pgueye866.workers.dev';
+    // Proxies Cloud haute disponibilité
+    const RENDER_PROXY_BASE = 'https://iptv-vbm1.onrender.com';
+    const CF_WORKER_BASE    = 'https://bokk-tv-proxy.pgueye866.workers.dev';
 
     function resolveStreamUrl(rawUrl, stage = 0, channel = null) {
         if (!rawUrl) return '';
@@ -381,13 +381,24 @@
 
         const isProduction = !isPort8080 && !isLocalHost && !isFileProtocol;
 
-        // ── EN PRODUCTION : CF Worker est le proxy principal pour TOUS les flux ──
-        // Résout CORS + Mixed Content HTTP→HTTPS + IPs bloquées par Vercel en un seul passage.
-        if (isProduction && CF_WORKER_BASE) {
-            if (stage <= 1) return `${CF_WORKER_BASE}/proxy?url=${encodeURIComponent(rawUrl)}${extraParams}`;
-            if (stage === 2) return `/api/proxy?url=${encodeURIComponent(rawUrl)}${extraParams}`;
-            if (rawUrl.startsWith('https://')) return rawUrl;
-            return `${CF_WORKER_BASE}/proxy?url=${encodeURIComponent(rawUrl)}${extraParams}`;
+        // ── EN PRODUCTION : Proxy Render haute compatibilité (non bloqué par MegaTV) ──
+        if (isProduction) {
+            // Stage 0 : Proxy Render principal (supporte MegaTV + RTS + tous flux HTTP)
+            if (stage === 0 && RENDER_PROXY_BASE) {
+                return `${RENDER_PROXY_BASE}/proxy?url=${encodeURIComponent(rawUrl)}${extraParams}`;
+            }
+            // Stage 1 : Fallback Cloudflare Worker
+            if (stage === 1 && CF_WORKER_BASE) {
+                return `${CF_WORKER_BASE}/proxy?url=${encodeURIComponent(rawUrl)}${extraParams}`;
+            }
+            // Stage 2 : Fallback Vercel /api/proxy
+            if (stage === 2) {
+                return `/api/proxy?url=${encodeURIComponent(rawUrl)}${extraParams}`;
+            }
+            // Stage 3+ : Retour sur Render
+            if (RENDER_PROXY_BASE) {
+                return `${RENDER_PROXY_BASE}/proxy?url=${encodeURIComponent(rawUrl)}${extraParams}`;
+            }
         }
 
         // ── EN LOCAL : server.py (port 8080) ──

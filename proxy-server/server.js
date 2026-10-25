@@ -35,6 +35,7 @@ function nodeFetch(targetUrl, extraHeaders, maxRedirects) {
                     nodeFetch(next, extraHeaders, maxRedirects - 1).then(resolve).catch(reject);
                     return;
                 }
+                res.finalUrl = targetUrl;
                 resolve(res);
             });
             req.on("timeout", () => req.destroy(new Error("Timeout")));
@@ -116,19 +117,20 @@ const server = http.createServer(async (req, res) => {
         const isM3u8 = ct.includes("mpegurl") || ct.includes("m3u") || lo.endsWith(".m3u8") || lo.endsWith(".m3u");
 
         if (isM3u8) {
+            const finalBaseUrl = upstream.finalUrl || targetUrl;
             const text = (await streamToBuffer(upstream)).toString("utf-8");
-            const xq = `&ref=${encodeURIComponent(parsed.query.ref || targetUrl)}&ua=IPTVSmartersPro`;
+            const xq = `&ref=${encodeURIComponent(parsed.query.ref || finalBaseUrl)}&ua=IPTVSmartersPro`;
             const rewritten = text.split(/\r?\n/).map(line => {
                 const t = line.trim();
                 if (!t) return line;
                 if (t.startsWith("#")) {
                     if (t.includes('URI="')) return line.replace(/URI="([^"]+)"/g, (_, p1) => {
-                        try { return `URI="${currentBase}/proxy?url=${encodeURIComponent(new URL(p1, targetUrl).href)}${xq}"`; }
+                        try { return `URI="${currentBase}/proxy?url=${encodeURIComponent(new URL(p1, finalBaseUrl).href)}${xq}"`; }
                         catch { return `URI="${p1}"`; }
                     });
                     return line;
                 }
-                try { return `${currentBase}/proxy?url=${encodeURIComponent(new URL(t, targetUrl).href)}${xq}`; }
+                try { return `${currentBase}/proxy?url=${encodeURIComponent(new URL(t, finalBaseUrl).href)}${xq}`; }
                 catch { return line; }
             });
             const body = Buffer.from(rewritten.join("\n"), "utf-8");
