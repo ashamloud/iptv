@@ -83,7 +83,7 @@ async function handleProxy(request, url, ctx) {
   }
 
   if (!resp.ok && resp.status !== 206) {
-    return new Response(`Erreur source : ${resp.status}`, { status: resp.status, headers: corsHeaders() });
+    return new Response(`Erreur source : ${resp.status} [redirects: ${redirects}, finalUrl: ${finalUrl}]`, { status: resp.status, headers: corsHeaders() });
   }
 
   const contentType = (resp.headers.get('Content-Type') || '').toLowerCase();
