@@ -1,4 +1,4 @@
-// ═══════════════════════════════════════════════════════════════
+﻿// ═══════════════════════════════════════════════════════════════
 // BOKK TV — Application Controller
 // HLS.js Engine, Channel Navigation, Favorites, Player Controls & UI
 // ═══════════════════════════════════════════════════════════════
@@ -379,41 +379,20 @@
             if (channel.userAgent) extraParams += `&ua=${encodeURIComponent(channel.userAgent)}`;
         }
 
-        let proxyBase = '/api/proxy';
-        if (isPort8080) {
-            proxyBase = '/proxy';
-        } else if (isLocalHost || isFileProtocol) {
-            proxyBase = `http://${fallbackLocalHost}:8080/proxy`;
-        }
-
-        // ── MegaTV HTTP (megatv5074.com) : bloqué par Vercel.
-        // En production (non-local), on route DIRECTEMENT vers le CF Worker dès le Stage 0.
-        const isMegaTvHttp = rawUrl.startsWith('http://') &&
-            (rawUrl.includes('megatv5074.com') || rawUrl.includes('megatv'));
         const isProduction = !isPort8080 && !isLocalHost && !isFileProtocol;
 
-        if (isMegaTvHttp && isProduction && CF_WORKER_BASE) {
-            // Toujours CF Worker pour MegaTV en production, quel que soit le stage
+        // ── EN PRODUCTION : CF Worker est le proxy principal pour TOUS les flux ──
+        // Résout CORS + Mixed Content HTTP→HTTPS + IPs bloquées par Vercel en un seul passage.
+        if (isProduction && CF_WORKER_BASE) {
+            if (stage <= 1) return `${CF_WORKER_BASE}/proxy?url=${encodeURIComponent(rawUrl)}${extraParams}`;
+            if (stage === 2) return `/api/proxy?url=${encodeURIComponent(rawUrl)}${extraParams}`;
+            if (rawUrl.startsWith('https://')) return rawUrl;
             return `${CF_WORKER_BASE}/proxy?url=${encodeURIComponent(rawUrl)}${extraParams}`;
         }
 
-        // Stage 0 : Proxy principal
-        if (stage === 0) return `${proxyBase}?url=${encodeURIComponent(rawUrl)}${extraParams}`;
-
-        // Stage 1 : Cloudflare Worker
-        if (stage === 1) {
-            if (CF_WORKER_BASE) return `${CF_WORKER_BASE}/proxy?url=${encodeURIComponent(rawUrl)}${extraParams}`;
-            return `${proxyBase}?url=${encodeURIComponent(rawUrl)}${extraParams}`;
-        }
-
-        // Stage 2 : Direct HTTPS ou proxy
-        if (stage === 2) {
-            if (rawUrl.startsWith('https://')) return rawUrl;
-            return `${proxyBase}?url=${encodeURIComponent(rawUrl)}${extraParams}`;
-        }
-
-        // Stage 3+ : CF Worker dernier recours
-        if (CF_WORKER_BASE) return `${CF_WORKER_BASE}/proxy?url=${encodeURIComponent(rawUrl)}${extraParams}`;
+        // ── EN LOCAL : server.py (port 8080) ──
+        let proxyBase = '/proxy';
+        if (!isPort8080) proxyBase = `http://${fallbackLocalHost}:8080/proxy`;
         return `${proxyBase}?url=${encodeURIComponent(rawUrl)}${extraParams}`;
     }
 
