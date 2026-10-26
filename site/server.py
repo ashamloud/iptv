@@ -98,6 +98,57 @@ RTS_CHANNELS = {
 }
 RTS_TOKEN_CACHE = {}
 
+# ── Pool de comptes MegaTV (20 comptes actifs vérifiés le 26/10/2026) ──
+# Chaque compte a max_connections=1 → 1 flux simultané par compte
+# Le load-balancer tourne en round-robin pour répartir les utilisateurs
+MEGATV_ACCOUNTS = [
+    ('02926AD784327A0', 'fa9yZrXklw'),
+    ('2BRE4RQJ4JJ3HYX', 'bjmTAtFkfI'),
+    ('37XK56RPPA4ESY4', 'WQ80IVhKvr'),
+    ('3KRSA1DTXX8N5CF', 'wGOfmMDnVr'),
+    ('430834571696283', '57URoE9Lii'),
+    ('511441353125991', '3VFrh1xsvI'),
+    ('61F6598D4955DCF', 'dA5BZGgigb'),
+    ('810C271333152C5', 'Ahv4pLQX1m'),
+    ('81NQAFA7Q5S4188', 'JWyIZeiu08'),
+    ('8M0GJT1DGH5GC5J', '21Ss8VLWx3'),
+    ('BXNJAX3',         'TX8599J3117TD8G'),
+    ('DH4R6JD1HQQ1W7E', 'GoCHhRWFte'),
+    ('E195F0H',         'gnZuJrgGnY'),
+    ('K7U6ZUB2J5ZEJV5', 'V6CKjNQIZH'),
+    ('KPJ8V0ZVDPHJGJV', 'KC1hKWKEI2'),
+    ('L123LS64BU77394', 'FrmSYMsCSP'),
+    ('MAG1DVVLHN',      'MAG9PA88BF'),
+    ('MAG98HJ481',      'MAGJPZEA3Q'),
+    ('MAGF69VF1N',      'MAGUYBXGCD'),
+    ('MAGNHL1VAP',      'MAGS5DV4NS'),
+]
+
+# Index pour le round-robin + verrou thread-safe
+_megatv_idx = 0
+_megatv_lock = threading.Lock()
+
+def get_megatv_account():
+    """Retourne le prochain compte MegaTV en round-robin (thread-safe)."""
+    global _megatv_idx
+    with _megatv_lock:
+        acc = MEGATV_ACCOUNTS[_megatv_idx % len(MEGATV_ACCOUNTS)]
+        _megatv_idx += 1
+        return acc
+
+def rewrite_megatv_url(url):
+    """
+    Remplace les credentials dans une URL MegaTV par un compte du pool.
+    Ex: http://megatv5074.com:80/live/OLD_USER/OLD_PASS/54010.m3u8
+     → http://megatv5074.com:80/live/NEW_USER/NEW_PASS/54010.m3u8
+    """
+    import re
+    m = re.match(r'(https?://[^/]+/live/)[^/]+/[^/]+/(.+)', url)
+    if m:
+        user, pwd = get_megatv_account()
+        return f"{m.group(1)}{user}/{pwd}/{m.group(2)}"
+    return url
+
 
 def resolve_rts_url(channel_key):
     """Obtient l'URL en direct signée et fraîche pour une chaîne RTS/SEN TV officielle."""
@@ -246,6 +297,12 @@ class BOKKStreamProxyHandler(SimpleHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(b"Impossible de contacter l'API RTS")
                 return
+
+        # ── Rotation automatique des comptes MegaTV ──
+        # Si l'URL pointe vers megatv5074.com/live/, on remplace les credentials
+        # par un compte du pool pour distribuer la charge (max 1 conn/compte)
+        if 'megatv5074.com' in target_url and '/live/' in target_url:
+            target_url = rewrite_megatv_url(target_url)
 
         # ── Cache HIT pour les segments vidéo (HLS uniquement, pas de flux continu /live/) ──
         target_lower_ext = target_url.lower().split('?')[0]
