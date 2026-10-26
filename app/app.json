@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "LoudStreamTV",
-    "slug": "loudstreamtv",
-    "version": "1.0.0",
+    "name": "BOKK TV",
+    "slug": "bokk-tv",
+    "version": "2.0.0",
     "orientation": "default",
     "icon": "./assets/images/icon.png",
-    "scheme": "loudstreamtv",
+    "scheme": "bokktv",
     "userInterfaceStyle": "dark",
     "ios": {
       "icon": "./assets/expo.icon",

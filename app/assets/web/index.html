@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BOKK TV — Télévision en Direct Sénégal & International</title>
+    <meta name="description" content="Regardez les chaînes TV du Sénégal (RTS, TFM, 2sTV), le Sport en direct, les chaînes francophones et le cinéma gratuitement sur BOKK TV.">
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="apple-touch-icon" href="favicon.png">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="style.css?v=7810">
+</head>
+<body>
+
+<!-- ═══════════════ HEADER ═══════════════ -->
+<header class="app-header">
+    <div style="display: flex; align-items: center; gap: 14px;">
+        <a href="#" class="brand-wrapper" title="BOKK TV — Accueil">
+            <div class="brand-icon">
+                <img src="favicon.png" alt="BOKK TV" class="brand-logo-img">
+            </div>
+            <div>
+                <span class="brand-text">BOKK<span style="color: var(--brand-light);">TV</span></span>
+            </div>
+        </a>
+        <div class="live-indicator">
+            <span class="live-dot"></span>
+            <span>DIRECT</span>
+        </div>
+        <span class="brand-badge">Sénégal & Monde</span>
+    </div>
+
+    <!-- Center: En cours de lecture -->
+    <div class="header-center">
+        <div id="now-playing-pill" class="now-playing-pill">
+            <span style="opacity: 0.6;">Diffusion :</span>
+            <strong id="now-playing-title">Sélectionnez une chaîne</strong>
+        </div>
+    </div>
+
+    <!-- Actions droites -->
+    <div class="header-actions">
+        <button id="btn-open-m3u" class="icon-btn" title="Importer une Playlist M3U">
+            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path d="M12 5v14M5 12h14"></path>
+            </svg>
+        </button>
+        <button id="btn-shortcuts" class="icon-btn" title="Raccourcis clavier (?)">
+            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="10"></circle>
+                <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                <line x1="12" y1="17" x2="12.01" y2="17"></line>
+            </svg>
+        </button>
+        <button id="btn-theater-header" class="icon-btn" title="Mode Cinéma (T)">
+            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                <line x1="8" y1="21" x2="16" y2="21"></line>
+                <line x1="12" y1="17" x2="12" y2="21"></line>
+            </svg>
+        </button>
+        <a href="https://mega.nz/file/hqYgHYAJ#WXR-cxC_t4BD4-RtWcIam6uU_3iRwURgTGq8Mo1xg7w" target="_blank" class="btn-primary btn-apk" title="Télécharger l'application Android">
+            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+            <span class="apk-text-full">Application APK</span>
+            <span class="apk-text-short" style="display:none;">APK</span>
+        </a>
+    </div>
+</header>
+
+<!-- ═══════════════ MAIN CONTENT ═══════════════ -->
+<main class="app-main">
+
+    <!-- ── LECTEUR VIDÉO ── -->
+    <section class="player-container" id="player-container">
+        <!-- Placeholder initial -->
+        <div id="player-placeholder" class="player-placeholder">
+            <div class="placeholder-icon">
+                <img src="favicon.png" alt="BOKK TV Logo" class="placeholder-logo-img">
+            </div>
+            <h1 class="placeholder-title">Bienvenue sur BOKK TV</h1>
+            <p class="placeholder-desc">Choisissez une chaîne dans le menu pour lancer la diffusion en haute définition.</p>
+        </div>
+
+        <!-- Chargement -->
+        <div id="player-loader" class="player-overlay">
+            <div class="spinner"></div>
+            <p style="font-size: 0.85rem; color: var(--text-secondary); font-weight: 500;">Chargement du flux en direct...</p>
+        </div>
+
+        <!-- Erreur -->
+        <div id="player-error" class="player-overlay">
+            <div class="error-card">
+                <div class="error-icon">
+                    <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="8" x2="12" y2="12"></line>
+                        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                    </svg>
+                </div>
+                <h3 style="font-size: 1rem; color: #fff;">Flux momentanément indisponible</h3>
+                <p id="error-message-text" style="font-size: 0.8rem; color: var(--text-secondary);">Le serveur du diffuseur ne répond pas actuellement.</p>
+                <div class="error-actions">
+                    <button id="btn-retry" class="btn-primary" style="padding: 6px 14px; font-size: 0.75rem;">
+                        Réessayer
+                    </button>
+                    <button id="btn-fallback" class="icon-btn" style="width: auto; padding: 6px 12px; font-size: 0.75rem;">
+                        Lien alternatif
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Éléments Vidéo -->
+        <video id="hls-video" class="video-screen" autoplay playsinline webkit-playsinline></video>
+        <iframe id="video-iframe" allowfullscreen allow="autoplay; encrypted-media"></iframe>
+
+        <!-- ── BARRE DE CONTRÔLES SURVOL DU LECTEUR ── -->
+        <div id="controls-overlay" class="player-controls-overlay">
+            <!-- Channel Info Banner -->
+            <div class="channel-banner">
+                <div class="channel-meta">
+                    <img id="player-channel-logo" class="channel-meta-logo" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg'/>" alt="Logo">
+                    <div class="channel-title-group">
+                        <h2 id="player-channel-name">Chaîne en direct</h2>
+                        <div class="channel-tags">
+                            <span id="player-channel-cat" class="badge-tag highlight">Sénégal</span>
+                            <span id="player-channel-badge" class="badge-tag">HD 1080p</span>
+                            <span id="player-stream-status" class="badge-tag" style="background: rgba(16,185,129,0.15); color: var(--emerald);">Flux stable</span>
+                            <!-- Indicateur vitesse réseau -->
+                            <span id="net-speed-badge" class="badge-tag net-speed-badge" style="display:none;" title="Vitesse de connexion estimée"></span>
+                        </div>
+                    </div>
+                </div>
+                <!-- Sélecteur de qualité -->
+                <div class="quality-selector" id="quality-selector" style="display:none;">
+                    <button class="quality-btn active" id="q-auto" data-level="-1" title="Qualité automatique (ABR)">AUTO</button>
+                    <button class="quality-btn" id="q-hd" data-level="hd" title="Forcer Haute Définition">HD</button>
+                    <button class="quality-btn" id="q-sd" data-level="sd" title="Forcer Définition Standard (connexion lente)">SD</button>
+                </div>
+                <button id="player-fav-btn" class="ctrl-btn" title="Ajouter aux favoris">
+                    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Controls Bar -->
+            <div class="controls-bar">
+                <div class="controls-left">
+                    <button id="ctrl-prev" class="ctrl-btn" title="Chaîne précédente (Flèche Bas)">
+                        <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/>
+                        </svg>
+                    </button>
+                    <button id="ctrl-play" class="ctrl-btn play-btn" title="Lecture / Pause (Espace)">
+                        <svg id="play-icon" width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
+                            <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                        </svg>
+                        <svg id="pause-icon" width="20" height="20" fill="currentColor" viewBox="0 0 24 24" style="display: none;">
+                            <rect x="6" y="4" width="4" height="16"></rect>
+                            <rect x="14" y="4" width="4" height="16"></rect>
+                        </svg>
+                    </button>
+                    <button id="ctrl-next" class="ctrl-btn" title="Chaîne suivante (Flèche Haut)">
+                        <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/>
+                        </svg>
+                    </button>
+
+                    <div class="volume-container">
+                        <button id="ctrl-mute" class="ctrl-btn" title="Couper le son (M)">
+                            <svg id="vol-high-icon" width="18" height="18" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+                            </svg>
+                            <svg id="vol-muted-icon" width="18" height="18" fill="currentColor" viewBox="0 0 24 24" style="display: none;">
+                                <path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/>
+                            </svg>
+                        </button>
+                        <input type="range" id="volume-slider" class="volume-slider" min="0" max="1" step="0.05" value="1" title="Volume">
+                    </div>
+                </div>
+
+                <div class="controls-right">
+                    <button id="ctrl-pip" class="ctrl-btn" title="Image dans l'image (PiP)">
+                        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                            <rect x="12" y="9" width="8" height="6" rx="1" ry="1"></rect>
+                        </svg>
+                    </button>
+                    <button id="ctrl-theater" class="ctrl-btn" title="Mode Cinéma (T)">
+                        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <rect x="2" y="4" width="20" height="16" rx="2"></rect>
+                            <line x1="16" y1="4" x2="16" y2="20"></line>
+                        </svg>
+                    </button>
+                    <button id="ctrl-fullscreen" class="ctrl-btn" title="Plein écran (F)">
+                        <svg id="fs-expand-icon" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
+                        </svg>
+                        <svg id="fs-shrink-icon" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="display: none;">
+                            <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ── LISTE DES CHAÎNES (SIDEBAR) ── -->
+    <aside class="app-sidebar" id="app-sidebar">
+        <!-- Recherche -->
+        <div class="search-wrapper">
+            <div class="search-input-box">
+                <svg class="search-icon" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                <input type="text" id="search-input" class="search-input" placeholder="Rechercher une chaîne (RTS, TFM, France 24, CNews, RMC, One Piece...)" autocomplete="off">
+                <button id="search-clear-btn" class="search-clear" title="Effacer la recherche">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Barre des catégories -->
+        <nav class="categories-bar" id="categories-bar"></nav>
+
+        <!-- Sélecteur de bouquet / catégorie IPTV -->
+        <div class="bouquet-filter-wrapper">
+            <select id="bouquet-filter" class="bouquet-select" title="Filtrer par bouquet / catégorie MegaTV">
+                <option value="all">⚡ Tous les bouquets MegaTV (131 disponibles)</option>
+            </select>
+        </div>
+
+        <!-- Métadonnées & sélecteur de vue -->
+        <div class="sidebar-meta">
+            <span id="channel-count-text">Chargement des chaînes...</span>
+            <div class="view-toggles">
+                <button id="btn-view-list" class="view-btn active" title="Vue Liste compacte">
+                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M4 6h16v2H4zm0 5h16v2H4zm0 5h16v2H4z"/>
+                    </svg>
+                </button>
+                <button id="btn-view-grid" class="view-btn" title="Vue Grille visuelle">
+                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M4 4h7v7H4zm9 0h7v7h-7zm-9 9h7v7H4zm9 0h7v7h-7z"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Conteneur défilant des chaînes -->
+        <div class="channel-list-scroll" id="channel-list"></div>
+    </aside>
+</main>
+
+<!-- ═══════════════ MODAL RACCOURCIS CLAVIER ═══════════════ -->
+<div id="shortcuts-modal" class="modal-backdrop">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h3>Raccourcis Clavier</h3>
+            <button id="btn-close-modal" class="icon-btn" style="border: none; background: transparent;">
+                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div class="shortcut-row">
+                <span>Lecture / Pause</span>
+                <span class="kbd">Espace</span>
+            </div>
+            <div class="shortcut-row">
+                <span>Plein écran</span>
+                <span class="kbd">F</span>
+            </div>
+            <div class="shortcut-row">
+                <span>Mode Cinéma</span>
+                <span class="kbd">T</span>
+            </div>
+            <div class="shortcut-row">
+                <span>Couper / Activer le son</span>
+                <span class="kbd">M</span>
+            </div>
+            <div class="shortcut-row">
+                <span>Chaîne suivante</span>
+                <span class="kbd">↓</span>
+            </div>
+            <div class="shortcut-row">
+                <span>Chaîne précédente</span>
+                <span class="kbd">↑</span>
+            </div>
+            <div class="shortcut-row">
+                <span>Rechercher une chaîne</span>
+                <span class="kbd">/</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════ MODAL IMPORTER PLAYLIST M3U ═══════════════ -->
+<div id="m3u-modal" class="modal-backdrop">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h3>Importer une Playlist M3U</h3>
+            <button id="btn-close-m3u" class="icon-btn" style="border: none; background: transparent;">
+                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div class="m3u-tabs">
+                <button id="tab-btn-url" class="m3u-tab-btn active">Lien URL M3U</button>
+                <button id="tab-btn-file" class="m3u-tab-btn">Fichier local (.m3u)</button>
+            </div>
+
+            <!-- Tab 1: URL -->
+            <div id="pane-url" class="m3u-pane active">
+                <p style="font-size: 0.8rem; color: var(--text-secondary);">
+                    Collez l'URL de votre abonnement ou playlist IPTV (format <code>.m3u</code> ou <code>.m3u8</code>) :
+                </p>
+                <input type="url" id="m3u-url-input" class="form-input" placeholder="https://exemple.com/playlist.m3u" autocomplete="off">
+                <button id="btn-load-m3u-url" class="btn-primary" style="justify-content: center; width: 100%;">
+                    Charger la playlist M3U
+                </button>
+            </div>
+
+            <!-- Tab 2: Fichier local -->
+            <div id="pane-file" class="m3u-pane">
+                <p style="font-size: 0.8rem; color: var(--text-secondary);">
+                    Sélectionnez un fichier <code>.m3u</code> ou <code>.m3u8</code> sur votre ordinateur :
+                </p>
+                <label class="file-drop-zone" for="m3u-file-input">
+                    <svg width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" style="color: var(--brand-light);">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="17 8 12 3 7 8"></polyline>
+                        <line x1="12" y1="3" x2="12" y2="15"></line>
+                    </svg>
+                    <span id="file-chosen-text" style="font-size: 0.85rem; font-weight: 500;">Cliquez pour choisir un fichier</span>
+                    <input type="file" id="m3u-file-input" accept=".m3u,.m3u8,text/plain" style="display: none;">
+                </label>
+                <button id="btn-load-m3u-file" class="btn-primary" style="justify-content: center; width: 100%;">
+                    Importer le fichier
+                </button>
+            </div>
+
+            <!-- Bouton de réinitialisation si une playlist existe -->
+            <div id="m3u-active-info" style="display: none; padding-top: 10px; border-top: 1px solid var(--border-subtle); align-items: center; justify-content: space-between;">
+                <span id="m3u-custom-count" style="font-size: 0.75rem; color: var(--emerald);">Playlist personnalisée active</span>
+                <button id="btn-clear-m3u" class="icon-btn" style="width: auto; padding: 4px 10px; font-size: 0.75rem; color: var(--live-red); border-color: rgba(239,68,68,0.3);">
+                    Supprimer ma playlist
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════ TOAST NOTIFICATIONS ═══════════════ -->
+<div id="toast-container" class="toast-container"></div>
+
+<!-- Scripts -->
+<script src="mpegts.js"></script>
+<script src="hls.min.js"></script>
+<script src="channels.js?v=7810"></script>
+<script src="app.js?v=7810"></script>
+</body>
+</html>
