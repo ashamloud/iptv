@@ -3,7 +3,7 @@
     "name": "BOKK TV",
     "slug": "bokk-tv",
     "version": "2.0.0",
-    "orientation": "default",
+    "orientation": "landscape",
     "icon": "./assets/images/icon.png",
     "scheme": "bokktv",
     "userInterfaceStyle": "dark",
@@ -20,7 +20,7 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.asham_loud.bokktv",
+      "package": "com.asham_loud.bokktv.tv",
       "permissions": [
         "INTERNET",
         "ACCESS_NETWORK_STATE"

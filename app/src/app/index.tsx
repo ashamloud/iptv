@@ -12,13 +12,10 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
 
-// Détection TV native ou mode TV
-const isTV = Platform.isTV;
+// URL officielle Smart TV BOKK TV
+const TV_ONLINE_URL = 'https://bokktv.vercel.app/tv';
 
-// URL de production : charge /tv pour Android TV / Fire TV, sinon interface mobile
-const BASE_URL = 'https://bokktv.vercel.app';
-
-// Injection de script pour garantir la suppression totale du bouton APK et des raccourcis desktop
+// Injection de script pour garantir la suppression totale de tout élément superflu
 const INJECTED_JS = `
   (function() {
     var style = document.createElement('style');
@@ -34,11 +31,8 @@ export default function App() {
   const [canGoBack, setCanGoBack] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
-  const [tvModePreview, setTvModePreview] = useState(isTV);
 
-  const activeUrl = useMemo(() => {
-    return tvModePreview ? `${BASE_URL}/tv` : BASE_URL;
-  }, [tvModePreview]);
+  const activeUrl = TV_ONLINE_URL;
 
   // Gestion de la touche physique Retour (Android / Télécommande TV)
   React.useEffect(() => {
