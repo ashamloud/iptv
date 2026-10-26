@@ -790,7 +790,9 @@ h1, h2, h3, .brand-text {
 .card-logo {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: contain;
+    padding: 4px;
+    display: block;
 }
 
 .card-content {
@@ -907,6 +909,8 @@ body.grid-view-active .app-sidebar {
     min-width: 0 !important;
     max-width: 100% !important;
     width: 100% !important;
+    min-height: 140px !important;
+    height: auto !important;
     background: var(--bg-surface-elevated) !important;
     border: 1px solid var(--border-subtle) !important;
     border-radius: var(--radius-md) !important;
@@ -914,6 +918,7 @@ body.grid-view-active .app-sidebar {
     overflow: hidden !important;
     position: relative !important;
     cursor: pointer !important;
+    flex-shrink: 0 !important;
     transition: transform var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast) !important;
 }
 
@@ -936,9 +941,9 @@ body.grid-view-active .app-sidebar {
 
 .channel-list-scroll.grid-mode .card-logo-wrap {
     width: 100% !important;
-    height: 68px !important;
+    height: 72px !important;
     border-radius: var(--radius-sm) !important;
-    background: rgba(255, 255, 255, 0.03) !important;
+    background: rgba(255, 255, 255, 0.04) !important;
     border: 1px solid rgba(255, 255, 255, 0.06) !important;
     display: flex !important;
     align-items: center !important;
@@ -948,12 +953,13 @@ body.grid-view-active .app-sidebar {
 }
 
 .channel-list-scroll.grid-mode .card-logo {
-    max-width: 85% !important;
-    max-height: 85% !important;
+    max-width: 80% !important;
+    max-height: 80% !important;
     width: auto !important;
     height: auto !important;
+    padding: 0 !important;
     object-fit: contain !important;
-    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5)) !important;
+    filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.6)) !important;
 }
 
 .channel-list-scroll.grid-mode .card-content {

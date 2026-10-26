@@ -401,10 +401,20 @@
             }
         }
 
-        // ── EN LOCAL : server.py (port 8080) ──
-        let proxyBase = '/proxy';
-        if (!isPort8080) proxyBase = `http://${fallbackLocalHost}:8080/proxy`;
-        return `${proxyBase}?url=${encodeURIComponent(rawUrl)}${extraParams}`;
+        // ── EN LOCAL (ex: port 8080 ou Live Server port 5500) ──
+        if (stage === 0) {
+            let proxyBase = '/proxy';
+            if (!isPort8080) proxyBase = `http://${fallbackLocalHost}:8080/proxy`;
+            return `${proxyBase}?url=${encodeURIComponent(rawUrl)}${extraParams}`;
+        } else if (stage === 1 && RENDER_PROXY_BASE) {
+            return `${RENDER_PROXY_BASE}/proxy?url=${encodeURIComponent(rawUrl)}${extraParams}`;
+        } else if (stage === 2 && CF_WORKER_BASE) {
+            return `${CF_WORKER_BASE}/proxy?url=${encodeURIComponent(rawUrl)}${extraParams}`;
+        } else {
+            let proxyBase = '/proxy';
+            if (!isPort8080) proxyBase = `http://${fallbackLocalHost}:8080/proxy`;
+            return `${proxyBase}?url=${encodeURIComponent(rawUrl)}${extraParams}`;
+        }
     }
 
     // ── Chargement d'une chaîne (Support Dual Engine MPEG-TS & HLS) ──
@@ -434,7 +444,7 @@
             playerLogo.src = getValidChannelLogo(channel);
             playerLogo.onerror = function() {
                 this.onerror = null;
-                this.src = generateLogoBadgeSvg(channel.name, channel.category);
+                this.src = DEFAULT_TV_LOGO;
             };
         }
         if (playerCat) playerCat.textContent = channel.category.toUpperCase();
@@ -864,11 +874,20 @@
         return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
     }
 
+    const DEFAULT_TV_LOGO = 'data:image/svg+xml;utf8,' + encodeURIComponent(
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">' +
+        '<rect width="100" height="100" rx="22" fill="#1e293b"/>' +
+        '<rect x="20" y="24" width="60" height="42" rx="6" fill="#0f172a" stroke="#475569" stroke-width="2.5"/>' +
+        '<path d="M42 74 L58 74 M50 66 L50 74" stroke="#475569" stroke-width="3" stroke-linecap="round"/>' +
+        '<polygon points="46,38 46,52 58,45" fill="#38bdf8"/>' +
+        '</svg>'
+    );
+
     function getValidChannelLogo(ch) {
-        if (!ch || !ch.logo || ch.logo.includes('go4.pw') || ch.logo.trim() === '') {
-            return generateLogoBadgeSvg(ch ? ch.name : '', ch ? ch.category : '');
+        if (!ch || !ch.logo || ch.logo.trim() === '') {
+            return DEFAULT_TV_LOGO;
         }
-        return ch.logo;
+        return ch.logo.trim();
     }
 
     // ── Création d'une carte de chaîne ──
@@ -887,11 +906,10 @@
 
         const isFav = isFavorite(ch.id);
         const logoSrc = getValidChannelLogo(ch);
-        const fallbackSvg = generateLogoBadgeSvg(ch.name, ch.category);
 
         card.innerHTML = `
             <div class="card-logo-wrap">
-                <img class="card-logo" src="${logoSrc}" alt="${ch.name}" loading="lazy" onerror="this.onerror=null;this.src='${fallbackSvg}';">
+                <img class="card-logo" src="${logoSrc}" alt="${ch.name}" loading="lazy" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src='${DEFAULT_TV_LOGO}';">
             </div>
             <div class="card-content">
                 <div class="card-top">
@@ -1314,10 +1332,12 @@
     function saveCustomChannels(newChannels) {
         localStorage.setItem('bokk_custom_m3u', JSON.stringify(newChannels));
         applyCustomChannels();
+        currentCategory = 'playlist';
+        userManuallySelectedCategory = true;
         renderCategories();
-        renderChannelList();
+        renderChannelList(true);
         updateM3uModalStatus();
-        showToast(`✅ ${newChannels.length} chaîne(s) importée(s) avec succès !`);
+        showToast(`✅ ${newChannels.length.toLocaleString('fr-FR')} chaîne(s) importée(s) avec succès !`);
         closeM3uModal();
     }
 
@@ -1444,9 +1464,10 @@
                         type: 'hls'
                     }));
 
+                    btnLoadM3uUrl.textContent = 'Charger la playlist M3U';
+                    btnLoadM3uUrl.disabled = false;
                     saveCustomChannels(parsed);
                     populateBouquetFilter();
-                    showToast(`✅ ${parsed.length.toLocaleString('fr-FR')} chaînes MegaTV rechargées avec succès !`);
                     return;
                 }
 
@@ -1622,19 +1643,18 @@
             if (appSidebar) appSidebar.classList.add('grid-expanded');
         }
 
-        // Détection automatique du pays de l'utilisateur par défaut
-        currentCategory = detectUserCountry();
+        // Affichage par défaut de l'ensemble du catalogue (MegaTV & Nationales)
+        currentCategory = 'tous';
 
         applyCustomChannels();
         populateBouquetFilter();
         renderCategories();
         renderChannelList(true);
 
-        // Lancement immédiat de la première chaîne du pays détecté
-        playFirstChannelOfCategory(currentCategory);
-
-        // Affinement asynchrone par géolocalisation IP
-        autoDetectUserCountryAsync();
+        // Lancement immédiat de la première chaîne (RTS 1 Sénégal)
+        if (channels.length > 0) {
+            loadChannel(0);
+        }
 
         // ── Mesure de la vitesse réseau au démarrage ──
         measureNetworkSpeed();
