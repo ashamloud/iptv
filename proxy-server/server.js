@@ -10,6 +10,44 @@ const RTS_CHANNELS = {
 };
 const rtsCache = {};
 
+// ── Pool de comptes MegaTV (20 actifs vérifiés 26/10/2026) ──
+const MEGATV_ACCOUNTS = [
+    ["02926AD784327A0","fa9yZrXklw"],
+    ["2BRE4RQJ4JJ3HYX","bjmTAtFkfI"],
+    ["37XK56RPPA4ESY4","WQ80IVhKvr"],
+    ["3KRSA1DTXX8N5CF","wGOfmMDnVr"],
+    ["430834571696283","57URoE9Lii"],
+    ["511441353125991","3VFrh1xsvI"],
+    ["61F6598D4955DCF","dA5BZGgigb"],
+    ["810C271333152C5","Ahv4pLQX1m"],
+    ["81NQAFA7Q5S4188","JWyIZeiu08"],
+    ["8M0GJT1DGH5GC5J","21Ss8VLWx3"],
+    ["BXNJAX3",        "TX8599J3117TD8G"],
+    ["DH4R6JD1HQQ1W7E","GoCHhRWFte"],
+    ["E195F0H",        "gnZuJrgGnY"],
+    ["K7U6ZUB2J5ZEJV5","V6CKjNQIZH"],
+    ["KPJ8V0ZVDPHJGJV","KC1hKWKEI2"],
+    ["L123LS64BU77394","FrmSYMsCSP"],
+    ["MAG1DVVLHN",     "MAG9PA88BF"],
+    ["MAG98HJ481",     "MAGJPZEA3Q"],
+    ["MAGF69VF1N",     "MAGUYBXGCD"],
+    ["MAGNHL1VAP",     "MAGS5DV4NS"],
+];
+let _megatvIdx = 0;
+function getMegaTvAccount() {
+    const acc = MEGATV_ACCOUNTS[_megatvIdx % MEGATV_ACCOUNTS.length];
+    _megatvIdx++;
+    return acc;
+}
+function rewriteMegaTvUrl(targetUrl) {
+    const m = targetUrl.match(/^(https?:\/\/[^\/]+\/live\/)[^\/]+\/[^\/]+\/(.+)$/);
+    if (m) {
+        const [user, pwd] = getMegaTvAccount();
+        return `${m[1]}${user}/${pwd}/${m[2]}`;
+    }
+    return targetUrl;
+}
+
 function nodeFetch(targetUrl, extraHeaders, maxRedirects) {
     if (maxRedirects === undefined) maxRedirects = 6;
     return new Promise((resolve, reject) => {
@@ -96,6 +134,11 @@ const server = http.createServer(async (req, res) => {
         const r = await resolveRts(targetUrl);
         if (!r) { res.writeHead(502); return res.end("RTS indisponible"); }
         targetUrl = r;
+    }
+
+    // MegaTV round-robin account rotation
+    if (targetUrl.includes("megatv5074.com") && targetUrl.includes("/live/")) {
+        targetUrl = rewriteMegaTvUrl(targetUrl);
     }
 
     try {
