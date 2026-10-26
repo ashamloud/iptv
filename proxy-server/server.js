@@ -136,9 +136,15 @@ const server = http.createServer(async (req, res) => {
         targetUrl = r;
     }
 
-    // MegaTV round-robin account rotation
+    // MegaTV round-robin account rotation — M3U8 UNIQUEMENT
+    // Les segments .ts ont déjà les credentials corrects réécrits par le proxy
+    // lors de la livraison de la playlist parente. Appliquer la rotation aux
+    // segments causerait des erreurs 401 car le compte serait différent.
     if (targetUrl.includes("megatv5074.com") && targetUrl.includes("/live/")) {
-        targetUrl = rewriteMegaTvUrl(targetUrl);
+        const tlo = targetUrl.toLowerCase().split("?")[0];
+        if (tlo.endsWith(".m3u8") || tlo.endsWith(".m3u")) {
+            targetUrl = rewriteMegaTvUrl(targetUrl);
+        }
     }
 
     try {

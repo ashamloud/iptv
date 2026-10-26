@@ -138,11 +138,11 @@ def get_megatv_account():
 
 def rewrite_megatv_url(url):
     """
-    Remplace les credentials dans une URL MegaTV par un compte du pool.
+    Remplace les credentials dans une URL MegaTV par un compte du pool (round-robin).
+    NE s'applique QU'aux playlists M3U8, pas aux segments .ts déjà réécrits.
     Ex: http://megatv5074.com:80/live/OLD_USER/OLD_PASS/54010.m3u8
      → http://megatv5074.com:80/live/NEW_USER/NEW_PASS/54010.m3u8
     """
-    import re
     m = re.match(r'(https?://[^/]+/live/)[^/]+/[^/]+/(.+)', url)
     if m:
         user, pwd = get_megatv_account()
@@ -299,9 +299,14 @@ class BOKKStreamProxyHandler(SimpleHTTPRequestHandler):
                 return
 
         # ── Rotation automatique des comptes MegaTV ──
-        # Si l'URL pointe vers megatv5074.com/live/, on remplace les credentials
-        # par un compte du pool pour distribuer la charge (max 1 conn/compte)
-        if 'megatv5074.com' in target_url and '/live/' in target_url:
+        # IMPORTANT: on ne tourne QUE pour les playlists .m3u8
+        # Les segments .ts contiennent déjà les bons credentials réécrits
+        # par le serveur lors de la livraison de la playlist parente.
+        # Tourner aussi sur les segments causerait des erreurs 401 !
+        target_lower_check = target_url.lower().split('?')[0]
+        is_megatv = 'megatv5074.com' in target_url and '/live/' in target_url
+        is_m3u8_req = target_lower_check.endswith('.m3u8') or target_lower_check.endswith('.m3u')
+        if is_megatv and is_m3u8_req:
             target_url = rewrite_megatv_url(target_url)
 
         # ── Cache HIT pour les segments vidéo (HLS uniquement, pas de flux continu /live/) ──
