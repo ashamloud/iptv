@@ -6,24 +6,39 @@
 (function () {
     'use strict';
 
-    // ── Proxies Cloud Haute Disponibilité ──
+    // ── Proxies Cloud Haute Disponibilité & Résolution Universelle ──
     const RENDER_PROXY = 'https://iptv-vbm1.onrender.com';
     const CF_WORKER    = 'https://bokk-tv-proxy.pgueye866.workers.dev';
 
     function resolveStreamUrl(rawUrl, stage = 0) {
         if (!rawUrl) return '';
-        if (rawUrl.startsWith('http://') || rawUrl.startsWith('https://')) {
-            const isMegaTv = rawUrl.includes('megatv') || rawUrl.includes(':80/live/');
-            if (isMegaTv) {
-                return `${RENDER_PROXY}/proxy?url=${encodeURIComponent(rawUrl)}&ua=IPTVSmartersPro`;
-            }
-            return rawUrl;
+        if (rawUrl.startsWith('data:') || rawUrl.startsWith('blob:')) return rawUrl;
+
+        const isLocalHost = (
+            window.location.hostname === 'localhost' ||
+            window.location.hostname === '127.0.0.1' ||
+            window.location.port === '8080'
+        );
+
+        let extraParams = '&ua=IPTVSmartersPro';
+        if (rawUrl.includes('radio2m.ma')) extraParams += '&ref=http://www.radio2m.ma/';
+
+        // En local sur port 8080
+        if (isLocalHost) {
+            if (stage === 0) return `/proxy?url=${encodeURIComponent(rawUrl)}${extraParams}`;
+            if (stage === 1) return `${RENDER_PROXY}/proxy?url=${encodeURIComponent(rawUrl)}${extraParams}`;
+            return `${CF_WORKER}/proxy?url=${encodeURIComponent(rawUrl)}${extraParams}`;
         }
-        // Aliases comme 'rts1', 'rts2', 'sentv'
-        if (stage === 1) {
-            return `${CF_WORKER}/proxy?url=${encodeURIComponent(rawUrl)}`;
+
+        // En production (Vercel / HTTPS) : tout flux HTTP ou HTTPS passe par un proxy
+        // pour éliminer totalement le Mixed Content et les blocages CORS.
+        if (stage === 0) {
+            return `${RENDER_PROXY}/proxy?url=${encodeURIComponent(rawUrl)}${extraParams}`;
+        } else if (stage === 1) {
+            return `${CF_WORKER}/proxy?url=${encodeURIComponent(rawUrl)}${extraParams}`;
+        } else {
+            return `/api/proxy?url=${encodeURIComponent(rawUrl)}${extraParams}`;
         }
-        return `${RENDER_PROXY}/proxy?url=${encodeURIComponent(rawUrl)}`;
     }
 
     // ── Catégories TV ──
@@ -188,14 +203,14 @@
             card.dataset.index = idx;
             card.tabIndex = -1;
 
-            const logoUrl = ch.logo && ch.logo.trim() ? ch.logo : 'favicon.png';
+            const logoUrl = ch.logo && ch.logo.trim() ? ch.logo : '../favicon.png';
             const isFav = favorites.has(ch.id);
 
             card.innerHTML = `
                 ${ch.badge ? `<span class="tv-card-badge">${ch.badge}</span>` : ''}
                 ${isFav ? `<span class="tv-card-fav">★</span>` : ''}
                 <div class="tv-card-logo-wrap">
-                    <img class="tv-card-logo" src="${logoUrl}" alt="${ch.name}" onerror="this.onerror=null;this.src='favicon.png';">
+                    <img class="tv-card-logo" src="${logoUrl}" alt="${ch.name}" onerror="this.onerror=null;this.src='../favicon.png';">
                 </div>
                 <div class="tv-card-name">${ch.name}</div>
                 <div class="tv-card-sub">${ch.group || ch.category}</div>
@@ -221,7 +236,7 @@
         playChannel(channel);
     }
 
-    function playChannel(channel, stage = 0) {
+    function playChannel(channel, stage = 0, useFallback = false) {
         destroyPlayers();
 
         errorEl.classList.remove('visible');
@@ -230,8 +245,9 @@
 
         showOSD(channel);
 
-        const targetUrl = resolveStreamUrl(channel.url, stage);
-        const lowerUrl = (channel.url || '').toLowerCase();
+        const activeUrl = (useFallback && channel.fallbackUrl) ? channel.fallbackUrl : channel.url;
+        const targetUrl = resolveStreamUrl(activeUrl, stage);
+        const lowerUrl = (activeUrl || '').toLowerCase();
 
         if (lowerUrl.includes('embed') || lowerUrl.includes('youtube.com')) {
             iframeEl.style.display = 'block';
@@ -261,8 +277,10 @@
             }).catch(() => {});
 
             mpegtsInstance.on(mpegts.Events.ERROR, () => {
-                if (stage < 1) {
-                    playChannel(channel, stage + 1);
+                if (stage < 2) {
+                    playChannel(channel, stage + 1, useFallback);
+                } else if (!useFallback && channel.fallbackUrl) {
+                    playChannel(channel, 0, true);
                 } else {
                     loaderEl.classList.remove('visible');
                     errorEl.classList.add('visible');
@@ -290,8 +308,14 @@
 
             hlsInstance.on(Hls.Events.ERROR, (_, data) => {
                 if (data.fatal) {
-                    if (stage < 1) {
-                        playChannel(channel, stage + 1);
+                    if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
+                        hlsInstance.startLoad();
+                    } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
+                        hlsInstance.recoverMediaError();
+                    } else if (stage < 2) {
+                        playChannel(channel, stage + 1, useFallback);
+                    } else if (!useFallback && channel.fallbackUrl) {
+                        playChannel(channel, 0, true);
                     } else {
                         loaderEl.classList.remove('visible');
                         errorEl.classList.add('visible');

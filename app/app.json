@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "BOKK TV",
-    "slug": "bokk-tv",
+    "slug": "loudstreamtv",
     "version": "2.0.0",
     "orientation": "landscape",
     "icon": "./assets/images/icon.png",

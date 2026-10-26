@@ -10,9 +10,8 @@ echo.
 :: Aller dans le bon dossier
 cd /d "%~dp0"
 
-:: Ouvrir le navigateur après 2 secondes
-timeout /t 2 /nobreak >nul
-start "" "http://localhost:8080"
+:: Lancer l'ouverture du navigateur en arriere-plan apres 1 seconde
+start "" cmd /c "timeout /t 1 /nobreak >nul && start http://localhost:8080"
 
 :: Lancer le serveur Python
 python server.py

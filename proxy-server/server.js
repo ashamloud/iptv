@@ -10,39 +10,28 @@ const RTS_CHANNELS = {
 };
 const rtsCache = {};
 
-// ── Pool de comptes MegaTV (20 actifs vérifiés 26/10/2026) ──
+// ── Pool de comptes MegaTV vérifiés et 100% actifs (HLS & MPEG-TS) ──
 const MEGATV_ACCOUNTS = [
-    ["02926AD784327A0","fa9yZrXklw"],
-    ["2BRE4RQJ4JJ3HYX","bjmTAtFkfI"],
-    ["37XK56RPPA4ESY4","WQ80IVhKvr"],
-    ["3KRSA1DTXX8N5CF","wGOfmMDnVr"],
-    ["430834571696283","57URoE9Lii"],
-    ["511441353125991","3VFrh1xsvI"],
     ["61F6598D4955DCF","dA5BZGgigb"],
-    ["810C271333152C5","Ahv4pLQX1m"],
     ["81NQAFA7Q5S4188","JWyIZeiu08"],
-    ["8M0GJT1DGH5GC5J","21Ss8VLWx3"],
-    ["BXNJAX3",        "TX8599J3117TD8G"],
-    ["DH4R6JD1HQQ1W7E","GoCHhRWFte"],
-    ["E195F0H",        "gnZuJrgGnY"],
     ["K7U6ZUB2J5ZEJV5","V6CKjNQIZH"],
-    ["KPJ8V0ZVDPHJGJV","KC1hKWKEI2"],
-    ["L123LS64BU77394","FrmSYMsCSP"],
-    ["MAG1DVVLHN",     "MAG9PA88BF"],
-    ["MAG98HJ481",     "MAGJPZEA3Q"],
-    ["MAGF69VF1N",     "MAGUYBXGCD"],
-    ["MAGNHL1VAP",     "MAGS5DV4NS"],
 ];
-let _megatvIdx = 0;
-function getMegaTvAccount() {
-    const acc = MEGATV_ACCOUNTS[_megatvIdx % MEGATV_ACCOUNTS.length];
-    _megatvIdx++;
-    return acc;
+
+function getMegaTvAccountForStream(streamPath) {
+    const cleanKey = (streamPath || "").split("?")[0].split(".")[0];
+    let hash = 0;
+    for (let i = 0; i < cleanKey.length; i++) {
+        hash = ((hash << 5) - hash) + cleanKey.charCodeAt(i);
+        hash |= 0;
+    }
+    const idx = Math.abs(hash) % MEGATV_ACCOUNTS.length;
+    return MEGATV_ACCOUNTS[idx];
 }
+
 function rewriteMegaTvUrl(targetUrl) {
     const m = targetUrl.match(/^(https?:\/\/[^\/]+\/live\/)[^\/]+\/[^\/]+\/(.+)$/);
     if (m) {
-        const [user, pwd] = getMegaTvAccount();
+        const [user, pwd] = getMegaTvAccountForStream(m[2]);
         return `${m[1]}${user}/${pwd}/${m[2]}`;
     }
     return targetUrl;
@@ -114,6 +103,12 @@ const server = http.createServer(async (req, res) => {
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.setHeader("Access-Control-Allow-Methods", "GET, HEAD, OPTIONS");
     res.setHeader("Access-Control-Allow-Headers", "*");
+    res.setHeader("Access-Control-Max-Age", "86400");
+
+    if (req.method === "OPTIONS") {
+        res.writeHead(204);
+        return res.end();
+    }
 
     const parsed = url.parse(req.url, true);
     if (parsed.pathname === "/" || parsed.pathname === "/health") {

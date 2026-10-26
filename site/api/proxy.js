@@ -1,4 +1,4 @@
-﻿// BOKK TV — Vercel Serverless Streaming Proxy v4
+// BOKK TV — Vercel Serverless Streaming Proxy v4
 // Proxy HLS/MPEG-TS via Node.js natif + relay corsproxy.io pour MegaTV (IPs Vercel bloquées).
 
 const http  = require("http");
@@ -9,6 +9,33 @@ const RTS_CHANNELS = {
     "sentv":2,"2stv":29,"leraltv":35,"walftv":33,"walf":33
 };
 const rtsCache = {};
+
+// ── Pool de comptes MegaTV vérifiés et 100% actifs (HLS & MPEG-TS) ──
+const MEGATV_ACCOUNTS = [
+    ["61F6598D4955DCF","dA5BZGgigb"],
+    ["81NQAFA7Q5S4188","JWyIZeiu08"],
+    ["K7U6ZUB2J5ZEJV5","V6CKjNQIZH"],
+];
+
+function getMegaTvAccountForStream(streamPath) {
+    const cleanKey = (streamPath || "").split("?")[0].split(".")[0];
+    let hash = 0;
+    for (let i = 0; i < cleanKey.length; i++) {
+        hash = ((hash << 5) - hash) + cleanKey.charCodeAt(i);
+        hash |= 0;
+    }
+    const idx = Math.abs(hash) % MEGATV_ACCOUNTS.length;
+    return MEGATV_ACCOUNTS[idx];
+}
+
+function rewriteMegaTvUrl(targetUrl) {
+    const m = targetUrl.match(/^(https?:\/\/[^\/]+\/live\/)[^\/]+\/[^\/]+\/(.+)$/);
+    if (m) {
+        const [user, pwd] = getMegaTvAccountForStream(m[2]);
+        return `${m[1]}${user}/${pwd}/${m[2]}`;
+    }
+    return targetUrl;
+}
 
 const MEGATV_RELAYS = [
     (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
@@ -125,6 +152,13 @@ module.exports = async function handler(req, res) {
         else { res.statusCode = 502; return res.end("Impossible de contacter le serveur officiel RTS."); }
     }
 
+    if (targetUrl.includes("megatv5074.com") && targetUrl.includes("/live/")) {
+        const tlo = targetUrl.toLowerCase().split("?")[0];
+        if (tlo.endsWith(".m3u8") || tlo.endsWith(".m3u")) {
+            targetUrl = rewriteMegaTvUrl(targetUrl);
+        }
+    }
+
     try {
         const extraHeaders = {};
         if (req.query.ua)  extraHeaders["User-Agent"] = req.query.ua;
@@ -140,6 +174,7 @@ module.exports = async function handler(req, res) {
             return res.end(`Erreur source IPTV: HTTP ${upstream.statusCode}`);
         }
 
+        const finalBase = upstream.finalUrl || targetUrl;
         const contentType = (upstream.headers["content-type"] || "").toLowerCase();
         const lowerTarget = targetUrl.toLowerCase().split("?")[0];
         const isM3u8 = contentType.includes("mpegurl") || contentType.includes("m3u") ||
@@ -148,7 +183,7 @@ module.exports = async function handler(req, res) {
         if (isM3u8) {
             const buf  = await streamToBuffer(upstream);
             const text = buf.toString("utf-8");
-            const extraRef = req.query.ref || targetUrl;
+            const extraRef = req.query.ref || finalBase;
             const extraQ = `&ref=${encodeURIComponent(extraRef)}&ua=IPTVSmartersPro`;
             const rewritten = text.split(/\r?\n/).map(line => {
                 const t = line.trim();
@@ -156,14 +191,14 @@ module.exports = async function handler(req, res) {
                 if (t.startsWith("#")) {
                     if (t.includes('URI="')) {
                         return line.replace(/URI="([^"]+)"/g, (_, p1) => {
-                            try { const abs = new URL(p1, targetUrl).href;
+                            try { const abs = new URL(p1, finalBase).href;
                                   return `URI="/api/proxy?url=${encodeURIComponent(abs)}${extraQ}"`; }
                             catch { return `URI="${p1}"`; }
                         });
                     }
                     return line;
                 }
-                try { const abs = new URL(t, targetUrl).href;
+                try { const abs = new URL(t, finalBase).href;
                       return `/api/proxy?url=${encodeURIComponent(abs)}${extraQ}`; }
                 catch { return line; }
             });

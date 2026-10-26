@@ -7,6 +7,33 @@
 
 const SEGMENT_EXTENSIONS = ['.ts', '.m4s', '.aac', '.mp4', '.fmp4'];
 
+const RTS_CHANNELS = {
+  'rts1': 26, 'rts2': 32, 'rts3': 42, 'rts4': 51, 'rts5': 52,
+  'sentv': 2, '2stv': 29, 'leraltv': 35, 'walftv': 33, 'walf': 33
+};
+
+const MEGATV_ACCOUNTS = [
+  ['61F6598D4955DCF', 'dA5BZGgigb'],
+  ['81NQAFA7Q5S4188', 'JWyIZeiu08'],
+  ['K7U6ZUB2J5ZEJV5', 'V6CKjNQIZH'],
+];
+
+function rewriteMegaTvUrl(targetUrl) {
+  const m = targetUrl.match(/^(https?:\/\/[^\/]+\/live\/)[^\/]+\/[^\/]+\/(.+)$/);
+  if (m) {
+    const streamPath = m[2];
+    const cleanKey = streamPath.split('?')[0].split('.')[0];
+    let hash = 0;
+    for (let i = 0; i < cleanKey.length; i++) {
+      hash = ((hash << 5) - hash) + cleanKey.charCodeAt(i);
+      hash |= 0;
+    }
+    const [user, pwd] = MEGATV_ACCOUNTS[Math.abs(hash) % MEGATV_ACCOUNTS.length];
+    return `${m[1]}${user}/${pwd}/${streamPath}`;
+  }
+  return targetUrl;
+}
+
 export default {
   async fetch(request, env, ctx) {
     if (request.method === 'OPTIONS') {
@@ -27,12 +54,34 @@ export default {
 };
 
 async function handleProxy(request, url, ctx) {
-  const targetUrl = url.searchParams.get('url');
+  let targetUrl = url.searchParams.get('url');
   const refParam  = url.searchParams.get('ref');
   const uaParam   = url.searchParams.get('ua');
 
   if (!targetUrl) {
     return new Response("Paramètre 'url' manquant.", { status: 400, headers: corsHeaders() });
+  }
+
+  // Résolution RTS
+  const rtsId = RTS_CHANNELS[targetUrl.toLowerCase()];
+  if (rtsId) {
+    try {
+      const r = await fetch(`https://tveapi.acan.group/myapiv2/directplayback/${rtsId}/json`, {
+        headers: { 'User-Agent': 'Mozilla/5.0' }
+      });
+      if (r.ok) {
+        const d = await r.json();
+        targetUrl = d.web_url || d.direct_url || targetUrl;
+      }
+    } catch (_) {}
+  }
+
+  // MegaTV pool
+  if (targetUrl.includes('megatv5074.com') && targetUrl.includes('/live/')) {
+    const tlo = targetUrl.toLowerCase().split('?')[0];
+    if (tlo.endsWith('.m3u8') || tlo.endsWith('.m3u')) {
+      targetUrl = rewriteMegaTvUrl(targetUrl);
+    }
   }
 
   const finalUa = uaParam || 'IPTVSmartersPro';

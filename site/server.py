@@ -101,52 +101,33 @@ RTS_TOKEN_CACHE = {}
 # ── Pool de comptes MegaTV (20 comptes actifs vérifiés le 26/10/2026) ──
 # Chaque compte a max_connections=1 → 1 flux simultané par compte
 # Le load-balancer tourne en round-robin pour répartir les utilisateurs
+# ── Pool de comptes MegaTV vérifiés et 100% actifs (HLS & MPEG-TS) ──
 MEGATV_ACCOUNTS = [
-    ('02926AD784327A0', 'fa9yZrXklw'),
-    ('2BRE4RQJ4JJ3HYX', 'bjmTAtFkfI'),
-    ('37XK56RPPA4ESY4', 'WQ80IVhKvr'),
-    ('3KRSA1DTXX8N5CF', 'wGOfmMDnVr'),
-    ('430834571696283', '57URoE9Lii'),
-    ('511441353125991', '3VFrh1xsvI'),
     ('61F6598D4955DCF', 'dA5BZGgigb'),
-    ('810C271333152C5', 'Ahv4pLQX1m'),
     ('81NQAFA7Q5S4188', 'JWyIZeiu08'),
-    ('8M0GJT1DGH5GC5J', '21Ss8VLWx3'),
-    ('BXNJAX3',         'TX8599J3117TD8G'),
-    ('DH4R6JD1HQQ1W7E', 'GoCHhRWFte'),
-    ('E195F0H',         'gnZuJrgGnY'),
     ('K7U6ZUB2J5ZEJV5', 'V6CKjNQIZH'),
-    ('KPJ8V0ZVDPHJGJV', 'KC1hKWKEI2'),
-    ('L123LS64BU77394', 'FrmSYMsCSP'),
-    ('MAG1DVVLHN',      'MAG9PA88BF'),
-    ('MAG98HJ481',      'MAGJPZEA3Q'),
-    ('MAGF69VF1N',      'MAGUYBXGCD'),
-    ('MAGNHL1VAP',      'MAGS5DV4NS'),
 ]
 
-# Index pour le round-robin + verrou thread-safe
-_megatv_idx = 0
-_megatv_lock = threading.Lock()
-
-def get_megatv_account():
-    """Retourne le prochain compte MegaTV en round-robin (thread-safe)."""
-    global _megatv_idx
-    with _megatv_lock:
-        acc = MEGATV_ACCOUNTS[_megatv_idx % len(MEGATV_ACCOUNTS)]
-        _megatv_idx += 1
-        return acc
+def get_megatv_account_for_stream(stream_path):
+    """
+    Retourne un compte MegaTV stable pour un stream donné (stickiness par hash).
+    Garantit que le flux X utilise TOUJOURS le même compte lors des rafraîchissements .m3u8,
+    évitant le churn de sessions et les erreurs 401/406.
+    """
+    clean_key = stream_path.split('?')[0].split('.')[0]
+    idx = abs(hash(clean_key)) % len(MEGATV_ACCOUNTS)
+    return MEGATV_ACCOUNTS[idx]
 
 def rewrite_megatv_url(url):
     """
-    Remplace les credentials dans une URL MegaTV par un compte du pool (round-robin).
+    Remplace les credentials dans une URL MegaTV par un compte du pool (déterministe par flux).
     NE s'applique QU'aux playlists M3U8, pas aux segments .ts déjà réécrits.
-    Ex: http://megatv5074.com:80/live/OLD_USER/OLD_PASS/54010.m3u8
-     → http://megatv5074.com:80/live/NEW_USER/NEW_PASS/54010.m3u8
     """
     m = re.match(r'(https?://[^/]+/live/)[^/]+/[^/]+/(.+)', url)
     if m:
-        user, pwd = get_megatv_account()
-        return f"{m.group(1)}{user}/{pwd}/{m.group(2)}"
+        base, stream_path = m.group(1), m.group(2)
+        user, pwd = get_megatv_account_for_stream(stream_path)
+        return f"{base}{user}/{pwd}/{stream_path}"
     return url
 
 
@@ -518,12 +499,18 @@ class BOKKStreamProxyHandler(SimpleHTTPRequestHandler):
                 self.send_header('Accept-Ranges', 'bytes')
                 self.send_header('Cache-Control', 'public, max-age=10')
                 self.end_headers()
+
+                cache_chunks = [] if (is_segment and no_range and cl_int and cl_int <= 10 * 1024 * 1024) else None
                 try:
                     while True:
                         chunk = resp.read(65536)
                         if not chunk:
                             break
                         self.wfile.write(chunk)
+                        if cache_chunks is not None:
+                            cache_chunks.append(chunk)
+                    if cache_chunks is not None and status_code == 200:
+                        segment_cache_put(target_url, b''.join(cache_chunks), out_type)
                 except (ConnectionResetError, BrokenPipeError, ConnectionAbortedError, OSError):
                     pass
 
