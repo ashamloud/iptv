@@ -1,6 +1,5 @@
 // BOKK TV — Catalogue Officiel des Chaînes
-// Chaînes Nationales Sénégal + MegaTV Premium + IPTV-Org
-// Total chaînes : 7798
+// Chaînes Nationales Sénégal + MegaTV Premium + TNT & FAST Permanent (7820 chaînes)
 
 const channels = [
   {
@@ -248,6 +247,216 @@ const channels = [
     "logo": "https://i.imgur.com/xXZ5kFy.jpg",
     "url": "https://vdo3.pro-fhi.net:3218/stream/play.m3u8",
     "fallbackUrl": "https://vdo3.pro-fhi.net:3218/stream/play.m3u8",
+    "type": "hls"
+  },
+  {
+    "id": 9900001,
+    "stream_id": 9900001,
+    "name": "France 2 (Direct National 1080p)",
+    "category": "francophone",
+    "group": "🇫🇷 France TNT & Général",
+    "country": "FR",
+    "badge": "FHD",
+    "desc": "France Télévisions • Direct National HD 24/7",
+    "logo": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e0/France_2_2018.svg/512px-France_2_2018.svg.png",
+    "url": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/francetv/backup/france2.m3u8",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/francetv/france-2.m3u8",
+    "type": "hls"
+  },
+  {
+    "id": 9900002,
+    "stream_id": 9900002,
+    "name": "France 3 (Direct National 1080p)",
+    "category": "francophone",
+    "group": "🇫🇷 France TNT & Général",
+    "country": "FR",
+    "badge": "FHD",
+    "desc": "France Télévisions • Direct National HD 24/7",
+    "logo": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b5/France_3_2018.svg/512px-France_3_2018.svg.png",
+    "url": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/francetv/backup/france3.m3u8",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/francetv/france-3.m3u8",
+    "type": "hls"
+  },
+  {
+    "id": 9900003,
+    "stream_id": 9900003,
+    "name": "France 4 (Culture & Spectacles)",
+    "category": "francophone",
+    "group": "🇫🇷 France TNT & Général",
+    "country": "FR",
+    "badge": "FHD",
+    "desc": "Culturebox & Jeunesse • Direct",
+    "logo": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c9/France_4_2018.svg/512px-France_4_2018.svg.png",
+    "url": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/francetv/france-4.m3u8",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/francetv/france-4.m3u8",
+    "type": "hls"
+  },
+  {
+    "id": 9900004,
+    "stream_id": 9900004,
+    "name": "France 5 (Savoirs & Documentaires)",
+    "category": "francophone",
+    "group": "🇫🇷 France TNT & Général",
+    "country": "FR",
+    "badge": "FHD",
+    "desc": "France Télévisions • Sciences, Nature & Société",
+    "logo": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/87/France_5_2018.svg/512px-France_5_2018.svg.png",
+    "url": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/francetv/backup/france5.m3u8",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/francetv/france-5.m3u8",
+    "type": "hls"
+  },
+  {
+    "id": 9900005,
+    "stream_id": 9900005,
+    "name": "France 24 (Info Continue FR 1080p)",
+    "category": "francophone",
+    "group": "🇫🇷 France Info & Monde",
+    "country": "FR",
+    "badge": "FHD",
+    "desc": "L'actualité internationale 24/7 en français",
+    "logo": "https://upload.wikimedia.org/wikipedia/fr/thumb/5/52/France_24_logo.svg/512px-France_24_logo.svg.png",
+    "url": "https://live.france24.com/hls/live/2037179-b/F24_FR_HI_HLS/master_5000.m3u8",
+    "fallbackUrl": "https://live.france24.com/hls/live/2037179-b/F24_FR_HI_HLS/master_5000.m3u8",
+    "type": "hls"
+  },
+  {
+    "id": 9900006,
+    "stream_id": 9900006,
+    "name": "TV5 Monde (Généraliste Francophone)",
+    "category": "francophone",
+    "group": "🇫🇷 France Info & Monde",
+    "country": "FR",
+    "badge": "FHD",
+    "desc": "La télévision francophone mondiale • Direct 24/7",
+    "logo": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e0/TV5MONDE_logo.svg/512px-TV5MONDE_logo.svg.png",
+    "url": "https://ott.tv5monde.com/Content/HLS/Live/channel(info)/index.m3u8",
+    "fallbackUrl": "https://ott.tv5monde.com/Content/HLS/Live/channel(info)/index.m3u8",
+    "type": "hls"
+  },
+  {
+    "id": 9900007,
+    "stream_id": 9900007,
+    "name": "Arte France (Culture & Découverte)",
+    "category": "francophone",
+    "group": "🇫🇷 France TNT & Général",
+    "country": "FR",
+    "badge": "FHD",
+    "desc": "Chaîne culturelle européenne • Direct 1080p",
+    "logo": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d4/Arte_Logo.svg/512px-Arte_Logo.svg.png",
+    "url": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/arte/arte.m3u8",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/arte/arte.m3u8",
+    "type": "hls"
+  },
+  {
+    "id": 9900008,
+    "stream_id": 9900008,
+    "name": "L'Équipe TV (Direct Sport 1080p)",
+    "category": "sport",
+    "group": "⚽ Sport & Événements",
+    "country": "FR",
+    "badge": "FHD",
+    "desc": "1ère chaîne de sport en direct en France",
+    "logo": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/bf/L%27%C3%89quipe_21_logo.svg/512px-L%27%C3%89quipe_21_logo.svg.png",
+    "url": "https://dq37unyetkpcz.cloudfront.net/v1/master/3722c60a815c199d9c0ef36c5b73da68a62b09d1/cc-m04j89j7k5gtp/LEquipe_FR.m3u8",
+    "fallbackUrl": "https://dq37unyetkpcz.cloudfront.net/v1/master/3722c60a815c199d9c0ef36c5b73da68a62b09d1/cc-m04j89j7k5gtp/LEquipe_FR.m3u8",
+    "type": "hls"
+  },
+  {
+    "id": 9900009,
+    "stream_id": 9900009,
+    "name": "Red Bull TV (Sports Extrêmes)",
+    "category": "sport",
+    "group": "⚽ Sport & Événements",
+    "country": "INT",
+    "badge": "FHD",
+    "desc": "F1, Moto, BMX, Ski & Sports Extrêmes • Direct 24/7",
+    "logo": "https://upload.wikimedia.org/wikipedia/en/thumb/f/f5/Red_Bull_TV_logo.svg/512px-Red_Bull_TV_logo.svg.png",
+    "url": "https://rbmn-live.akamaized.net/hls/live/590964/BoRB-AT/master.m3u8",
+    "fallbackUrl": "https://rbmn-live.akamaized.net/hls/live/590964/BoRB-AT/master.m3u8",
+    "type": "hls"
+  },
+  {
+    "id": 9900010,
+    "stream_id": 9900010,
+    "name": "Africa 24 (1ère Chaîne Panafricaine)",
+    "category": "senegal",
+    "group": "🇸🇳 Sénégal & Afrique",
+    "country": "SN",
+    "badge": "FHD",
+    "desc": "Actualités & Économie d'Afrique en continu",
+    "logo": "https://upload.wikimedia.org/wikipedia/fr/thumb/f/f6/Logo_Africa24.svg/512px-Logo_Africa24.svg.png",
+    "url": "https://africa24.vedge.infomaniak.com/livecast/ik:africa24/manifest.m3u8",
+    "fallbackUrl": "https://africa24.vedge.infomaniak.com/livecast/ik:africa24/manifest.m3u8",
+    "type": "hls"
+  },
+  {
+    "id": 9900011,
+    "stream_id": 9900011,
+    "name": "Africanews Français (Panafricain)",
+    "category": "senegal",
+    "group": "🇸🇳 Sénégal & Afrique",
+    "country": "SN",
+    "badge": "FHD",
+    "desc": "L'information africaine indépendante 24/7",
+    "logo": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cc/Africanews_logo.svg/512px-Africanews_logo.svg.png",
+    "url": "https://africanews-africanews-french-1-fr.samsung.wurl.tv/playlist.m3u8",
+    "fallbackUrl": "https://africanews-africanews-french-1-fr.samsung.wurl.tv/playlist.m3u8",
+    "type": "hls"
+  },
+  {
+    "id": 9900012,
+    "stream_id": 9900012,
+    "name": "Trace Sport Stars (Sport & Célébrités)",
+    "category": "sport",
+    "group": "⚽ Sport & Événements",
+    "country": "FR",
+    "badge": "HD",
+    "desc": "La vie des champions du sport mondial",
+    "logo": "https://upload.wikimedia.org/wikipedia/fr/thumb/f/fc/Trace_Sport_Stars_logo.svg/512px-Trace_Sport_Stars_logo.svg.png",
+    "url": "https://trace-sportstars-fr-samsung.amagi.tv/playlist.m3u8",
+    "fallbackUrl": "https://trace-sportstars-fr-samsung.amagi.tv/playlist.m3u8",
+    "type": "hls"
+  },
+  {
+    "id": 9900013,
+    "stream_id": 9900013,
+    "name": "Pluto TV Ciné Français (Films 24/7)",
+    "category": "cinema",
+    "group": "🎬 Films & Séries",
+    "country": "FR",
+    "badge": "FHD",
+    "desc": "Films français & comédies en continu 24/7",
+    "logo": "https://images.pluto.tv/channels/5d8b89e3a649635b7501cb66/colorLogoPNG.png",
+    "url": "https://service-stitcher.clusters.pluto.tv/stitch/hls/channel/5d8b89e3a649635b7501cb66/master.m3u8?advertisingId=&appName=web&appVersion=unknown&appStoreUrl=&architecture=&buildVersion=&clientDeviceType=0&deviceDNT=0&deviceId=unknown&deviceMake=unknown&deviceModel=unknown&deviceType=unknown&deviceVersion=unknown&includeExtendedEvents=false&sid=unknown&userId=",
+    "fallbackUrl": "https://service-stitcher.clusters.pluto.tv/stitch/hls/channel/5d8b89e3a649635b7501cb66/master.m3u8?advertisingId=&appName=web&appVersion=unknown&appStoreUrl=&architecture=&buildVersion=&clientDeviceType=0&deviceDNT=0&deviceId=unknown&deviceMake=unknown&deviceModel=unknown&deviceType=unknown&deviceVersion=unknown&includeExtendedEvents=false&sid=unknown&userId=",
+    "type": "hls"
+  },
+  {
+    "id": 9900014,
+    "stream_id": 9900014,
+    "name": "Pluto TV Action (Cinéma Action & Frissons)",
+    "category": "cinema",
+    "group": "🎬 Films & Séries",
+    "country": "FR",
+    "badge": "FHD",
+    "desc": "Films d'action, blockbusters & thrillers 24/7",
+    "logo": "https://images.pluto.tv/channels/5d8b89f5a649635b7501cb6a/colorLogoPNG.png",
+    "url": "https://service-stitcher.clusters.pluto.tv/stitch/hls/channel/5d8b89f5a649635b7501cb6a/master.m3u8?advertisingId=&appName=web&appVersion=unknown&appStoreUrl=&architecture=&buildVersion=&clientDeviceType=0&deviceDNT=0&deviceId=unknown&deviceMake=unknown&deviceModel=unknown&deviceType=unknown&deviceVersion=unknown&includeExtendedEvents=false&sid=unknown&userId=",
+    "fallbackUrl": "https://service-stitcher.clusters.pluto.tv/stitch/hls/channel/5d8b89f5a649635b7501cb6a/master.m3u8?advertisingId=&appName=web&appVersion=unknown&appStoreUrl=&architecture=&buildVersion=&clientDeviceType=0&deviceDNT=0&deviceId=unknown&deviceMake=unknown&deviceModel=unknown&deviceType=unknown&deviceVersion=unknown&includeExtendedEvents=false&sid=unknown&userId=",
+    "type": "hls"
+  },
+  {
+    "id": 9900015,
+    "stream_id": 9900015,
+    "name": "Trace Urban FR (Musique & Hip-Hop)",
+    "category": "music",
+    "group": "🎵 Musique & Clips",
+    "country": "FR",
+    "badge": "FHD",
+    "desc": "La 1ère chaîne musicale urbaine au monde",
+    "logo": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6f/Trace_Urban_logo.svg/512px-Trace_Urban_logo.svg.png",
+    "url": "https://trace-urban-fr-samsung.amagi.tv/playlist.m3u8",
+    "fallbackUrl": "https://trace-urban-fr-samsung.amagi.tv/playlist.m3u8",
     "type": "hls"
   },
   {
@@ -31845,7 +32054,7 @@ const channels = [
     "desc": "EU | FR | GÉNÉRAL",
     "logo": "https://go4.pw/FRANCE/TF1_FRANCE.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/56988.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/56988.ts",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/GJS95CQ9yiI6/Yu4GH8bSP0yaCVQ.m3u8",
     "type": "hls"
   },
   {
@@ -31859,7 +32068,7 @@ const channels = [
     "desc": "EU | FR | GÉNÉRAL",
     "logo": "https://go4.pw/FRANCE/francetv.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/57003.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/57003.ts",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/francetv/backup/france2.m3u8",
     "type": "hls"
   },
   {
@@ -31873,7 +32082,7 @@ const channels = [
     "desc": "EU | FR | GÉNÉRAL",
     "logo": "https://go4.pw/FRANCE/francetv.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/56997.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/56997.ts",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/francetv/backup/france3.m3u8",
     "type": "hls"
   },
   {
@@ -31887,7 +32096,7 @@ const channels = [
     "desc": "EU | FR | GÉNÉRAL",
     "logo": "https://go4.pw/FRANCE/noa3.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1126820.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1126820.ts",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/francetv/backup/france3.m3u8",
     "type": "hls"
   },
   {
@@ -31901,7 +32110,7 @@ const channels = [
     "desc": "EU | FR | GÉNÉRAL",
     "logo": "https://go4.pw/FRANCE/france.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/57004.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/57004.ts",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/francetv/france-4.m3u8",
     "type": "hls"
   },
   {
@@ -31915,7 +32124,7 @@ const channels = [
     "desc": "EU | FR | GÉNÉRAL",
     "logo": "https://go4.pw/FRANCE/francetv.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/57005.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/57005.ts",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/francetv/backup/france5.m3u8",
     "type": "hls"
   },
   {
@@ -31957,7 +32166,7 @@ const channels = [
     "desc": "EU | FR | GÉNÉRAL",
     "logo": "https://go4.pw/EUROPE/FRANCE/ARTE.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/57002.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/57002.ts",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/arte/arte.m3u8",
     "type": "hls"
   },
   {
@@ -31985,7 +32194,7 @@ const channels = [
     "desc": "EU | FR | GÉNÉRAL",
     "logo": "https://go4.pw/EUROPE/FRANCE/TMC_1.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/56848.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/56848.ts",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/GJS95CQ9yiI6/3pzeKuVoUXLYM2e.m3u8",
     "type": "hls"
   },
   {
@@ -31999,7 +32208,7 @@ const channels = [
     "desc": "EU | FR | GÉNÉRAL",
     "logo": "https://go4.pw/EUROPE/FRANCE/TFX.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/60130.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/60130.ts",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/GJS95CQ9yiI6/VgGPIh9yDCiZuu4.m3u8",
     "type": "hls"
   },
   {
@@ -32293,7 +32502,7 @@ const channels = [
     "desc": "EU | FR | GÉNÉRAL",
     "logo": "https://go4.pw/EUROPE/FRANCE/Tv5_monde_HD.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/329454.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/329454.ts",
+    "fallbackUrl": "https://ott.tv5monde.com/Content/HLS/Live/channel(info)/index.m3u8",
     "type": "hls"
   },
   {
@@ -32307,7 +32516,7 @@ const channels = [
     "desc": "EU | FR | GÉNÉRAL",
     "logo": "https://go4.pw/EUROPE/FRANCE/Tv5_monde_HD.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/56975.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/56975.ts",
+    "fallbackUrl": "https://ott.tv5monde.com/Content/HLS/Live/channel(info)/index.m3u8",
     "type": "hls"
   },
   {
@@ -32321,7 +32530,7 @@ const channels = [
     "desc": "EU | FR | GÉNÉRAL",
     "logo": "https://go4.pw/EUROPE/FRANCE/Tv5_monde_HD.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/311411.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/311411.ts",
+    "fallbackUrl": "https://ott.tv5monde.com/Content/HLS/Live/channel(info)/index.m3u8",
     "type": "hls"
   },
   {
@@ -32391,7 +32600,7 @@ const channels = [
     "desc": "EU | FR | GÉNÉRAL",
     "logo": "https://go4.pw/FRANCE/france.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/920028.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/920028.ts",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/francetv/backup/france3.m3u8",
     "type": "hls"
   },
   {
@@ -32419,7 +32628,7 @@ const channels = [
     "desc": "EU | FR | GÉNÉRAL",
     "logo": "https://go4.pw/FRANCE/france.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1146332.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1146332.ts",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/francetv/backup/france3.m3u8",
     "type": "hls"
   },
   {
@@ -32433,7 +32642,7 @@ const channels = [
     "desc": "EU | FR | GÉNÉRAL",
     "logo": "https://go4.pw/FRANCE/france.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1146333.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1146333.ts",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/francetv/backup/france3.m3u8",
     "type": "hls"
   },
   {
@@ -32447,7 +32656,7 @@ const channels = [
     "desc": "EU | FR | GÉNÉRAL",
     "logo": "https://go4.pw/FRANCE/france.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1146334.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1146334.ts",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/francetv/backup/france3.m3u8",
     "type": "hls"
   },
   {
@@ -32461,7 +32670,7 @@ const channels = [
     "desc": "EU | FR | GÉNÉRAL",
     "logo": "https://go4.pw/FRANCE/france.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1146335.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1146335.ts",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/francetv/backup/france3.m3u8",
     "type": "hls"
   },
   {
@@ -32475,7 +32684,7 @@ const channels = [
     "desc": "EU | FR | GÉNÉRAL",
     "logo": "https://go4.pw/FRANCE/france.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1146336.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1146336.ts",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/francetv/backup/france3.m3u8",
     "type": "hls"
   },
   {
@@ -32489,7 +32698,7 @@ const channels = [
     "desc": "EU | FR | GÉNÉRAL",
     "logo": "https://go4.pw/FRANCE/france.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1146337.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1146337.ts",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/francetv/backup/france3.m3u8",
     "type": "hls"
   },
   {
@@ -32503,7 +32712,7 @@ const channels = [
     "desc": "EU | FR | GÉNÉRAL",
     "logo": "https://go4.pw/FRANCE/france.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1146338.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1146338.ts",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/francetv/backup/france3.m3u8",
     "type": "hls"
   },
   {
@@ -32517,7 +32726,7 @@ const channels = [
     "desc": "EU | FR | GÉNÉRAL",
     "logo": "https://go4.pw/FRANCE/france.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1146339.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1146339.ts",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/francetv/backup/france3.m3u8",
     "type": "hls"
   },
   {
@@ -32531,7 +32740,7 @@ const channels = [
     "desc": "EU | FR | GÉNÉRAL",
     "logo": "https://go4.pw/FRANCE/france.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1146340.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1146340.ts",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/francetv/backup/france3.m3u8",
     "type": "hls"
   },
   {
@@ -32545,7 +32754,7 @@ const channels = [
     "desc": "EU | FR | GÉNÉRAL",
     "logo": "https://go4.pw/FRANCE/france.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1146341.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1146341.ts",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/francetv/backup/france3.m3u8",
     "type": "hls"
   },
   {
@@ -32559,7 +32768,7 @@ const channels = [
     "desc": "EU | FR | GÉNÉRAL",
     "logo": "https://go4.pw/FRANCE/france.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1146342.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1146342.ts",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/francetv/backup/france3.m3u8",
     "type": "hls"
   },
   {
@@ -32573,7 +32782,7 @@ const channels = [
     "desc": "EU | FR | GÉNÉRAL",
     "logo": "https://go4.pw/FRANCE/france.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1146343.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1146343.ts",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/francetv/backup/france3.m3u8",
     "type": "hls"
   },
   {
@@ -32587,7 +32796,7 @@ const channels = [
     "desc": "EU | FR | GÉNÉRAL",
     "logo": "https://go4.pw/FRANCE/france.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1146344.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1146344.ts",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/francetv/backup/france3.m3u8",
     "type": "hls"
   },
   {
@@ -32601,7 +32810,7 @@ const channels = [
     "desc": "EU | FR | GÉNÉRAL",
     "logo": "https://go4.pw/FRANCE/Viastella.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1146345.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1146345.ts",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/francetv/backup/france3.m3u8",
     "type": "hls"
   },
   {
@@ -32615,7 +32824,7 @@ const channels = [
     "desc": "EU | FR | GÉNÉRAL",
     "logo": "https://go4.pw/FRANCE/france.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1146346.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1146346.ts",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/francetv/backup/france3.m3u8",
     "type": "hls"
   },
   {
@@ -32629,7 +32838,7 @@ const channels = [
     "desc": "EU | FR | GÉNÉRAL",
     "logo": "https://go4.pw/FRANCE/france.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1146347.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1146347.ts",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/francetv/backup/france3.m3u8",
     "type": "hls"
   },
   {
@@ -32643,7 +32852,7 @@ const channels = [
     "desc": "EU | FR | GÉNÉRAL",
     "logo": "https://go4.pw/FRANCE/france.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1146348.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1146348.ts",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/francetv/backup/france3.m3u8",
     "type": "hls"
   },
   {
@@ -32657,7 +32866,7 @@ const channels = [
     "desc": "EU | FR | GÉNÉRAL",
     "logo": "https://go4.pw/FRANCE/france.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1146349.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1146349.ts",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/francetv/backup/france3.m3u8",
     "type": "hls"
   },
   {
@@ -32671,7 +32880,7 @@ const channels = [
     "desc": "EU | FR | GÉNÉRAL",
     "logo": "https://go4.pw/FRANCE/france.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1146350.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1146350.ts",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/francetv/backup/france3.m3u8",
     "type": "hls"
   },
   {
@@ -32685,7 +32894,7 @@ const channels = [
     "desc": "EU | FR | GÉNÉRAL",
     "logo": "https://go4.pw/FRANCE/france.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1146351.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1146351.ts",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/francetv/backup/france3.m3u8",
     "type": "hls"
   },
   {
@@ -32699,7 +32908,7 @@ const channels = [
     "desc": "EU | FR | GÉNÉRAL",
     "logo": "https://go4.pw/FRANCE/france.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1146352.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1146352.ts",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/francetv/backup/france3.m3u8",
     "type": "hls"
   },
   {
@@ -32713,7 +32922,7 @@ const channels = [
     "desc": "EU | FR | GÉNÉRAL",
     "logo": "https://go4.pw/FRANCE/france.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1146353.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1146353.ts",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/francetv/backup/france3.m3u8",
     "type": "hls"
   },
   {
@@ -32839,7 +33048,7 @@ const channels = [
     "desc": "EU | FR | GÉNÉRAL",
     "logo": "https://go4.pw/FRANCE/TF1_FRANCE.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/56945.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/56945.ts",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/GJS95CQ9yiI6/Yu4GH8bSP0yaCVQ.m3u8",
     "type": "hls"
   },
   {
@@ -32853,7 +33062,7 @@ const channels = [
     "desc": "EU | FR | GÉNÉRAL",
     "logo": "https://go4.pw/FRANCE/francetv.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/56960.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/56960.ts",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/francetv/backup/france2.m3u8",
     "type": "hls"
   },
   {
@@ -32867,7 +33076,7 @@ const channels = [
     "desc": "EU | FR | GÉNÉRAL",
     "logo": "https://go4.pw/FRANCE/francetv.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/56954.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/56954.ts",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/francetv/backup/france3.m3u8",
     "type": "hls"
   },
   {
@@ -32881,7 +33090,7 @@ const channels = [
     "desc": "EU | FR | GÉNÉRAL",
     "logo": "https://go4.pw/FRANCE/noa3.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/323522.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/323522.ts",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/francetv/backup/france3.m3u8",
     "type": "hls"
   },
   {
@@ -32895,7 +33104,7 @@ const channels = [
     "desc": "EU | FR | GÉNÉRAL",
     "logo": "https://go4.pw/EUROPE/FRANCE/FRANCE4FHD.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/56961.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/56961.ts",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/francetv/france-4.m3u8",
     "type": "hls"
   },
   {
@@ -32909,7 +33118,7 @@ const channels = [
     "desc": "EU | FR | GÉNÉRAL",
     "logo": "https://go4.pw/FRANCE/francetv.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/56962.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/56962.ts",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/francetv/backup/france5.m3u8",
     "type": "hls"
   },
   {
@@ -32937,7 +33146,7 @@ const channels = [
     "desc": "EU | FR | GÉNÉRAL",
     "logo": "https://go4.pw/EUROPE/FRANCE/ARTE.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/56959.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/56959.ts",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/arte/arte.m3u8",
     "type": "hls"
   },
   {
@@ -32965,7 +33174,7 @@ const channels = [
     "desc": "EU | FR | GÉNÉRAL",
     "logo": "https://go4.pw/EUROPE/FRANCE/TMC_1.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/56823.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/56823.ts",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/GJS95CQ9yiI6/3pzeKuVoUXLYM2e.m3u8",
     "type": "hls"
   },
   {
@@ -32979,7 +33188,7 @@ const channels = [
     "desc": "EU | FR | GÉNÉRAL",
     "logo": "https://go4.pw/EUROPE/FRANCE/TFX.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/60104.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/60104.ts",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/GJS95CQ9yiI6/VgGPIh9yDCiZuu4.m3u8",
     "type": "hls"
   },
   {
@@ -33175,7 +33384,7 @@ const channels = [
     "desc": "EU | FR | GÉNÉRAL",
     "logo": "https://go4.pw/EUROPE/FRANCE/TMC_PLUS.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1086023.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1086023.ts",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/GJS95CQ9yiI6/3pzeKuVoUXLYM2e.m3u8",
     "type": "hls"
   },
   {
@@ -33217,7 +33426,7 @@ const channels = [
     "desc": "EU | FR | GÉNÉRAL",
     "logo": "https://go4.pw/EUROPE/FRANCE/Tv5_monde_HD.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/329453.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/329453.ts",
+    "fallbackUrl": "https://ott.tv5monde.com/Content/HLS/Live/channel(info)/index.m3u8",
     "type": "hls"
   },
   {
@@ -33231,7 +33440,7 @@ const channels = [
     "desc": "EU | FR | GÉNÉRAL",
     "logo": "https://go4.pw/EUROPE/FRANCE/Tv5_monde_HD.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/56932.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/56932.ts",
+    "fallbackUrl": "https://ott.tv5monde.com/Content/HLS/Live/channel(info)/index.m3u8",
     "type": "hls"
   },
   {
@@ -33273,7 +33482,7 @@ const channels = [
     "desc": "EU | FR | GÉNÉRAL",
     "logo": "https://go4.pw/FRANCE/TF1_FRANCE.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/56902.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/56902.ts",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/GJS95CQ9yiI6/Yu4GH8bSP0yaCVQ.m3u8",
     "type": "hls"
   },
   {
@@ -33287,7 +33496,7 @@ const channels = [
     "desc": "EU | FR | GÉNÉRAL",
     "logo": "https://go4.pw/FRANCE/francetv.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/56917.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/56917.ts",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/francetv/backup/france2.m3u8",
     "type": "hls"
   },
   {
@@ -33301,7 +33510,7 @@ const channels = [
     "desc": "EU | FR | GÉNÉRAL",
     "logo": "https://go4.pw/FRANCE/noa3.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/310626.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/310626.ts",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/francetv/backup/france3.m3u8",
     "type": "hls"
   },
   {
@@ -33315,7 +33524,7 @@ const channels = [
     "desc": "EU | FR | GÉNÉRAL",
     "logo": "https://go4.pw/FRANCE/francetv.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/56911.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/56911.ts",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/francetv/backup/france3.m3u8",
     "type": "hls"
   },
   {
@@ -33329,7 +33538,7 @@ const channels = [
     "desc": "EU | FR | GÉNÉRAL",
     "logo": "https://go4.pw/EUROPE/FRANCE/FRANCE4FHD.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/56918.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/56918.ts",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/francetv/france-4.m3u8",
     "type": "hls"
   },
   {
@@ -33343,7 +33552,7 @@ const channels = [
     "desc": "EU | FR | GÉNÉRAL",
     "logo": "https://go4.pw/FRANCE/francetv.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/56919.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/56919.ts",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/francetv/backup/france5.m3u8",
     "type": "hls"
   },
   {
@@ -33399,7 +33608,7 @@ const channels = [
     "desc": "EU | FR | GÉNÉRAL",
     "logo": "https://go4.pw/EUROPE/FRANCE/ARTE.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/56916.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/56916.ts",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/arte/arte.m3u8",
     "type": "hls"
   },
   {
@@ -33581,7 +33790,7 @@ const channels = [
     "desc": "EU | FR | GÉNÉRAL",
     "logo": "https://go4.pw/EUROPE/FRANCE/TMC_PLUS.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/333601.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/333601.ts",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/GJS95CQ9yiI6/3pzeKuVoUXLYM2e.m3u8",
     "type": "hls"
   },
   {
@@ -33623,7 +33832,7 @@ const channels = [
     "desc": "EU | FR | GÉNÉRAL",
     "logo": "https://go4.pw/EUROPE/FRANCE/Tv5_monde_HD.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/56889.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/56889.ts",
+    "fallbackUrl": "https://ott.tv5monde.com/Content/HLS/Live/channel(info)/index.m3u8",
     "type": "hls"
   },
   {
@@ -33665,7 +33874,7 @@ const channels = [
     "desc": "EU | FR | GÉNÉRAL",
     "logo": "https://go4.pw/FRANCE/frlog.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1121095.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1121095.ts",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/francetv/france-4.m3u8",
     "type": "hls"
   },
   {
@@ -33679,7 +33888,7 @@ const channels = [
     "desc": "EU | FR | GÉNÉRAL",
     "logo": "https://go4.pw/FRANCE/TF1_FRANCE.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1044109.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1044109.ts",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/GJS95CQ9yiI6/Yu4GH8bSP0yaCVQ.m3u8",
     "type": "hls"
   },
   {
@@ -33693,7 +33902,7 @@ const channels = [
     "desc": "EU | FR | GÉNÉRAL",
     "logo": "https://go4.pw/FRANCE/francetv.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1044110.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1044110.ts",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/francetv/backup/france2.m3u8",
     "type": "hls"
   },
   {
@@ -33777,7 +33986,7 @@ const channels = [
     "desc": "EU | FR | NEWS",
     "logo": "https://go4.pw/EUROPE/FRANCE/FRANCE24.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/60117.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/60117.ts",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/francetv/backup/france2.m3u8",
     "type": "hls"
   },
   {
@@ -34085,7 +34294,7 @@ const channels = [
     "desc": "EU | FR | NEWS",
     "logo": "https://go4.pw/EUROPE/FRANCE/FRANCE24.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/60096.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/60096.ts",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/francetv/backup/france2.m3u8",
     "type": "hls"
   },
   {
@@ -34267,7 +34476,7 @@ const channels = [
     "desc": "EU | FR | NEWS",
     "logo": "https://go4.pw/EUROPE/FRANCE/FRANCE24.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/60078.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/60078.ts",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/francetv/backup/france2.m3u8",
     "type": "hls"
   },
   {
@@ -34855,7 +35064,7 @@ const channels = [
     "desc": "EU | FR | CINÉMA",
     "logo": "https://go4.pw/EUROPE/FRANCE/TF1_SERIES-FILMS.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/63504.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/63504.ts",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/GJS95CQ9yiI6/Yu4GH8bSP0yaCVQ.m3u8",
     "type": "hls"
   },
   {
@@ -35219,7 +35428,7 @@ const channels = [
     "desc": "EU | FR | CINÉMA",
     "logo": "https://go4.pw/EUROPE/FRANCE/TF1_SERIES-FILMS.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/60110.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/60110.ts",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/GJS95CQ9yiI6/Yu4GH8bSP0yaCVQ.m3u8",
     "type": "hls"
   },
   {
@@ -35261,7 +35470,7 @@ const channels = [
     "desc": "EU | FR | CINÉMA",
     "logo": "https://go4.pw/EUROPE/FRANCE/ALACARTE.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1026776.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1026776.ts",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/arte/arte.m3u8",
     "type": "hls"
   },
   {
@@ -35275,7 +35484,7 @@ const channels = [
     "desc": "EU | FR | CINÉMA",
     "logo": "https://go4.pw/EUROPE/FRANCE/ALACARTE.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1134177.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1134177.ts",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/arte/arte.m3u8",
     "type": "hls"
   },
   {
@@ -35289,7 +35498,7 @@ const channels = [
     "desc": "EU | FR | CINÉMA",
     "logo": "https://go4.pw/EUROPE/FRANCE/ALACARTE.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1026777.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1026777.ts",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/arte/arte.m3u8",
     "type": "hls"
   },
   {
@@ -35639,7 +35848,7 @@ const channels = [
     "desc": "EU | FR | CINÉMA",
     "logo": "https://go4.pw/EUROPE/FRANCE/TFX.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/60092.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/60092.ts",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/GJS95CQ9yiI6/VgGPIh9yDCiZuu4.m3u8",
     "type": "hls"
   },
   {
@@ -35667,7 +35876,7 @@ const channels = [
     "desc": "EU | FR | CINÉMA",
     "logo": "https://go4.pw/EUROPE/FRANCE/TF1_SERIES-FILMS.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/60091.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/60091.ts",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/GJS95CQ9yiI6/Yu4GH8bSP0yaCVQ.m3u8",
     "type": "hls"
   },
   {
@@ -38271,7 +38480,7 @@ const channels = [
     "desc": "EU | FR | ENTERTAINMENT",
     "logo": "https://go4.pw/FRANCE/frlog.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1121106.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1121106.ts",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/francetv/france-4.m3u8",
     "type": "hls"
   },
   {
@@ -38705,7 +38914,7 @@ const channels = [
     "desc": "EU | FR | SPORTS",
     "logo": "https://go4.pw/FRANCE/frlog.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1121054.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1121054.ts",
+    "fallbackUrl": "https://dq37unyetkpcz.cloudfront.net/v1/master/3722c60a815c199d9c0ef36c5b73da68a62b09d1/cc-m04j89j7k5gtp/LEquipe_FR.m3u8",
     "type": "hls"
   },
   {
@@ -38761,7 +38970,7 @@ const channels = [
     "desc": "EU | FR | SPORTS",
     "logo": "https://go4.pw/EUROPE/FRANCE/EQUIPE.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1140768.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1140768.ts",
+    "fallbackUrl": "https://dq37unyetkpcz.cloudfront.net/v1/master/3722c60a815c199d9c0ef36c5b73da68a62b09d1/cc-m04j89j7k5gtp/LEquipe_FR.m3u8",
     "type": "hls"
   },
   {
@@ -38775,7 +38984,7 @@ const channels = [
     "desc": "EU | FR | SPORTS",
     "logo": "https://go4.pw/EUROPE/FRANCE/EQUIPE.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1140769.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1140769.ts",
+    "fallbackUrl": "https://dq37unyetkpcz.cloudfront.net/v1/master/3722c60a815c199d9c0ef36c5b73da68a62b09d1/cc-m04j89j7k5gtp/LEquipe_FR.m3u8",
     "type": "hls"
   },
   {
@@ -38789,7 +38998,7 @@ const channels = [
     "desc": "EU | FR | SPORTS",
     "logo": "https://go4.pw/EUROPE/FRANCE/EQUIPE.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1140770.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1140770.ts",
+    "fallbackUrl": "https://dq37unyetkpcz.cloudfront.net/v1/master/3722c60a815c199d9c0ef36c5b73da68a62b09d1/cc-m04j89j7k5gtp/LEquipe_FR.m3u8",
     "type": "hls"
   },
   {
@@ -38803,7 +39012,7 @@ const channels = [
     "desc": "EU | FR | SPORTS",
     "logo": "https://go4.pw/FRANCE/equipe2.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/330265.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/330265.ts",
+    "fallbackUrl": "https://dq37unyetkpcz.cloudfront.net/v1/master/3722c60a815c199d9c0ef36c5b73da68a62b09d1/cc-m04j89j7k5gtp/LEquipe_FR.m3u8",
     "type": "hls"
   },
   {
@@ -38817,7 +39026,7 @@ const channels = [
     "desc": "EU | FR | SPORTS",
     "logo": "https://go4.pw/FRANCE/equipe2.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/737356.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/737356.ts",
+    "fallbackUrl": "https://dq37unyetkpcz.cloudfront.net/v1/master/3722c60a815c199d9c0ef36c5b73da68a62b09d1/cc-m04j89j7k5gtp/LEquipe_FR.m3u8",
     "type": "hls"
   },
   {
@@ -38831,7 +39040,7 @@ const channels = [
     "desc": "EU | FR | SPORTS",
     "logo": "https://go4.pw/FRANCE/equipe2.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/330264.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/330264.ts",
+    "fallbackUrl": "https://dq37unyetkpcz.cloudfront.net/v1/master/3722c60a815c199d9c0ef36c5b73da68a62b09d1/cc-m04j89j7k5gtp/LEquipe_FR.m3u8",
     "type": "hls"
   },
   {
@@ -38845,7 +39054,7 @@ const channels = [
     "desc": "EU | FR | SPORTS",
     "logo": "https://go4.pw/FRANCE/equipe2.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/737381.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/737381.ts",
+    "fallbackUrl": "https://dq37unyetkpcz.cloudfront.net/v1/master/3722c60a815c199d9c0ef36c5b73da68a62b09d1/cc-m04j89j7k5gtp/LEquipe_FR.m3u8",
     "type": "hls"
   },
   {
@@ -40553,7 +40762,7 @@ const channels = [
     "desc": "EU | FR | SPORTS",
     "logo": "https://go4.pw/FRANCE/frlog.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1121068.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1121068.ts",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/francetv/france-4.m3u8",
     "type": "hls"
   },
   {
@@ -47035,7 +47244,7 @@ const channels = [
     "desc": "EU | FR | ENFANTS",
     "logo": "https://go4.pw/EUROPE/FRANCE/GULLI.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/60119.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/60119.ts",
+    "fallbackUrl": "https://origin-m6web.live.6cloud.fr/out/v1/6play/6play-gulli/cmaf_q2hyb21h/hls-short-sd.m3u8",
     "type": "hls"
   },
   {
@@ -47343,7 +47552,7 @@ const channels = [
     "desc": "EU | FR | ENFANTS",
     "logo": "https://go4.pw/EUROPE/FRANCE/GULLI.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/60098.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/60098.ts",
+    "fallbackUrl": "https://origin-m6web.live.6cloud.fr/out/v1/6play/6play-gulli/cmaf_q2hyb21h/hls-short-sd.m3u8",
     "type": "hls"
   },
   {
@@ -47665,7 +47874,7 @@ const channels = [
     "desc": "EU | FR | ENFANTS",
     "logo": "https://go4.pw/EUROPE/FRANCE/GULLI.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/60080.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/60080.ts",
+    "fallbackUrl": "https://origin-m6web.live.6cloud.fr/out/v1/6play/6play-gulli/cmaf_q2hyb21h/hls-short-sd.m3u8",
     "type": "hls"
   },
   {
@@ -49037,7 +49246,7 @@ const channels = [
     "desc": "EU | FR | CARAÃBES",
     "logo": "https://go4.pw/EUROPE/FRANCE/TF1.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1099703.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1099703.ts",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/GJS95CQ9yiI6/Yu4GH8bSP0yaCVQ.m3u8",
     "type": "hls"
   },
   {
@@ -49051,7 +49260,7 @@ const channels = [
     "desc": "EU | FR | CARAÃBES",
     "logo": "https://go4.pw/FRANCE/france.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1099661.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1099661.ts",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/francetv/backup/france2.m3u8",
     "type": "hls"
   },
   {
@@ -49065,7 +49274,7 @@ const channels = [
     "desc": "EU | FR | CARAÃBES",
     "logo": "https://go4.pw/FRANCE/france.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1099663.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1099663.ts",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/francetv/backup/france3.m3u8",
     "type": "hls"
   },
   {
@@ -49079,7 +49288,7 @@ const channels = [
     "desc": "EU | FR | CARAÃBES",
     "logo": "https://go4.pw/FRANCE/france.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1099664.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1099664.ts",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/francetv/france-4.m3u8",
     "type": "hls"
   },
   {
@@ -49093,7 +49302,7 @@ const channels = [
     "desc": "EU | FR | CARAÃBES",
     "logo": "https://go4.pw/FRANCE/france.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1099665.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1099665.ts",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/francetv/backup/france5.m3u8",
     "type": "hls"
   },
   {
@@ -49107,7 +49316,7 @@ const channels = [
     "desc": "EU | FR | CARAÃBES",
     "logo": "https://go4.pw/EUROPE/FRANCE/FRANCE24.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1099662.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1099662.ts",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/francetv/backup/france2.m3u8",
     "type": "hls"
   },
   {
@@ -49191,7 +49400,7 @@ const channels = [
     "desc": "EU | FR | CARAÃBES",
     "logo": "https://go4.pw/EUROPE/FRANCE/Tv5_monde_HD.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1099713.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1099713.ts",
+    "fallbackUrl": "https://ott.tv5monde.com/Content/HLS/Live/channel(info)/index.m3u8",
     "type": "hls"
   },
   {
@@ -49555,7 +49764,7 @@ const channels = [
     "desc": "EU | FR | CARAÃBES",
     "logo": "https://go4.pw/EUROPE/FRANCE/GULLI.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1099670.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1099670.ts",
+    "fallbackUrl": "https://origin-m6web.live.6cloud.fr/out/v1/6play/6play-gulli/cmaf_q2hyb21h/hls-short-sd.m3u8",
     "type": "hls"
   },
   {
@@ -49779,7 +49988,7 @@ const channels = [
     "desc": "EU | FR | CARAÃBES",
     "logo": "https://go4.pw/EUROPE/FRANCE/EQUIPE.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1099677.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1099677.ts",
+    "fallbackUrl": "https://dq37unyetkpcz.cloudfront.net/v1/master/3722c60a815c199d9c0ef36c5b73da68a62b09d1/cc-m04j89j7k5gtp/LEquipe_FR.m3u8",
     "type": "hls"
   },
   {
@@ -50003,7 +50212,7 @@ const channels = [
     "desc": "EU | FR | CARAÃBES",
     "logo": "https://go4.pw/EUROPE/FRANCE/ARTE.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1099721.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1099721.ts",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/arte/arte.m3u8",
     "type": "hls"
   },
   {
@@ -50045,7 +50254,7 @@ const channels = [
     "desc": "EU | FR | CARAÃBES",
     "logo": "https://go4.pw/EUROPE/FRANCE/TF1_SERIES-FILMS.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1099704.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1099704.ts",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/GJS95CQ9yiI6/Yu4GH8bSP0yaCVQ.m3u8",
     "type": "hls"
   },
   {
@@ -50213,7 +50422,7 @@ const channels = [
     "desc": "EU | FR | CARAÃBES",
     "logo": "https://go4.pw/EUROPE/FRANCE/TMC_1.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1099706.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1099706.ts",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/GJS95CQ9yiI6/3pzeKuVoUXLYM2e.m3u8",
     "type": "hls"
   },
   {
@@ -50409,7 +50618,7 @@ const channels = [
     "desc": "EU | FR | RÉUNION",
     "logo": "https://go4.pw/EUROPE/FRANCE/TF1.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/987056.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/987056.ts",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/GJS95CQ9yiI6/Yu4GH8bSP0yaCVQ.m3u8",
     "type": "hls"
   },
   {
@@ -50423,7 +50632,7 @@ const channels = [
     "desc": "EU | FR | RÉUNION",
     "logo": "https://go4.pw/FRANCE/france.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/987115.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/987115.ts",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/francetv/backup/france2.m3u8",
     "type": "hls"
   },
   {
@@ -50437,7 +50646,7 @@ const channels = [
     "desc": "EU | FR | RÉUNION",
     "logo": "https://go4.pw/FRANCE/france.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/987117.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/987117.ts",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/francetv/backup/france3.m3u8",
     "type": "hls"
   },
   {
@@ -50451,7 +50660,7 @@ const channels = [
     "desc": "EU | FR | RÉUNION",
     "logo": "https://go4.pw/FRANCE/france.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/987118.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/987118.ts",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/francetv/france-4.m3u8",
     "type": "hls"
   },
   {
@@ -50465,7 +50674,7 @@ const channels = [
     "desc": "EU | FR | RÉUNION",
     "logo": "https://go4.pw/FRANCE/france.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/987119.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/987119.ts",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/francetv/backup/france5.m3u8",
     "type": "hls"
   },
   {
@@ -50535,7 +50744,7 @@ const channels = [
     "desc": "EU | FR | RÉUNION",
     "logo": "https://go4.pw/EUROPE/FRANCE/Tv5_monde_HD.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/987066.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/987066.ts",
+    "fallbackUrl": "https://ott.tv5monde.com/Content/HLS/Live/channel(info)/index.m3u8",
     "type": "hls"
   },
   {
@@ -50563,7 +50772,7 @@ const channels = [
     "desc": "EU | FR | RÉUNION",
     "logo": "https://go4.pw/EUROPE/FRANCE/TFX.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/987058.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/987058.ts",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/GJS95CQ9yiI6/VgGPIh9yDCiZuu4.m3u8",
     "type": "hls"
   },
   {
@@ -50605,7 +50814,7 @@ const channels = [
     "desc": "EU | FR | RÉUNION",
     "logo": "https://go4.pw/EUROPE/FRANCE/TMC_1.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/987059.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/987059.ts",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/GJS95CQ9yiI6/3pzeKuVoUXLYM2e.m3u8",
     "type": "hls"
   },
   {
@@ -50647,7 +50856,7 @@ const channels = [
     "desc": "EU | FR | RÉUNION",
     "logo": "https://go4.pw/EUROPE/FRANCE/GULLI.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/987121.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/987121.ts",
+    "fallbackUrl": "https://origin-m6web.live.6cloud.fr/out/v1/6play/6play-gulli/cmaf_q2hyb21h/hls-short-sd.m3u8",
     "type": "hls"
   },
   {
@@ -50815,7 +51024,7 @@ const channels = [
     "desc": "EU | FR | RÉUNION",
     "logo": "https://go4.pw/EUROPE/FRANCE/ARTE.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/987076.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/987076.ts",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/arte/arte.m3u8",
     "type": "hls"
   },
   {
@@ -50941,7 +51150,7 @@ const channels = [
     "desc": "EU | FR | RÉUNION",
     "logo": "https://go4.pw/EUROPE/FRANCE/FRANCE24.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/987116.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/987116.ts",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/francetv/backup/france2.m3u8",
     "type": "hls"
   },
   {
@@ -51193,7 +51402,7 @@ const channels = [
     "desc": "EU | FR | RÉUNION",
     "logo": "https://go4.pw/EUROPE/FRANCE/EQUIPE.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/987130.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/987130.ts",
+    "fallbackUrl": "https://dq37unyetkpcz.cloudfront.net/v1/master/3722c60a815c199d9c0ef36c5b73da68a62b09d1/cc-m04j89j7k5gtp/LEquipe_FR.m3u8",
     "type": "hls"
   },
   {
@@ -51319,7 +51528,7 @@ const channels = [
     "desc": "EU | FR | RÉUNION",
     "logo": "https://go4.pw/EUROPE/FRANCE/TF1_SERIES-FILMS.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/987057.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/987057.ts",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/GJS95CQ9yiI6/Yu4GH8bSP0yaCVQ.m3u8",
     "type": "hls"
   },
   {
@@ -105110,7 +105319,7 @@ const channels = [
     "desc": "IPTV Francophone • General",
     "logo": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/dd/France_3_2018.svg/960px-France_3_2018.svg.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1054622.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1054622.ts",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/francetv/backup/france3.m3u8",
     "type": "hls",
     "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.3"
   },
@@ -105141,7 +105350,7 @@ const channels = [
     "desc": "IPTV Francophone • General",
     "logo": "https://upload.wikimedia.org/wikipedia/commons/6/61/France_3_Lorraine_-_Logo_2018.svg",
     "url": "http://5.180.164.197:8080/FRANCE3/index.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1146340.ts",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/francetv/backup/france3.m3u8",
     "type": "hls"
   },
   {
@@ -105156,7 +105365,7 @@ const channels = [
     "desc": "IPTV Francophone • Kids",
     "logo": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3b/France_4_2018.svg/960px-France_4_2018.svg.png",
     "url": "http://176.65.146.100:8047/play/a074/index.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1054623.ts",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/francetv/france-4.m3u8",
     "type": "hls"
   },
   {
@@ -105171,7 +105380,7 @@ const channels = [
     "desc": "IPTV Francophone • Kids",
     "logo": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3b/France_4_2018.svg/960px-France_4_2018.svg.png",
     "url": "https://sv1.data-stream.top/8c0a287e56a6e1843143904778be3775b4d3edd4fba4ffcc3f72638c7a71d4d4/hls/francetv4.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1054623.ts",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/francetv/france-4.m3u8",
     "type": "hls"
   },
   {
@@ -105186,7 +105395,7 @@ const channels = [
     "desc": "IPTV Francophone • General",
     "logo": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/50/France_5_2018.svg/960px-France_5_2018.svg.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1054624.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1054624.ts",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/francetv/backup/france5.m3u8",
     "type": "hls"
   },
   {
@@ -105201,7 +105410,7 @@ const channels = [
     "desc": "IPTV Francophone • News",
     "logo": "https://i.imgur.com/u8N6uoj.png",
     "url": "https://live.france24.com/hls/live/2037179-b/F24_FR_HI_HLS/master_5000.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/60117.ts",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/francetv/backup/france2.m3u8",
     "type": "hls"
   },
   {
@@ -105368,7 +105577,7 @@ const channels = [
     "desc": "IPTV Francophone • Kids",
     "logo": "https://i.imgur.com/kqYssbW.png",
     "url": "http://99.27.51.147:8080/Gulli/index.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1054627.ts",
+    "fallbackUrl": "https://origin-m6web.live.6cloud.fr/out/v1/6play/6play-gulli/cmaf_q2hyb21h/hls-short-sd.m3u8",
     "type": "hls",
     "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.3"
   },
@@ -108600,7 +108809,7 @@ const channels = [
     "desc": "IPTV Francophone • Entertainment",
     "logo": "https://i.imgur.com/QxHt9NC.png",
     "url": "https://futbol9865.ultratv13.workers.dev/deportivo111/24.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1054642.ts",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/GJS95CQ9yiI6/Yu4GH8bSP0yaCVQ.m3u8",
     "type": "hls",
     "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36"
   },
@@ -108616,7 +108825,7 @@ const channels = [
     "desc": "IPTV Francophone • Entertainment",
     "logo": "https://i.imgur.com/QxHt9NC.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1054642.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1054642.ts",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/GJS95CQ9yiI6/Yu4GH8bSP0yaCVQ.m3u8",
     "type": "hls",
     "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36"
   },
@@ -108632,7 +108841,7 @@ const channels = [
     "desc": "IPTV Francophone • Undefined",
     "logo": "https://i.imgur.com/d91GcVf.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/60130.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/60130.ts",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/GJS95CQ9yiI6/VgGPIh9yDCiZuu4.m3u8",
     "type": "hls"
   },
   {
@@ -108707,7 +108916,7 @@ const channels = [
     "desc": "IPTV Francophone • General",
     "logo": "https://upload.wikimedia.org/wikipedia/en/thumb/5/54/TMC_logo.svg/960px-TMC_logo.svg.png",
     "url": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1054643.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1054643.ts",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/GJS95CQ9yiI6/3pzeKuVoUXLYM2e.m3u8",
     "type": "hls",
     "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36"
   },
@@ -108723,7 +108932,7 @@ const channels = [
     "desc": "IPTV Francophone • General",
     "logo": "https://upload.wikimedia.org/wikipedia/en/thumb/5/54/TMC_logo.svg/960px-TMC_logo.svg.png",
     "url": "http://tv.streambox.fr/live/testlivestream/testlivestream/13.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/1054643.ts",
+    "fallbackUrl": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/GJS95CQ9yiI6/3pzeKuVoUXLYM2e.m3u8",
     "type": "hls"
   },
   {
@@ -109203,7 +109412,7 @@ const channels = [
     "desc": "IPTV Francophone • General",
     "logo": "https://i.imgur.com/rPAbMSu.png",
     "url": "http://5.180.164.197:8080/TV5MONDE/index.m3u8",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/329454.ts",
+    "fallbackUrl": "https://ott.tv5monde.com/Content/HLS/Live/channel(info)/index.m3u8",
     "type": "hls"
   },
   {
@@ -109278,7 +109487,7 @@ const channels = [
     "desc": "IPTV Francophone • Lifestyle",
     "logo": "https://i.imgur.com/cwC7Q2V.png",
     "url": "http://103.190.232.129/stream/tvb/style/master.m3u8?p=967e33767f592e1aaf3d4019f38f380bf784e113b193d89c412d047059d6300d&u=Oleg",
-    "fallbackUrl": "http://megatv5074.com:80/live/81NQAFA7Q5S4188/JWyIZeiu08/311411.ts",
+    "fallbackUrl": "https://ott.tv5monde.com/Content/HLS/Live/channel(info)/index.m3u8",
     "type": "hls"
   },
   {
@@ -109747,4 +109956,3 @@ const channels = [
     "type": "hls"
   }
 ];
-
