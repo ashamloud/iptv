@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <!-- Viewport TV 1080p standard sans mise à l'échelle pour une netteté maximale -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>BOKK TV — Smart TV & Android TV Experience</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="tv-style.css?v=201">
+    <link rel="icon" type="image/png" href="../favicon.png">
+</head>
+<body class="tv-body">
+
+    <!-- ═══════════════ LECTEUR PLEIN ÉCRAN TV ═══════════════ -->
+    <div id="tv-player-container" class="tv-player-container">
+        <video id="tv-video" class="tv-video" autoplay playsinline></video>
+        <iframe id="tv-iframe" class="tv-iframe" allow="autoplay; fullscreen"></iframe>
+
+        <!-- Indicateur de mise en mémoire tampon / Chargement -->
+        <div id="tv-loader" class="tv-loader">
+            <div class="tv-spinner"></div>
+            <div id="tv-loader-channel" class="tv-loader-channel">Chargement du flux direct...</div>
+        </div>
+
+        <!-- Notification de chaîne / OSD (On Screen Display) au changement -->
+        <div id="tv-osd" class="tv-osd">
+            <div class="tv-osd-badge" id="tv-osd-badge">FHD</div>
+            <div class="tv-osd-content">
+                <div class="tv-osd-number" id="tv-osd-number">CH 01</div>
+                <div class="tv-osd-name" id="tv-osd-name">RTS 1 Sénégal</div>
+                <div class="tv-osd-desc" id="tv-osd-desc">🇸🇳 Sénégal • Direct 24/7</div>
+            </div>
+            <div class="tv-osd-live">
+                <span class="live-dot"></span>
+                <span>DIRECT</span>
+            </div>
+        </div>
+
+        <!-- Message d'erreur de lecture -->
+        <div id="tv-error" class="tv-error">
+            <div class="tv-error-box">
+                <div class="tv-error-icon">⚠️</div>
+                <div class="tv-error-title">Flux momentanément indisponible</div>
+                <div class="tv-error-desc">Appuyez sur <span class="key-pill">OK</span> pour réessayer ou <span class="key-pill">▲ / ▼</span> pour zapper.</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════════ INTERFACE NAVIGATION TV (MENU GUIDE) ═══════════════ -->
+    <div id="tv-overlay" class="tv-overlay visible">
+        <!-- En-tête Navigation -->
+        <header class="tv-header">
+            <div class="tv-brand">
+                <img src="../favicon.png" alt="BOKK TV" class="tv-logo">
+                <span class="tv-title">BOKK<span class="accent">TV</span></span>
+                <span class="tv-chip">1080p Smart TV</span>
+            </div>
+            
+            <div class="tv-clock" id="tv-clock">12:00</div>
+        </header>
+
+        <!-- Rangée 1 : Filtres Catégories (Navigation Horizontale) -->
+        <div class="tv-rail-section">
+            <div class="tv-section-label">Catégories</div>
+            <div class="tv-cat-row" id="tv-cat-row" role="tablist">
+                <!-- Rempli dynamiquement en JS -->
+            </div>
+        </div>
+
+        <!-- Rangée 2 : Filtre Rapide Bouquet (148 Bouquets) -->
+        <div class="tv-rail-section">
+            <div class="tv-section-label">Bouquet & Thématique</div>
+            <div class="tv-bouquet-row" id="tv-bouquet-row">
+                <!-- Rempli dynamiquement en JS -->
+            </div>
+        </div>
+
+        <!-- Grille / Carrousel des Chaînes (Focusable) -->
+        <div class="tv-channels-section">
+            <div class="tv-section-meta">
+                <span class="tv-section-label" id="tv-grid-label">🇸🇳 Sénégal</span>
+                <span class="tv-count" id="tv-count-text">18 chaînes</span>
+            </div>
+
+            <div class="tv-grid" id="tv-grid" tabindex="0">
+                <!-- Rempli dynamiquement avec les chaînes -->
+            </div>
+        </div>
+
+        <!-- Barre d'aide Télécommande en bas -->
+        <footer class="tv-footer">
+            <div class="remote-hint"><span class="key-pill">◄ ► ▲ ▼</span> Naviguer</div>
+            <div class="remote-hint"><span class="key-pill">OK / Entrée</span> Regarder plein écran</div>
+            <div class="remote-hint"><span class="key-pill">Retour / Esc</span> Masquer / Afficher le guide</div>
+            <div class="remote-hint"><span class="key-pill">F</span> Ajouter aux Favoris</div>
+            <div class="remote-hint"><span class="key-pill">P+ / P-</span> Zapper directement</div>
+        </footer>
+    </div>
+
+    <!-- Scripts IPTV Engine & HLS -->
+    <script src="../hls.min.js"></script>
+    <script src="../mpegts.js"></script>
+    <script src="../channels.js"></script>
+    <script src="tv-app.js"></script>
+</body>
+</html>

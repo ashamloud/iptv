@@ -20,7 +20,21 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.asham_loud.loudstreamtv"
+      "package": "com.asham_loud.bokktv",
+      "permissions": [
+        "INTERNET",
+        "ACCESS_NETWORK_STATE"
+      ],
+      "intentFilters": [
+        {
+          "action": "MAIN",
+          "category": [
+            "DEFAULT",
+            "LAUNCHER",
+            "LEANBACK_LAUNCHER"
+          ]
+        }
+      ]
     },
     "web": {
       "output": "static",

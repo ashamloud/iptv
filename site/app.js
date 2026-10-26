@@ -6,6 +6,12 @@
 (function () {
     'use strict';
 
+    // Détection de l'application native / PWA (Masquer le bouton APK et raccourcis desktop)
+    if (navigator.userAgent.includes('BOKKTV-App') || window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) {
+        if (document.body) document.body.classList.add('is-native-app');
+        else document.addEventListener('DOMContentLoaded', () => document.body.classList.add('is-native-app'));
+    }
+
     // ── Catégories disponibles ──
     const CATEGORIES = [
         { key: 'tous',         label: 'Toutes les chaînes', icon: '📺' },

@@ -1405,6 +1405,18 @@ body.theater-mode .app-sidebar {
         font-weight: 700;
     }
 
+    /* Mode Application Native Mobile / TV / PWA : Aucun bouton de téléchargement requis */
+    body.is-native-app .btn-apk,
+    body.is-native-app #btn-shortcuts,
+    body.is-native-app #btn-theater-header,
+    @media all and (display-mode: standalone) {
+        .btn-apk,
+        #btn-shortcuts,
+        #btn-theater-header {
+            display: none !important;
+        }
+    }
+
     /* ── APP MAIN (DÉROULEMENT SANS BLOCAGE DE SCROLL) ── */
     .app-main {
         display: block !important;

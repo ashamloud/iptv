@@ -1,4 +1,4 @@
-import React, { useRef, useState, useCallback } from 'react';
+import React, { useRef, useState, useCallback, useMemo } from 'react';
 import {
   StyleSheet,
   View,
@@ -12,16 +12,35 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
 
-// URL de production synchronisée avec le site web
-const ONLINE_URL = 'https://bokktv.vercel.app';
+// Détection TV native ou mode TV
+const isTV = Platform.isTV;
+
+// URL de production : charge /tv pour Android TV / Fire TV, sinon interface mobile
+const BASE_URL = 'https://bokktv.vercel.app';
+
+// Injection de script pour garantir la suppression totale du bouton APK et des raccourcis desktop
+const INJECTED_JS = `
+  (function() {
+    var style = document.createElement('style');
+    style.innerHTML = '.btn-apk, #btn-shortcuts, #btn-theater-header { display: none !important; }';
+    document.head.appendChild(style);
+    document.body.classList.add('is-native-app');
+  })();
+  true;
+`;
 
 export default function App() {
   const webViewRef = useRef<WebView>(null);
   const [canGoBack, setCanGoBack] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
+  const [tvModePreview, setTvModePreview] = useState(isTV);
 
-  // Gestion du bouton retour Android
+  const activeUrl = useMemo(() => {
+    return tvModePreview ? `${BASE_URL}/tv` : BASE_URL;
+  }, [tvModePreview]);
+
+  // Gestion de la touche physique Retour (Android / Télécommande TV)
   React.useEffect(() => {
     if (Platform.OS !== 'android') return;
 
@@ -46,48 +65,86 @@ export default function App() {
   }, []);
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
-      <StatusBar barStyle="light-content" backgroundColor="#06090e" />
+    <SafeAreaView style={styles.container} edges={isTV ? [] : ['top', 'left', 'right']}>
+      <StatusBar barStyle="light-content" backgroundColor="#06090e" hidden={isTV} />
 
-      <WebView
-        ref={webViewRef}
-        source={{ uri: ONLINE_URL }}
-        style={styles.webview}
-        // Configuration vidéo et média
-        allowsInlineMediaPlayback={true}
-        mediaPlaybackRequiresUserAction={false}
-        javaScriptEnabled={true}
-        domStorageEnabled={true}
-        mixedContentMode="always"
-        thirdPartyCookiesEnabled={true}
-        sharedCookiesEnabled={true}
-        cacheEnabled={true}
-        // Navigation & performance
-        allowsBackForwardNavigationGestures={true}
-        onNavigationStateChange={(navState) => {
-          setCanGoBack(navState.canGoBack);
-        }}
-        onLoadStart={() => {
-          setLoadError(false);
-          setIsLoading(true);
-        }}
-        onLoadEnd={() => {
-          setIsLoading(false);
-        }}
-        onError={() => {
-          setIsLoading(false);
-          setLoadError(true);
-        }}
-        // Optimisation rendu web mobile
-        userAgent="Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36 BOKKTV-App/2.0"
-        scalesPageToFit={false}
-      />
+      {/* Sur navigateur Web (preview Expo Web) */}
+      {Platform.OS === 'web' ? (
+        <View style={StyleSheet.absoluteFill}>
+          <iframe
+            key={activeUrl}
+            src={activeUrl}
+            style={{ width: '100%', height: '100%', border: 'none', backgroundColor: '#06090e' }}
+            allow="autoplay; fullscreen; picture-in-picture"
+            onLoad={() => setIsLoading(false)}
+            onError={() => {
+              setIsLoading(false);
+              setLoadError(true);
+            }}
+          />
+          {/* Bouton de bascule Preview TV / Mobile lors du test sur navigateur */}
+          <View style={styles.previewToggleBar}>
+            <TouchableOpacity
+              style={[styles.toggleBtn, !tvModePreview && styles.toggleBtnActive]}
+              onPress={() => setTvModePreview(false)}
+            >
+              <Text style={styles.toggleText}>📱 Mobile</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.toggleBtn, tvModePreview && styles.toggleBtnActive]}
+              onPress={() => setTvModePreview(true)}
+            >
+              <Text style={styles.toggleText}>📺 Smart TV</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      ) : (
+        /* Sur Application Mobile & Android TV Native (WebView) */
+        <WebView
+          ref={webViewRef}
+          source={{ uri: activeUrl }}
+          style={styles.webview}
+          // Configuration vidéo et média haute performance
+          allowsInlineMediaPlayback={true}
+          mediaPlaybackRequiresUserAction={false}
+          javaScriptEnabled={true}
+          domStorageEnabled={true}
+          mixedContentMode="always"
+          thirdPartyCookiesEnabled={true}
+          sharedCookiesEnabled={true}
+          cacheEnabled={true}
+          injectedJavaScript={INJECTED_JS}
+          allowsBackForwardNavigationGestures={true}
+          onNavigationStateChange={(navState) => {
+            setCanGoBack(navState.canGoBack);
+          }}
+          onLoadStart={() => {
+            setLoadError(false);
+            setIsLoading(true);
+          }}
+          onLoadEnd={() => {
+            setIsLoading(false);
+          }}
+          onError={() => {
+            setIsLoading(false);
+            setLoadError(true);
+          }}
+          userAgent={
+            isTV
+              ? "Mozilla/5.0 (Linux; Android 12; Android TV) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36 BOKKTV-App/2.0 TV"
+              : "Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36 BOKKTV-App/2.0"
+          }
+          scalesPageToFit={false}
+        />
+      )}
 
       {/* Écran de chargement initial */}
       {isLoading && (
-        <View style={styles.loadingOverlay} pointerEvents="none">
+        <View style={[styles.loadingOverlay, { pointerEvents: 'none' }]}>
           <ActivityIndicator size="large" color="#6366f1" />
-          <Text style={styles.loadingText}>BOKK TV en cours de chargement...</Text>
+          <Text style={styles.loadingText}>
+            {isTV || tvModePreview ? 'BOKK TV Smart TV...' : 'BOKK TV en cours de chargement...'}
+          </Text>
         </View>
       )}
 
@@ -159,6 +216,31 @@ const styles = StyleSheet.create({
   retryText: {
     color: '#ffffff',
     fontSize: 14,
+    fontWeight: '600',
+  },
+  previewToggleBar: {
+    position: 'absolute',
+    bottom: 16,
+    right: 16,
+    flexDirection: 'row',
+    backgroundColor: 'rgba(15, 23, 42, 0.92)',
+    borderRadius: 30,
+    padding: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+    zIndex: 100,
+  },
+  toggleBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+  },
+  toggleBtnActive: {
+    backgroundColor: '#6366f1',
+  },
+  toggleText: {
+    color: '#ffffff',
+    fontSize: 12,
     fontWeight: '600',
   },
 });
