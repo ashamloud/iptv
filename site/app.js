@@ -1029,30 +1029,75 @@
         });
     }
 
-    // ── Plein Écran & Mode Cinéma ──
+    // ── Plein Écran & Mode Cinéma (Compatible iOS Safari, iPadOS, Android & Desktop) ──
     function toggleFullscreen() {
-        if (!document.fullscreenElement) {
-            playerContainer.requestFullscreen().then(() => {
-                // Sur smartphone : basculer automatiquement en mode paysage
-                if (screen.orientation && screen.orientation.lock) {
-                    screen.orientation.lock('landscape').catch(() => {});
-                }
-            }).catch(err => {
-                console.warn('Plein écran non supporté :', err);
-            });
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+                      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+        // Sur iPhone/iPad : Safari n'implémente pas standard requestFullscreen() sur les <div>
+        // mais implémente webkitEnterFullscreen() directement sur l'élément <video>
+        if (isIOS && videoEl && videoEl.webkitEnterFullscreen) {
+            if (videoEl.webkitDisplayingFullscreen) {
+                if (videoEl.webkitExitFullscreen) videoEl.webkitExitFullscreen();
+            } else {
+                videoEl.webkitEnterFullscreen();
+            }
+            return;
+        }
+
+        // Standard HTML5 Fullscreen API (Android, PC, Mac Chrome/Edge/Firefox)
+        const fsEl = document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement;
+        if (!fsEl) {
+            const req = playerContainer.requestFullscreen || 
+                        playerContainer.webkitRequestFullscreen || 
+                        playerContainer.mozRequestFullScreen || 
+                        playerContainer.msRequestFullscreen;
+
+            if (req) {
+                req.call(playerContainer).then(() => {
+                    if (screen.orientation && screen.orientation.lock) {
+                        screen.orientation.lock('landscape').catch(() => {});
+                    }
+                }).catch(() => {
+                    // Si le conteneur est refusé, essayer directement sur la vidéo
+                    if (videoEl && videoEl.webkitEnterFullscreen) {
+                        videoEl.webkitEnterFullscreen();
+                    }
+                });
+            } else if (videoEl && videoEl.webkitEnterFullscreen) {
+                videoEl.webkitEnterFullscreen();
+            }
         } else {
-            document.exitFullscreen().catch(() => {});
+            const exit = document.exitFullscreen || 
+                         document.webkitExitFullscreen || 
+                         document.mozCancelFullScreen || 
+                         document.msExitFullscreen;
+            if (exit) exit.call(document).catch(() => {});
         }
     }
 
-    document.addEventListener('fullscreenchange', () => {
-        const isFs = !!document.fullscreenElement;
-        if (fsExpandIcon) fsExpandIcon.style.display = isFs ? 'none' : 'block';
-        if (fsShrinkIcon) fsShrinkIcon.style.display = isFs ? 'block' : 'none';
-        if (!isFs && screen.orientation && screen.orientation.unlock) {
-            screen.orientation.unlock().catch(() => {});
-        }
+    // Événements d'état plein écran (Standards + Webkit iOS)
+    ['fullscreenchange', 'webkitfullscreenchange', 'mozfullscreenchange', 'MSFullscreenChange'].forEach(evt => {
+        document.addEventListener(evt, () => {
+            const isFs = !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement);
+            if (fsExpandIcon) fsExpandIcon.style.display = isFs ? 'none' : 'block';
+            if (fsShrinkIcon) fsShrinkIcon.style.display = isFs ? 'block' : 'none';
+            if (!isFs && screen.orientation && screen.orientation.unlock) {
+                screen.orientation.unlock().catch(() => {});
+            }
+        });
     });
+
+    if (videoEl) {
+        videoEl.addEventListener('webkitbeginfullscreen', () => {
+            if (fsExpandIcon) fsExpandIcon.style.display = 'none';
+            if (fsShrinkIcon) fsShrinkIcon.style.display = 'block';
+        });
+        videoEl.addEventListener('webkitendfullscreen', () => {
+            if (fsExpandIcon) fsExpandIcon.style.display = 'block';
+            if (fsShrinkIcon) fsShrinkIcon.style.display = 'none';
+        });
+    }
 
     function toggleTheaterMode() {
         document.body.classList.toggle('theater-mode');
