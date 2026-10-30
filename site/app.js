@@ -12,8 +12,12 @@
         else document.addEventListener('DOMContentLoaded', () => document.body.classList.add('is-native-app'));
     }
 
+    // Catalogue des chaînes (résolu depuis window.channels ou global)
+    var channels = (typeof window !== 'undefined' && window.channels) ? window.channels : (typeof channels !== 'undefined' ? channels : []);
+
     // ── Métadonnées des catégories (découverte automatique selon les liens) ──
     const CATEGORY_METADATA = {
+        'playlist':     { label: '📂 Ma Playlist',     icon: '📂', order: 0.1 },
         'senegal':      { label: '🇸🇳 Sénégal',         icon: '🇸🇳', order: 1 },
         'francophone':  { label: '🇫🇷 France & TNT',    icon: '🇫🇷', order: 2 },
         'sport':        { label: '⚽ Sport Direct',     icon: '⚽', order: 3 },
@@ -1537,12 +1541,6 @@
 
         if (custom.length > 0) {
             channels.push(...custom);
-            if (!CATEGORIES.some(c => c.key === 'playlist')) {
-                CATEGORIES.splice(1, 0, { key: 'playlist', label: '📂 Ma Playlist', icon: '📂' });
-            }
-        } else {
-            const pIdx = CATEGORIES.findIndex(c => c.key === 'playlist');
-            if (pIdx >= 0) CATEGORIES.splice(pIdx, 1);
         }
     }
 

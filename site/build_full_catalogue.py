@@ -330,20 +330,23 @@ def main():
             print(f"Backup warning: {e}")
 
     # Écriture dans site/channels.js
+    export_suffix = ";\nif (typeof window !== 'undefined') { window.channels = channels; }\nif (typeof module !== 'undefined' && module.exports) { module.exports = channels; }\n"
     with open('channels.js', 'w', encoding='utf-8') as f:
         f.write("// BOKK TV — Catalogue Officiel des Chaines Actives\n")
         f.write(f"// ({len(verified_channels)} chaines 100% testees et fonctionnelles)\n\n")
-        f.write("const channels = ")
+        f.write("var channels = window.channels = ")
         json.dump(verified_channels, f, ensure_ascii=False)
-        f.write(";\n")
+        f.write(export_suffix)
 
     # Écriture dans app/assets/web/channels.js si existe
     app_web_path = "../app/assets/web/channels.js"
     if os.path.exists(os.path.dirname(app_web_path)):
         with open(app_web_path, 'w', encoding='utf-8') as f:
-            f.write("const channels = ")
+            f.write("// BOKK TV — Catalogue Officiel des Chaines Actives\n")
+            f.write(f"// ({len(verified_channels)} chaines 100% testees et fonctionnelles)\n\n")
+            f.write("var channels = window.channels = ")
             json.dump(verified_channels, f, ensure_ascii=False)
-            f.write(";\n")
+            f.write(export_suffix)
         print(f"Catalogue synchronisé dans {app_web_path}")
 
     print("\n✅ Catalogue mis à jour avec succès !")
