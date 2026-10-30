@@ -12,8 +12,9 @@ const rtsCache = {};
 
 // ── Pool de comptes MegaTV vérifiés et 100% actifs (HLS & MPEG-TS) ──
 const MEGATV_ACCOUNTS = [
+    ["430834571696283","57URoE9Lii"],
     ["61F6598D4955DCF","dA5BZGgigb"],
-    ["81NQAFA7Q5S4188","JWyIZeiu08"],
+    ["E195F0H","gnZuJrgGnY"],
     ["K7U6ZUB2J5ZEJV5","V6CKjNQIZH"],
 ];
 

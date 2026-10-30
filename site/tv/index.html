@@ -11,8 +11,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     
-    <link rel="stylesheet" href="tv-style.css?v=201">
-    <link rel="icon" type="image/png" href="../favicon.png">
+    <link rel="stylesheet" href="/tv/tv-style.css?v=202">
+    <link rel="icon" type="image/png" href="/favicon.png">
 </head>
 <body class="tv-body">
 
@@ -28,7 +28,7 @@
         </div>
 
         <!-- Notification de chaîne / OSD (On Screen Display) au changement -->
-        <div id="tv-osd" class="tv-osd">
+        <div id="tv-osd" class="tv-osd" style="display: none;">
             <div class="tv-osd-badge" id="tv-osd-badge">FHD</div>
             <div class="tv-osd-content">
                 <div class="tv-osd-number" id="tv-osd-number">CH 01</div>
@@ -42,7 +42,7 @@
         </div>
 
         <!-- Message d'erreur de lecture -->
-        <div id="tv-error" class="tv-error">
+        <div id="tv-error" class="tv-error" style="display: none;">
             <div class="tv-error-box">
                 <div class="tv-error-icon">⚠️</div>
                 <div class="tv-error-title">Flux momentanément indisponible</div>
@@ -56,7 +56,7 @@
         <!-- En-tête Navigation -->
         <header class="tv-header">
             <div class="tv-brand">
-                <img src="../favicon.png" alt="BOKK TV" class="tv-logo">
+                <img src="/favicon.png" alt="BOKK TV" class="tv-logo">
                 <span class="tv-title">BOKK<span class="accent">TV</span></span>
                 <span class="tv-chip">1080p Smart TV</span>
             </div>
@@ -103,9 +103,9 @@
     </div>
 
     <!-- Scripts IPTV Engine & HLS -->
-    <script src="../hls.min.js"></script>
-    <script src="../mpegts.js"></script>
-    <script src="../channels.js"></script>
-    <script src="tv-app.js"></script>
+    <script src="/hls.min.js"></script>
+    <script src="/mpegts.js"></script>
+    <script src="/channels.js?v=7815"></script>
+    <script src="/tv/tv-app.js?v=205"></script>
 </body>
 </html>

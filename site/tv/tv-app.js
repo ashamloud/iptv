@@ -7,7 +7,6 @@
     'use strict';
 
     // ── Proxies Cloud Haute Disponibilité & Résolution Universelle ──
-    const RENDER_PROXY = 'https://iptv-vbm1.onrender.com';
     const CF_WORKER    = 'https://bokk-tv-proxy.pgueye866.workers.dev';
 
     function resolveStreamUrl(rawUrl, stage = 0) {
@@ -23,18 +22,14 @@
         let extraParams = '&ua=IPTVSmartersPro';
         if (rawUrl.includes('radio2m.ma')) extraParams += '&ref=http://www.radio2m.ma/';
 
-        // En local sur port 8080
+        // En local sur port 8080 : utiliser le proxy Python local ultra-rapide
         if (isLocalHost) {
             if (stage === 0) return `/proxy?url=${encodeURIComponent(rawUrl)}${extraParams}`;
-            if (stage === 1) return `${RENDER_PROXY}/proxy?url=${encodeURIComponent(rawUrl)}${extraParams}`;
             return `${CF_WORKER}/proxy?url=${encodeURIComponent(rawUrl)}${extraParams}`;
         }
 
-        // En production (Vercel / HTTPS) : tout flux HTTP ou HTTPS passe par un proxy
-        // pour éliminer totalement le Mixed Content et les blocages CORS.
+        // En production : Cloudflare Worker en premier (Edge CDN gratuit 100k req/j)
         if (stage === 0) {
-            return `${RENDER_PROXY}/proxy?url=${encodeURIComponent(rawUrl)}${extraParams}`;
-        } else if (stage === 1) {
             return `${CF_WORKER}/proxy?url=${encodeURIComponent(rawUrl)}${extraParams}`;
         } else {
             return `/api/proxy?url=${encodeURIComponent(rawUrl)}${extraParams}`;
@@ -44,18 +39,19 @@
     // ── Catégories TV ──
     const CATEGORIES = [
         { key: 'senegal',     label: '🇸🇳 Sénégal' },
+        { key: 'afrique',     label: 'Afrique' },
         { key: 'francophone', label: '🇫🇷 France & TNT' },
-        { key: 'sport',       label: '⚽ Sport Direct' },
-        { key: 'cinema',      label: '🎬 Films & Séries' },
-        { key: 'favoris',     label: '⭐ Mes Favoris' },
-        { key: 'tous',        label: '⚡ Tout le Catalogue' },
+        { key: 'sport',       label: 'Sport Direct' },
+        { key: 'cinema',      label: 'Films & Séries' },
+        { key: 'music',       label: 'Musique Afrique' },
+        { key: 'documentaire',label: 'Documentaires' },
+        { key: 'jeunesse',    label: 'Jeunesse' },
+        { key: 'favoris',     label: 'Mes Favoris' },
+        { key: 'tous',        label: 'Tout le Catalogue' },
         { key: 'uk',          label: '🇬🇧 UK & USA' },
         { key: 'espagne',     label: '🇪🇸 Espagne' },
         { key: 'allemagne',   label: '🇩🇪 Allemagne' },
-        { key: 'italie',      label: '🇮🇹 Italie' },
-        { key: 'documentaire',label: '🌍 Documentaires' },
-        { key: 'jeunesse',    label: '🧸 Jeunesse' },
-        { key: 'music',       label: '🎵 Musique' }
+        { key: 'italie',      label: '🇮🇹 Italie' }
     ];
 
     // ── Variables d'état ──
@@ -203,14 +199,14 @@
             card.dataset.index = idx;
             card.tabIndex = -1;
 
-            const logoUrl = ch.logo && ch.logo.trim() ? ch.logo : '../favicon.png';
+            const logoUrl = ch.logo && ch.logo.trim() ? ch.logo : '/favicon.png';
             const isFav = favorites.has(ch.id);
 
             card.innerHTML = `
                 ${ch.badge ? `<span class="tv-card-badge">${ch.badge}</span>` : ''}
                 ${isFav ? `<span class="tv-card-fav">★</span>` : ''}
                 <div class="tv-card-logo-wrap">
-                    <img class="tv-card-logo" src="${logoUrl}" alt="${ch.name}" onerror="this.onerror=null;this.src='../favicon.png';">
+                    <img class="tv-card-logo" src="${logoUrl}" alt="${ch.name}" onerror="this.onerror=null;this.src='/favicon.png';">
                 </div>
                 <div class="tv-card-name">${ch.name}</div>
                 <div class="tv-card-sub">${ch.group || ch.category}</div>
@@ -303,7 +299,10 @@
 
             hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
                 loaderEl.classList.remove('visible');
-                videoEl.play().catch(() => {});
+                videoEl.play().catch(() => {
+                    videoEl.muted = true;
+                    videoEl.play().catch(() => {});
+                });
             });
 
             hlsInstance.on(Hls.Events.ERROR, (_, data) => {

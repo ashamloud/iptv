@@ -11,6 +11,8 @@ explore_*.py
 fetch_*.py
 scan_*.py
 debug_*.py
+scratch_*.py
+*.bak
 yt_cids*.json
 acan_channels.json
 

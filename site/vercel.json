@@ -9,7 +9,9 @@
     }
   },
   "rewrites": [
-    { "source": "/proxy", "destination": "/api/proxy" }
+    { "source": "/proxy", "destination": "/api/proxy" },
+    { "source": "/tv", "destination": "/tv/index.html" },
+    { "source": "/tv/", "destination": "/tv/index.html" }
   ],
   "headers": [
     {

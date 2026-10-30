@@ -12,23 +12,25 @@
         else document.addEventListener('DOMContentLoaded', () => document.body.classList.add('is-native-app'));
     }
 
-    // ── Catégories disponibles ──
-    const CATEGORIES = [
-        { key: 'tous',         label: 'Toutes les chaînes', icon: '📺' },
-        { key: 'senegal',      label: '🇸🇳 Sénégal',         icon: '🇸🇳' },
-        { key: 'francophone',  label: '🇫🇷 France',          icon: '🇫🇷' },
-        { key: 'sport',        label: '⚽ Sport',            icon: '⚽' },
-        { key: 'cinema',       label: '🎬 Films & Séries',   icon: '🎬' },
-        { key: 'uk',           label: '🇬🇧 UK & USA',        icon: '🇬🇧' },
-        { key: 'espagne',      label: '🇪🇸 Espagne',         icon: '🇪🇸' },
-        { key: 'allemagne',    label: '🇩🇪 Allemagne',       icon: '🇩🇪' },
-        { key: 'italie',       label: '🇮🇹 Italie',          icon: '🇮🇹' },
-        { key: 'albanie',      label: '🇦🇱 Albanie',         icon: '🇦🇱' },
-        { key: 'documentaire', label: '🌍 Documentaire',    icon: '🌍' },
-        { key: 'jeunesse',     label: '🧸 Jeunesse',        icon: '🧸' },
-        { key: 'music',        label: '🎵 Musique',         icon: '🎵' },
-        { key: 'favoris',      label: '⭐ Favoris',          icon: '⭐' }
-    ];
+    // ── Métadonnées des catégories (découverte automatique selon les liens) ──
+    const CATEGORY_METADATA = {
+        'senegal':      { label: '🇸🇳 Sénégal',         icon: '🇸🇳', order: 1 },
+        'francophone':  { label: '🇫🇷 France & TNT',    icon: '🇫🇷', order: 2 },
+        'sport':        { label: '⚽ Sport Direct',     icon: '⚽', order: 3 },
+        'cinema':       { label: '🎬 Films & Séries',   icon: '🎬', order: 4 },
+        'info':         { label: '📰 Actualités & Info', icon: '📰', order: 5 },
+        'afrique':      { label: '🌍 Afrique',         icon: '🌍', order: 6 },
+        'documentaire': { label: '🌍 Documentaire',    icon: '🌍', order: 7 },
+        'jeunesse':     { label: '🧸 Jeunesse',        icon: '🧸', order: 8 },
+        'music':        { label: '🎵 Musique',         icon: '🎵', order: 9 },
+        'uk':           { label: '🇬🇧 UK & USA',        icon: '🇬🇧', order: 10 },
+        'espagne':      { label: '🇪🇸 Espagne',         icon: '🇪🇸', order: 11 },
+        'allemagne':    { label: '🇩🇪 Allemagne',       icon: '🇩🇪', order: 12 },
+        'italie':       { label: '🇮🇹 Italie',          icon: '🇮🇹', order: 13 },
+        'turquie':      { label: '🇹🇷 Turquie',         icon: '🇹🇷', order: 14 },
+        'albanie':      { label: '🇦🇱 Albanie',         icon: '🇦🇱', order: 15 },
+        'monde':        { label: '🌐 International',    icon: '🌐', order: 99 }
+    };
 
     // ── État de l'application ──
     let currentIndex = -1;
@@ -163,8 +165,65 @@
         if (loaderEl) loaderEl.classList.remove('active');
     }
 
-    function showPlayerError(msg) {
+    // ── Gestion et masquage automatique des chaînes non fonctionnelles ──
+    const BROKEN_CHANNELS_KEY = 'bokk_broken_channels';
+    function getBrokenChannelIds() {
+        try {
+            return JSON.parse(localStorage.getItem(BROKEN_CHANNELS_KEY) || '[]');
+        } catch {
+            return [];
+        }
+    }
+
+    function markChannelAsBroken(channel, index) {
+        if (!channel) return;
+        const bId = String(channel.id || channel.url);
+        const brokenList = getBrokenChannelIds();
+        if (!brokenList.includes(bId)) {
+            brokenList.push(bId);
+            try { localStorage.setItem(BROKEN_CHANNELS_KEY, JSON.stringify(brokenList)); } catch {}
+        }
+        channel._broken = true;
+
+        showToast(`⚠️ "${channel.name}" ne répond pas — masquée.`);
+
+        // Supprimer immédiatement du catalogue actif
+        const chIdx = channels.findIndex(c => (c.id && c.id === channel.id) || c.url === channel.url);
+        if (chIdx !== -1) {
+            channels.splice(chIdx, 1);
+        }
+
+        renderChannelList(true);
+
+        // Zapper automatiquement sur la chaîne suivante
+        setTimeout(() => {
+            const filtered = getFilteredChannels();
+            if (filtered.length > 0) {
+                const nextIdx = Math.min(Math.max(0, index), filtered.length - 1);
+                loadChannel(filtered[nextIdx].index);
+            }
+        }, 1000);
+    }
+
+    // Compteur d'échecs par chaîne — on ne supprime qu'après 3 échecs consécutifs
+    const _failCount = {};
+    function showPlayerError(msg, channel = null, index = -1) {
         hidePlayerLoader();
+        if (channel) {
+            const cKey = String(channel.id || channel.url);
+            _failCount[cKey] = (_failCount[cKey] || 0) + 1;
+            if (_failCount[cKey] >= 3) {
+                delete _failCount[cKey];
+                markChannelAsBroken(channel, index);
+            } else {
+                // Pas encore broken : afficher l'erreur normalement
+                if (errorEl) {
+                    errorEl.classList.add('active');
+                    if (errorMsgEl) errorMsgEl.textContent = msg || 'Ce flux est temporairement indisponible.';
+                }
+            }
+            return;
+        }
         if (errorEl) {
             errorEl.classList.add('active');
             if (errorMsgEl) errorMsgEl.textContent = msg || 'Ce flux est temporairement indisponible.';
@@ -228,6 +287,10 @@
     function attemptAutoPlay(playerEngine = null) {
         clearPlayerOverlays();
 
+        // Toujours démarrer en sourdine pour éviter l'AbortError (politique autoplay navigateur)
+        // On unmute dès la lecture confirmée si l'utilisateur a déjà interagi
+        videoEl.muted = true;
+
         const doPlay = () => {
             if (playerEngine && typeof playerEngine.play === 'function') {
                 return playerEngine.play();
@@ -239,24 +302,20 @@
         if (promise && typeof promise.then === 'function') {
             promise.then(() => {
                 clearPlayerOverlays();
-            }).catch(() => {
-                // Le navigateur bloque l'autoplay avec son : on démarre en sourdine pour forcer la lecture immédiate sans rester sur pause
-                console.log('[BOKK TV] Autoplay avec son restreint par le navigateur. Démarrage automatique sans pause...');
-                videoEl.muted = true;
-                const promiseMuted = doPlay();
-                if (promiseMuted && typeof promiseMuted.then === 'function') {
-                    promiseMuted.then(() => {
-                        clearPlayerOverlays();
-                        if (!mutedAutoplayToastShown && !userHasInteracted) {
-                            mutedAutoplayToastShown = true;
-                            showToast('🔇 Lecture automatique active — Touchez pour le son');
-                        }
-                    }).catch(e => {
-                        console.warn('[BOKK TV] Échec lecture automatique :', e);
-                        clearPlayerOverlays();
-                    });
-                } else {
-                    clearPlayerOverlays();
+                // Unmute immédiatement si l'utilisateur a déjà cliqué/touché
+                if (userHasInteracted) {
+                    videoEl.muted = false;
+                    videoEl.volume = parseFloat(localStorage.getItem('bokk_volume') || '1');
+                } else if (!mutedAutoplayToastShown) {
+                    mutedAutoplayToastShown = true;
+                    showToast('🔇 Lecture automatique active — Cliquez pour le son');
+                }
+            }).catch((err) => {
+                console.warn('[BOKK TV] Échec lecture automatique muette :', err && err.message);
+                clearPlayerOverlays();
+                if (!mutedAutoplayToastShown) {
+                    mutedAutoplayToastShown = true;
+                    showToast('🔇 Lecture automatique active — Touchez pour le son');
                 }
             });
         }
@@ -357,8 +416,8 @@
         }
     }
 
-    // Proxies Cloud haute disponibilité
-    const RENDER_PROXY_BASE = 'https://iptv-vbm1.onrender.com';
+    // Proxies Cloud haute disponibilité (Cloudflare Worker Edge ultra-rapide)
+    const RENDER_PROXY_BASE = null; // Désactivé (Render free suspendu par quota de 5 Go)
     const CF_WORKER_BASE    = 'https://bokk-tv-proxy.pgueye866.workers.dev';
 
     function resolveStreamUrl(rawUrl, stage = 0, channel = null) {
@@ -387,34 +446,28 @@
 
         const isProduction = !isPort8080 && !isLocalHost && !isFileProtocol;
 
-        // ── EN PRODUCTION : Proxy Render haute compatibilité (non bloqué par MegaTV) ──
+        // ── EN PRODUCTION : Cloudflare Worker haute performance (Edge CDN mondial) ──
         if (isProduction) {
-            // Stage 0 : Proxy Render principal (supporte MegaTV + RTS + tous flux HTTP)
-            if (stage === 0 && RENDER_PROXY_BASE) {
-                return `${RENDER_PROXY_BASE}/proxy?url=${encodeURIComponent(rawUrl)}${extraParams}`;
-            }
-            // Stage 1 : Fallback Cloudflare Worker
-            if (stage === 1 && CF_WORKER_BASE) {
+            // Stage 0 : Cloudflare Worker CDN (100k req/jour, non bridé à 5 Go)
+            if (stage === 0 && CF_WORKER_BASE) {
                 return `${CF_WORKER_BASE}/proxy?url=${encodeURIComponent(rawUrl)}${extraParams}`;
             }
-            // Stage 2 : Fallback Vercel /api/proxy
-            if (stage === 2) {
+            // Stage 1 : Fallback Vercel /api/proxy
+            if (stage === 1) {
                 return `/api/proxy?url=${encodeURIComponent(rawUrl)}${extraParams}`;
             }
-            // Stage 3+ : Retour sur Render
-            if (RENDER_PROXY_BASE) {
-                return `${RENDER_PROXY_BASE}/proxy?url=${encodeURIComponent(rawUrl)}${extraParams}`;
+            // Stage 2+ : Retour Cloudflare Worker
+            if (CF_WORKER_BASE) {
+                return `${CF_WORKER_BASE}/proxy?url=${encodeURIComponent(rawUrl)}${extraParams}`;
             }
         }
 
-        // ── EN LOCAL (ex: port 8080 ou Live Server port 5500) ──
+        // ── EN LOCAL (port 8080 avec serveur Python local illimité) ──
         if (stage === 0) {
             let proxyBase = '/proxy';
             if (!isPort8080) proxyBase = `http://${fallbackLocalHost}:8080/proxy`;
             return `${proxyBase}?url=${encodeURIComponent(rawUrl)}${extraParams}`;
-        } else if (stage === 1 && RENDER_PROXY_BASE) {
-            return `${RENDER_PROXY_BASE}/proxy?url=${encodeURIComponent(rawUrl)}${extraParams}`;
-        } else if (stage === 2 && CF_WORKER_BASE) {
+        } else if (stage === 1 && CF_WORKER_BASE) {
             return `${CF_WORKER_BASE}/proxy?url=${encodeURIComponent(rawUrl)}${extraParams}`;
         } else {
             let proxyBase = '/proxy';
@@ -479,7 +532,9 @@
         }
 
         const finalUrl = resolveStreamUrl(activeUrl, retryStage, channel);
-        console.log(`[BOKK TV] Chargement chaîne: "${channel.name}" [${streamType.toUpperCase()}] (Stage: ${retryStage}) URL:`, finalUrl);
+        // mpegts.js tourne dans un Web Worker : les URLs relatives sont interdites → forcer absolute
+        const absoluteFinalUrl = finalUrl.startsWith('/') ? (window.location.origin + finalUrl) : finalUrl;
+        console.log(`[BOKK TV] Chargement chaîne: "${channel.name}" [${streamType.toUpperCase()}] (Stage: ${retryStage}) URL:`, absoluteFinalUrl);
 
         if (streamType === 'embed') {
             iframeEl.style.display = 'block';
@@ -488,25 +543,23 @@
                 clearPlayerOverlays();
             };
         } else if (streamType === 'ts') {
-            // ── LECTEUR MPEG-TS (FLUX DIRECT MEGATV) ──
+            // ── LECTEUR MPEG-TS ULTRA-RAPIDE (< 1s) ──
             videoEl.style.display = 'block';
 
             if (typeof mpegts !== 'undefined' && mpegts.isSupported()) {
                 mpegtsInstance = mpegts.createPlayer({
                     type: 'mse',
                     isLive: true,
-                    url: finalUrl
+                    url: absoluteFinalUrl
                 }, {
-                    enableWorker: true,
+                    enableWorker: false,
                     lazyLoad: false,
-                    // ── Buffer ultra-stable pour connexions 1-5 Mbps (évite les saccades) ──
-                    liveBufferLatencyChasing: false,   // Ne JAMAIS accélérer la vidéo (cause n°1 des saccades)
-                    liveBufferLatencyMaxLatency: 45.0,  // tolère jusqu'à 45s de retard pour bufferiser confortablement
-                    liveBufferLatencyMinRemain: 8.0,    // garde 8s de vidéo d'avance minimum
-                    // ── Stash buffer adapté pour démarrage rapide et régularité ──
+                    // ── Démarrage instantané sans latence artificielle ──
+                    liveBufferLatencyChasing: true,
+                    liveBufferLatencyMaxLatency: 2.5,
+                    liveBufferLatencyMinRemain: 0.3,    // 0.3s au lieu de 8.0s ! Affichage immédiat
                     enableStashBuffer: true,
-                    stashInitialSize: 384,              // 384 KB pour démarrer vite sans buffer underrun
-                    // ── Nettoyage auto pour éviter les fuites mémoire ──
+                    stashInitialSize: 64,               // 64 KB au lieu de 384 KB
                     autoCleanupSourceBuffer: true,
                     autoCleanupMaxBackwardDuration: 60,
                     autoCleanupMinBackwardDuration: 30
@@ -515,9 +568,9 @@
                 mpegtsInstance.attachMediaElement(videoEl);
                 mpegtsInstance.load();
 
-                videoEl.addEventListener('playing', () => {
-                    clearPlayerOverlays();
-                }, { once: true });
+                videoEl.addEventListener('playing', () => clearPlayerOverlays(), { once: true });
+                videoEl.addEventListener('loadeddata', () => clearPlayerOverlays(), { once: true });
+                videoEl.addEventListener('canplay', () => clearPlayerOverlays(), { once: true });
 
                 attemptAutoPlay(mpegtsInstance);
 
@@ -533,54 +586,52 @@
                         console.log(`[BOKK TV] Stage ${retryStage + 1}...`);
                         loadChannel(index, useFallback, retryStage + 1);
                     } else {
-                        showPlayerError('Ce flux est temporairement indisponible.');
+                        showPlayerError('Ce flux est temporairement indisponible.', channel, index);
                     }
                 });
             } else {
-                // Fallback direct sur l'élément vidéo
                 videoEl.src = finalUrl;
                 videoEl.play().catch(() => {});
             }
         } else {
-            // ── LECTEUR HLS (.M3U8) OPTIMISÉ CONNEXION FAIBLE ──
+            // ── LECTEUR HLS (.M3U8) INSTANT ZAPPING (< 2s) ──
             videoEl.style.display = 'block';
 
             if (typeof Hls !== 'undefined' && Hls.isSupported()) {
                 hlsInstance = new Hls({
                     enableWorker: true,
                     lowLatencyMode: false,
-                    // ── Démarrage fluide immédiat sur profil léger ──
-                    startLevel: 0,                     // Démarre sur le profil le plus léger pour 0 freeze au lancement
-                    capLevelToPlayerSize: true,        // Ne pas charger du 1080p inutile si l'écran affiche en 720p
-                    // ── Buffer profond pour connexions modestes : absorption totale des chutes de débit ──
-                    liveSyncDurationCount: 4,          // 4 segments d'avance
-                    liveMaxLatencyDurationCount: 10,   // marge généreuse pour absorber les baisses
-                    backBufferLength: 30,
-                    maxBufferLength: 60,               // 60s de buffer vidéo d'avance
-                    maxMaxBufferLength: 120,           // jusqu'à 2 minutes si nécessaire
-                    maxBufferSize: 90 * 1000 * 1000,
-                    maxBufferHole: 1.0,                // saute immédiatement les micro-trous sans pause
-                    highBufferWatchdogPeriod: 2,
-                    // ── Délais réseau très tolérants pour connexions lentes ──
-                    manifestLoadingTimeOut: 30000,
-                    manifestLoadingMaxRetry: 5,
-                    manifestLoadingRetryDelay: 1000,
-                    levelLoadingTimeOut: 30000,
-                    levelLoadingMaxRetry: 5,
-                    fragLoadingTimeOut: 60000,         // 60s par segment (évite d'annuler les téléchargements lents)
-                    fragLoadingMaxRetry: 6,
-                    fragLoadingRetryDelay: 1000,
-                    // ── ABR conservateur pour connexion ~2.5 Mbps ──
-                    abrEwmaDefaultEstimate: 1800000,   // estimation réaliste 1.8 Mbps
-                    abrBandWidthFactor: 0.70,          // n'utilise que 70% de la bande passante estimée
-                    abrBandWidthUpFactor: 0.50,        // ne monte en qualité que si le débit est vraiment solide
-                    abrMaxWithRealBitrate: true,
-                    // ── Préchargement fluide ──
-                    startFragPrefetch: true,
+                    startLevel: 0,                     // Démarre sur le profil le plus léger pour affichage immédiat
+                    capLevelToPlayerSize: true,
+                    // ── Calage immédiat sur le 1er segment live (< 1.5s) ──
+                    liveSyncDurationCount: 1,          // 1 seul segment d'avance nécessaire pour jouer tout de suite !
+                    liveMaxLatencyDurationCount: 4,
+                    backBufferLength: 20,
+                    maxBufferLength: 20,
+                    maxMaxBufferLength: 40,
+                    maxBufferSize: 30 * 1000 * 1000,
+                    maxBufferHole: 0.5,
+                    highBufferWatchdogPeriod: 1,
+                    // ── Timeouts ultra-réactifs pour zapping rapide sans freeze prolongé ──
+                    manifestLoadingTimeOut: 3500,      // 3.5s max au lieu de 30s
+                    manifestLoadingMaxRetry: 1,
+                    manifestLoadingRetryDelay: 300,
+                    levelLoadingTimeOut: 3500,
+                    levelLoadingMaxRetry: 1,
+                    fragLoadingTimeOut: 5000,          // 5s max au lieu de 60s
+                    fragLoadingMaxRetry: 2,
+                    fragLoadingRetryDelay: 300,
+                    // ── Bande passante & pré-chargement ──
+                    abrEwmaDefaultEstimate: 2500000,
+                    abrBandWidthFactor: 0.85,
+                    startFragPrefetch: true,           // Télécharge le 1er segment en avance
                     progressive: true,
-                    nudgeMaxRetry: 10,
-                    maxStarvationDelay: 6
+                    nudgeMaxRetry: 5,
+                    maxStarvationDelay: 4
                 });
+
+                videoEl.addEventListener('loadeddata', () => clearPlayerOverlays(), { once: true });
+                videoEl.addEventListener('canplay', () => clearPlayerOverlays(), { once: true });
 
                 hlsInstance.loadSource(finalUrl);
                 hlsInstance.attachMedia(videoEl);
@@ -643,7 +694,7 @@
                                 } else if (retryStage < 3) {
                                     loadChannel(index, useFallback, retryStage + 1);
                                 } else {
-                                    showPlayerError('Ce flux est temporairement indisponible.');
+                                    showPlayerError('Ce flux est temporairement indisponible.', channel, index);
                                 }
                                 break;
                             case Hls.ErrorTypes.MEDIA_ERROR:
@@ -656,7 +707,7 @@
                                         hlsInstance.recoverMediaError();
                                     } catch (e2) {
                                         destroyActivePlayer();
-                                        showPlayerError('Ce flux est temporairement indisponible.');
+                                        showPlayerError('Ce flux est temporairement indisponible.', channel, index);
                                     }
                                 }
                                 break;
@@ -667,7 +718,7 @@
                                 } else if (retryStage < 3) {
                                     loadChannel(index, useFallback, retryStage + 1);
                                 } else {
-                                    showPlayerError('Ce flux est temporairement indisponible.');
+                                    showPlayerError('Ce flux est temporairement indisponible.', channel, index);
                                 }
                                 break;
                         }
@@ -701,20 +752,23 @@
         loadChannel(filtered[prevIdx].index);
     }
 
-    // ── Détection de correspondance catégorie ──
+    // ── Détection de correspondance catégorie (dynamique selon liens/pays/groupes) ──
     function isChannelInCategory(ch, catKey, favs) {
         if (catKey === 'tous') return true;
         if (catKey === 'favoris') return favs.includes(ch.id);
-        if (catKey === 'senegal') return (ch.category === 'senegal' || ch.country === 'SN');
-        if (catKey === 'francophone') return (ch.category === 'francophone' || ch.country === 'FR' || (ch.group && ch.group.includes('FR |')));
-        if (catKey === 'sport') return (ch.category === 'sport' || (ch.group && (ch.group.includes('SPORT') || ch.group.includes('DAZN') || ch.group.includes('FOOT') || ch.group.includes('LALIGA') || ch.group.includes('PREMIER LEAGUE'))));
-        if (catKey === 'cinema') return (ch.category === 'cinema' || (ch.group && (ch.group.includes('CINÉMA') || ch.group.includes('FILM') || ch.group.includes('SERIE') || ch.group.includes('MOVIES'))));
-        if (catKey === 'uk') return (ch.country === 'UK' || ch.category === 'uk' || (ch.group && ch.group.includes('UK |')));
-        if (catKey === 'espagne') return (ch.country === 'ES' || ch.category === 'espagne' || (ch.group && ch.group.includes('ES |')));
-        if (catKey === 'allemagne') return (ch.country === 'DE' || ch.category === 'allemagne' || (ch.group && (ch.group.includes('DE |') || ch.group.includes('AUSTRIA'))));
-        if (catKey === 'italie') return (ch.country === 'IT' || ch.category === 'italie' || (ch.group && ch.group.includes('IT |')));
-        if (catKey === 'albanie') return (ch.country === 'AL' || ch.category === 'albanie' || (ch.group && ch.group.includes('ALB |')));
-        return (ch.category === catKey);
+        const chCat = (ch.category || '').toLowerCase();
+        if (chCat === catKey.toLowerCase()) return true;
+        if (ch.country && ch.country.toLowerCase() === catKey.toLowerCase()) return true;
+        if (ch.group && ch.group.toLowerCase().includes(catKey.toLowerCase())) return true;
+        if (catKey === 'senegal') return (chCat === 'senegal' || ch.country === 'SN' || (ch.group && ch.group.toLowerCase().includes('sénégal')));
+        if (catKey === 'francophone') return (chCat === 'francophone' || ch.country === 'FR' || (ch.group && (ch.group.includes('FR |') || ch.group.toLowerCase().includes('france'))));
+        if (catKey === 'sport') return (chCat === 'sport' || (ch.group && (ch.group.toLowerCase().includes('sport') || ch.group.includes('DAZN') || ch.group.includes('FOOT'))));
+        if (catKey === 'cinema') return (chCat === 'cinema' || (ch.group && (ch.group.toLowerCase().includes('ciné') || ch.group.toLowerCase().includes('film') || ch.group.toLowerCase().includes('movie') || ch.group.toLowerCase().includes('serie'))));
+        if (catKey === 'uk') return (ch.country === 'UK' || ch.country === 'US' || chCat === 'uk' || (ch.group && (ch.group.includes('UK |') || ch.group.includes('USA'))));
+        if (catKey === 'espagne') return (ch.country === 'ES' || chCat === 'espagne' || (ch.group && ch.group.includes('ES |')));
+        if (catKey === 'allemagne') return (ch.country === 'DE' || chCat === 'allemagne' || (ch.group && (ch.group.includes('DE |') || ch.group.includes('GERMANY'))));
+        if (catKey === 'italie') return (ch.country === 'IT' || chCat === 'italie' || (ch.group && ch.group.includes('IT |')));
+        return false;
     }
 
     // ── Filtrage des chaînes ──
@@ -745,7 +799,7 @@
             });
     }
 
-    // ── Remplissage du sélecteur de bouquets ──
+    // ── Remplissage du sélecteur de bouquets (groupes M3U automatiques) ──
     function populateBouquetFilter() {
         if (!bouquetFilter) return;
         const groups = new Map();
@@ -756,7 +810,7 @@
             }
         });
 
-        bouquetFilter.innerHTML = `<option value="all">⚡ Tous les bouquets (${channels.length.toLocaleString('fr-FR')} chaînes)</option>`;
+        bouquetFilter.innerHTML = `<option value="all">⚡ Tous les bouquets M3U (${channels.length.toLocaleString('fr-FR')} chaînes)</option>`;
         const sortedGroups = Array.from(groups.entries()).sort((a, b) => a[0].localeCompare(b[0], 'fr'));
         sortedGroups.forEach(([grp, count]) => {
             const opt = document.createElement('option');
@@ -772,22 +826,56 @@
         };
     }
 
-    // ── Rendu de la barre des catégories ──
+    // ── Découverte dynamique des catégories présentes dans les liens ──
+    function getDynamicCategories() {
+        const catMap = new Map();
+        catMap.set('tous', { key: 'tous', label: 'Toutes les chaînes', icon: '📺', count: channels.length, order: 0 });
+
+        const favs = getFavorites();
+        const favCount = channels.filter(ch => favs.includes(ch.id)).length;
+        if (favCount > 0) {
+            catMap.set('favoris', { key: 'favoris', label: '⭐ Favoris', icon: '⭐', count: favCount, order: 0.5 });
+        }
+
+        channels.forEach(ch => {
+            const rawCat = (ch.category || 'monde').toLowerCase();
+            if (!catMap.has(rawCat)) {
+                const meta = CATEGORY_METADATA[rawCat] || {
+                    label: rawCat.charAt(0).toUpperCase() + rawCat.slice(1),
+                    icon: '📺',
+                    order: 50
+                };
+                catMap.set(rawCat, {
+                    key: rawCat,
+                    label: meta.label,
+                    icon: meta.icon,
+                    count: 0,
+                    order: meta.order || 50
+                });
+            }
+            catMap.get(rawCat).count += 1;
+        });
+
+        return Array.from(catMap.values())
+            .filter(c => c.count > 0 || c.key === 'tous')
+            .sort((a, b) => a.order - b.order);
+    }
+
+    // ── Rendu de la barre des catégories dynamiques ──
     function renderCategories() {
         if (!categoriesBar) return;
         categoriesBar.innerHTML = '';
 
-        CATEGORIES.forEach(cat => {
-            const count = getCategoryCount(cat.key);
-            if (cat.key !== 'tous' && cat.key !== 'favoris' && count === 0) return;
+        const dynamicCategories = getDynamicCategories();
 
+        dynamicCategories.forEach(cat => {
             const btn = document.createElement('button');
             btn.className = 'cat-pill' + (cat.key === currentCategory ? ' active' : '');
             btn.dataset.category = cat.key;
 
             btn.innerHTML = `
                 <span>${cat.label}</span>
-                <span class="cat-pill-count">${count.toLocaleString('fr-FR')}</span>
+                <span class="cat-pill-count">${cat.count.toLocaleString('fr-FR')}</span>
             `;
 
             btn.onclick = () => {
@@ -816,11 +904,13 @@
     }
 
     function updateCategoryCounts() {
+        const dynamicCategories = getDynamicCategories();
         document.querySelectorAll('.cat-pill').forEach(btn => {
             const catKey = btn.dataset.category;
             const countEl = btn.querySelector('.cat-pill-count');
             if (countEl && catKey) {
-                countEl.textContent = getCategoryCount(catKey).toLocaleString('fr-FR');
+                const found = dynamicCategories.find(c => c.key === catKey);
+                countEl.textContent = (found ? found.count : getCategoryCount(catKey)).toLocaleString('fr-FR');
             }
         });
     }
@@ -1190,11 +1280,17 @@
     if (playerContainer) {
         playerContainer.ondblclick = toggleFullscreen;
 
-        // Support tactile : tap pour afficher/masquer les contrôles sur smartphone
+        // Clic sur le lecteur : relance la lecture si en pause (résout les écrans noirs dus à l'autoplay) et bascule les contrôles
         playerContainer.addEventListener('click', (e) => {
             if (e.target.closest('button') || e.target.closest('input') || e.target.closest('a') || e.target.closest('.quality-selector')) {
                 showPlayerControlsTemporarily();
                 return;
+            }
+            // Si la vidéo est en pause ou bloquée par la politique autoplay du navigateur
+            if (videoEl && videoEl.paused && currentIndex >= 0) {
+                userHasInteracted = true;
+                ensureUnmuted();
+                videoEl.play().catch(() => {});
             }
             if (playerContainer.classList.contains('show-controls')) {
                 playerContainer.classList.remove('show-controls');
@@ -1702,9 +1798,13 @@
         renderCategories();
         renderChannelList(true);
 
-        // Lancement immédiat de la première chaîne (RTS 1 Sénégal)
+        // Lancement immédiat sur France 24 (flux vérifié 100% opérationnel)
         if (channels.length > 0) {
-            loadChannel(0);
+            const f24Idx = channels.findIndex(c =>
+                (c.name && c.name.toLowerCase().includes('france 24')) ||
+                (c.url && c.url.includes('france24.com'))
+            );
+            loadChannel(f24Idx >= 0 ? f24Idx : 0);
         }
 
         // ── Mesure de la vitesse réseau au démarrage ──

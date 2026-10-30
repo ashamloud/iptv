@@ -352,7 +352,8 @@
     }
 
     // Proxies Cloud haute disponibilité
-    const RENDER_PROXY_BASE = 'https://iptv-vbm1.onrender.com';
+    // Proxies Cloud haute disponibilité (Cloudflare Worker Edge ultra-rapide)
+    const RENDER_PROXY_BASE = null; // Désactivé (Render suspendu par quota de 5 Go)
     const CF_WORKER_BASE    = 'https://bokk-tv-proxy.pgueye866.workers.dev';
 
     function resolveStreamUrl(rawUrl, stage = 0, channel = null) {
@@ -381,34 +382,25 @@
 
         const isProduction = !isPort8080 && !isLocalHost && !isFileProtocol;
 
-        // ── EN PRODUCTION : Proxy Render haute compatibilité (non bloqué par MegaTV) ──
+        // ── EN PRODUCTION : Cloudflare Worker haute performance (Edge CDN mondial) ──
         if (isProduction) {
-            // Stage 0 : Proxy Render principal (supporte MegaTV + RTS + tous flux HTTP)
-            if (stage === 0 && RENDER_PROXY_BASE) {
-                return `${RENDER_PROXY_BASE}/proxy?url=${encodeURIComponent(rawUrl)}${extraParams}`;
-            }
-            // Stage 1 : Fallback Cloudflare Worker
-            if (stage === 1 && CF_WORKER_BASE) {
+            if (stage === 0 && CF_WORKER_BASE) {
                 return `${CF_WORKER_BASE}/proxy?url=${encodeURIComponent(rawUrl)}${extraParams}`;
             }
-            // Stage 2 : Fallback Vercel /api/proxy
-            if (stage === 2) {
+            if (stage === 1) {
                 return `/api/proxy?url=${encodeURIComponent(rawUrl)}${extraParams}`;
             }
-            // Stage 3+ : Retour sur Render
-            if (RENDER_PROXY_BASE) {
-                return `${RENDER_PROXY_BASE}/proxy?url=${encodeURIComponent(rawUrl)}${extraParams}`;
+            if (CF_WORKER_BASE) {
+                return `${CF_WORKER_BASE}/proxy?url=${encodeURIComponent(rawUrl)}${extraParams}`;
             }
         }
 
-        // ── EN LOCAL (ex: port 8080 ou Live Server port 5500) ──
+        // ── EN LOCAL (port 8080 avec serveur Python local illimité) ──
         if (stage === 0) {
             let proxyBase = '/proxy';
             if (!isPort8080) proxyBase = `http://${fallbackLocalHost}:8080/proxy`;
             return `${proxyBase}?url=${encodeURIComponent(rawUrl)}${extraParams}`;
-        } else if (stage === 1 && RENDER_PROXY_BASE) {
-            return `${RENDER_PROXY_BASE}/proxy?url=${encodeURIComponent(rawUrl)}${extraParams}`;
-        } else if (stage === 2 && CF_WORKER_BASE) {
+        } else if (stage === 1 && CF_WORKER_BASE) {
             return `${CF_WORKER_BASE}/proxy?url=${encodeURIComponent(rawUrl)}${extraParams}`;
         } else {
             let proxyBase = '/proxy';

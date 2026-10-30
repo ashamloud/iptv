@@ -22,6 +22,7 @@ import ssl
 import json
 import gzip
 import time
+import socket
 import threading
 import urllib.request
 import urllib.parse
@@ -103,8 +104,9 @@ RTS_TOKEN_CACHE = {}
 # Le load-balancer tourne en round-robin pour répartir les utilisateurs
 # ── Pool de comptes MegaTV vérifiés et 100% actifs (HLS & MPEG-TS) ──
 MEGATV_ACCOUNTS = [
+    ('430834571696283', '57URoE9Lii'),
     ('61F6598D4955DCF', 'dA5BZGgigb'),
-    ('81NQAFA7Q5S4188', 'JWyIZeiu08'),
+    ('E195F0H',         'gnZuJrgGnY'),
     ('K7U6ZUB2J5ZEJV5', 'V6CKjNQIZH'),
 ]
 
@@ -162,6 +164,10 @@ def resolve_rts_url(channel_key):
 class BOKKStreamProxyHandler(SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=SITE_DIR, **kwargs)
+
+    def address_string(self):
+        # Éviter le reverse DNS lookup de Python sur Windows (économie de 2 à 4 secondes par requête !)
+        return self.client_address[0]
 
     def do_OPTIONS(self):
         self.send_response(200)
@@ -350,20 +356,46 @@ class BOKKStreamProxyHandler(SimpleHTTPRequestHandler):
             req = urllib.request.Request(target_url, headers=headers)
 
             try:
-                resp = STREAM_OPENER.open(req, timeout=20)
+                resp = STREAM_OPENER.open(req, timeout=4.0)
             except urllib.error.HTTPError as he:
-                # Si 401 ou 403, retenter avec IPTVSmartersPro et sans referer superflu
-                if he.code in (401, 403) and 'Referer' in headers and not custom_ref:
-                    del headers['Referer']
-                    headers['User-Agent'] = 'IPTVSmartersPro'
-                    req2 = urllib.request.Request(target_url, headers=headers)
-                    resp = STREAM_OPENER.open(req2, timeout=20)
-                elif he.code in (401, 403) and 'User-Agent' in headers and ua != USER_AGENT:
-                    headers['User-Agent'] = USER_AGENT
-                    req2 = urllib.request.Request(target_url, headers=headers)
-                    resp = STREAM_OPENER.open(req2, timeout=20)
-                else:
-                    raise he
+                resp = None
+                # Si 401 ou 403 sur MegaTV, tenter les autres comptes actifs du pool
+                if he.code in (401, 403) and is_megatv:
+                    m_match = re.match(r'(https?://[^/]+/live/)[^/]+/[^/]+/(.+)', target_url)
+                    if m_match:
+                        base_u, s_path = m_match.group(1), m_match.group(2)
+                        for alt_user, alt_pwd in MEGATV_ACCOUNTS:
+                            alt_url = f"{base_u}{alt_user}/{alt_pwd}/{s_path}"
+                            try:
+                                req_alt = urllib.request.Request(alt_url, headers=headers)
+                                resp = STREAM_OPENER.open(req_alt, timeout=3.0)
+                                target_url = alt_url
+                                break
+                            except Exception:
+                                continue
+
+                if resp is None:
+                    # Essayer intelligemment les User-Agents alternatifs (Dalvik Android, VLC, IPTVSmartersPro, Chrome)
+                    alt_uas = [
+                        'Dalvik/2.1.0 (Linux; U; Android 13; Samsung F1833B Build/TP1A.280629.015)',
+                        'IPTVSmartersPro',
+                        'VLC/3.0.18 LibVLC/3.0.18',
+                        USER_AGENT
+                    ]
+                    for test_ua in alt_uas:
+                        if test_ua != headers.get('User-Agent'):
+                            try:
+                                h2 = dict(headers)
+                                h2['User-Agent'] = test_ua
+                                if he.code in (401, 403) and 'Referer' in h2 and not custom_ref:
+                                    del h2['Referer']
+                                req2 = urllib.request.Request(target_url, headers=h2)
+                                resp = STREAM_OPENER.open(req2, timeout=3.0)
+                                break
+                            except Exception:
+                                continue
+                    if resp is None:
+                        raise he
 
             with resp:
                 final_url = resp.geturl()
@@ -450,6 +482,10 @@ class BOKKStreamProxyHandler(SimpleHTTPRequestHandler):
                             self.send_header('Accept-Ranges', 'bytes')
                             self.end_headers()
                             self.wfile.write(out_bytes)
+                            try:
+                                self.wfile.flush()
+                            except Exception:
+                                pass
                             return
                         except (ConnectionResetError, BrokenPipeError, ConnectionAbortedError, OSError):
                             return
@@ -507,6 +543,10 @@ class BOKKStreamProxyHandler(SimpleHTTPRequestHandler):
                         if not chunk:
                             break
                         self.wfile.write(chunk)
+                        try:
+                            self.wfile.flush()
+                        except Exception:
+                            pass
                         if cache_chunks is not None:
                             cache_chunks.append(chunk)
                     if cache_chunks is not None and status_code == 200:
@@ -543,6 +583,15 @@ class BOKKStreamProxyHandler(SimpleHTTPRequestHandler):
 class SafeThreadingHTTPServer(ThreadingHTTPServer):
     # Sur Windows, désactiver allow_reuse_address pour empêcher 2 processus d'écouter sur le même port
     allow_reuse_address = False
+    daemon_threads = True
+
+    def get_request(self):
+        sock, addr = super().get_request()
+        try:
+            sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+        except Exception:
+            pass
+        return sock, addr
 
 
 if __name__ == '__main__':
