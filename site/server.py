@@ -296,6 +296,13 @@ class BOKKStreamProxyHandler(SimpleHTTPRequestHandler):
         if is_megatv and is_m3u8_req:
             target_url = rewrite_megatv_url(target_url)
 
+        # Normalisation automatique des flux novatv vers MPEG-TS live
+        if 'novatv.xyz' in target_url and '/live/' not in target_url and not target_url.endswith('.ts'):
+            p_nova = urllib.parse.urlparse(target_url)
+            p_parts = p_nova.path.strip('/').split('/')
+            if len(p_parts) >= 3:
+                target_url = f"http://{p_nova.netloc}/live/{p_parts[0]}/{p_parts[1]}/{p_parts[2]}.ts"
+
         # ── Cache HIT pour les segments vidéo (HLS uniquement, pas de flux continu /live/) ──
         target_lower_ext = target_url.lower().split('?')[0]
         if (any(target_lower_ext.endswith(ext) for ext in SEGMENT_EXTENSIONS)
@@ -353,7 +360,17 @@ class BOKKStreamProxyHandler(SimpleHTTPRequestHandler):
             if client_range:
                 headers['Range'] = client_range
 
-            req = urllib.request.Request(target_url, headers=headers)
+            # Contournement intelligent des pannes / timeouts DNS locaux (Livebox / FAI)
+            req_url = target_url
+            try:
+                p_host = urllib.parse.urlparse(target_url)
+                if p_host.hostname == 'barrelastv.ottcst.org':
+                    req_url = target_url.replace(p_host.netloc, f"103.205.17.108:{p_host.port or 80}", 1)
+                    headers['Host'] = p_host.netloc
+            except Exception:
+                pass
+
+            req = urllib.request.Request(req_url, headers=headers)
 
             try:
                 resp = STREAM_OPENER.open(req, timeout=4.0)

@@ -33,6 +33,8 @@
         'italie':       { label: '🇮🇹 Italie',          icon: '🇮🇹', order: 13 },
         'turquie':      { label: '🇹🇷 Turquie',         icon: '🇹🇷', order: 14 },
         'albanie':      { label: '🇦🇱 Albanie',         icon: '🇦🇱', order: 15 },
+        'exyu':         { label: '🇷🇸 Ex-Yougoslavie',  icon: '🇷🇸', order: 16 },
+        'adulte':       { label: '🔞 Adulte (+18)',     icon: '🔞', order: 98 },
         'monde':        { label: '🌐 International',    icon: '🌐', order: 99 }
     };
 
@@ -558,15 +560,15 @@
                 }, {
                     enableWorker: false,
                     lazyLoad: false,
-                    // ── Démarrage instantané sans latence artificielle ──
+                    // ── Moteur MPEG-TS Anti-Coupure (optimisé débits variables & connexions faibles) ──
                     liveBufferLatencyChasing: true,
-                    liveBufferLatencyMaxLatency: 2.5,
-                    liveBufferLatencyMinRemain: 0.3,    // 0.3s au lieu de 8.0s ! Affichage immédiat
+                    liveBufferLatencyMaxLatency: 3.0,    // Coussin de sécurité de 3s pour absorber les baisses de débit
+                    liveBufferLatencyMinRemain: 0.6,    // 0.6s de flux continu garanti sans caler
                     enableStashBuffer: true,
-                    stashInitialSize: 64,               // 64 KB au lieu de 384 KB
+                    stashInitialSize: 48,               // 48 Ko de cache initial pour affichage rapide et stable
                     autoCleanupSourceBuffer: true,
-                    autoCleanupMaxBackwardDuration: 60,
-                    autoCleanupMinBackwardDuration: 30
+                    autoCleanupMaxBackwardDuration: 30,
+                    autoCleanupMinBackwardDuration: 15
                 });
 
                 mpegtsInstance.attachMediaElement(videoEl);
@@ -607,30 +609,32 @@
                     lowLatencyMode: false,
                     startLevel: 0,                     // Démarre sur le profil le plus léger pour affichage immédiat
                     capLevelToPlayerSize: true,
-                    // ── Calage immédiat sur le 1er segment live (< 1.5s) ──
-                    liveSyncDurationCount: 1,          // 1 seul segment d'avance nécessaire pour jouer tout de suite !
-                    liveMaxLatencyDurationCount: 4,
-                    backBufferLength: 20,
-                    maxBufferLength: 20,
-                    maxMaxBufferLength: 40,
-                    maxBufferSize: 30 * 1000 * 1000,
-                    maxBufferHole: 0.5,
-                    highBufferWatchdogPeriod: 1,
-                    // ── Timeouts ultra-réactifs pour zapping rapide sans freeze prolongé ──
-                    manifestLoadingTimeOut: 3500,      // 3.5s max au lieu de 30s
-                    manifestLoadingMaxRetry: 1,
+                    // ── Coussin de sécurité anti-coupure (connexions faibles & instables) ──
+                    liveSyncDurationCount: 2,          // 2 segments d'avance : absorbe les ralentissements 4G/ADSL
+                    liveMaxLatencyDurationCount: 5,    // Tolère les légères variations sans figer la vidéo
+                    backBufferLength: 8,
+                    maxBufferLength: 12,               // 12s de buffer de sécurité anti-calage
+                    maxMaxBufferLength: 24,
+                    maxBufferSize: 20 * 1000 * 1000,
+                    maxBufferHole: 0.6,                // Tolère les trous de paquets sans bloquer
+                    highBufferWatchdogPeriod: 2,
+                    // ── Timeouts et tolérance aux débits variables ──
+                    manifestLoadingTimeOut: 5000,
+                    manifestLoadingMaxRetry: 2,
                     manifestLoadingRetryDelay: 300,
-                    levelLoadingTimeOut: 3500,
-                    levelLoadingMaxRetry: 1,
-                    fragLoadingTimeOut: 5000,          // 5s max au lieu de 60s
-                    fragLoadingMaxRetry: 2,
-                    fragLoadingRetryDelay: 300,
-                    // ── Bande passante & pré-chargement ──
-                    abrEwmaDefaultEstimate: 2500000,
-                    abrBandWidthFactor: 0.85,
+                    levelLoadingTimeOut: 5000,
+                    levelLoadingMaxRetry: 2,
+                    fragLoadingTimeOut: 6000,          // 6s pour laisser le temps aux connexions lentes de télécharger
+                    fragLoadingMaxRetry: 3,
+                    fragLoadingRetryDelay: 400,
+                    // ── ABR sécurisé (évite les calages en ne sur-estimant jamais la connexion) ──
+                    abrEwmaDefaultEstimate: 1000000,   // 1 Mbps par défaut pour ne pas bloquer
+                    abrBandWidthFactor: 0.70,          // Garde 30% de marge de sécurité réseau
+                    abrBandWidthUpFactor: 0.60,        // Ne monte en qualité que si le réseau est très stable
                     startFragPrefetch: true,           // Télécharge le 1er segment en avance
                     progressive: true,
-                    nudgeMaxRetry: 5,
+                    nudgeMaxRetry: 8,
+                    nudgeOffset: 0.2,
                     maxStarvationDelay: 4
                 });
 
@@ -678,6 +682,27 @@
                 });
 
                 hlsInstance.on(Hls.Events.ERROR, (_, data) => {
+                    // Récupération automatique sur calage ou micro-coupure de connexion (anti-freeze)
+                    if (data.details === 'bufferStalledError' || data.details === 'bufferNudgeOnStall') {
+                        console.warn('[BOKK TV Anti-Freeze] Ralentissement réseau détecté, relance fluide du tampon...');
+                        if (videoEl && !videoEl.paused && videoEl.buffered && videoEl.buffered.length > 0) {
+                            const bufEnd = videoEl.buffered.end(videoEl.buffered.length - 1);
+                            if (bufEnd > videoEl.currentTime + 0.1) {
+                                videoEl.currentTime = bufEnd - 0.2;
+                            }
+                        }
+                        if (hlsInstance) {
+                            if (hlsInstance.autoLevelEnabled && hlsInstance.levels && hlsInstance.levels.length > 1) {
+                                const currentLvl = hlsInstance.currentLevel;
+                                if (currentLvl > 0) {
+                                    hlsInstance.currentLevel = currentLvl - 1;
+                                }
+                            }
+                            hlsInstance.startLoad();
+                        }
+                        return;
+                    }
+
                     // Si le navigateur rejette un codec audio spécifique (ex: E-AC3 Dolby)
                     if (data.details === 'bufferAddCodecError' && data.mimeType && data.mimeType.includes('audio')) {
                         console.warn('[BOKK TV] Codec audio incompatible avec le navigateur, essai piste alternative...');

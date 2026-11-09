@@ -51,7 +51,10 @@
         { key: 'uk',          label: '🇬🇧 UK & USA' },
         { key: 'espagne',     label: '🇪🇸 Espagne' },
         { key: 'allemagne',   label: '🇩🇪 Allemagne' },
-        { key: 'italie',      label: '🇮🇹 Italie' }
+        { key: 'italie',      label: '🇮🇹 Italie' },
+        { key: 'exyu',        label: '🇷🇸 Ex-Yougoslavie' },
+        { key: 'adulte',      label: '🔞 Adulte' },
+        { key: 'monde',       label: '🌐 Monde' }
     ];
 
     // ── Variables d'état ──
@@ -256,15 +259,20 @@
         iframeEl.style.display = 'none';
         videoEl.style.display = 'block';
 
-        if (lowerUrl.endsWith('.ts') && typeof mpegts !== 'undefined' && mpegts.isSupported()) {
+        const isMpegTs = (channel.type === 'ts' || lowerUrl.endsWith('.ts') || lowerUrl.endsWith('.mpegts') || (!lowerUrl.includes('.m3u8') && !lowerUrl.includes('embed')));
+        if (isMpegTs && typeof mpegts !== 'undefined' && mpegts.isSupported()) {
             mpegtsInstance = mpegts.createPlayer({
                 type: 'mse',
                 isLive: true,
                 url: targetUrl
             }, {
-                enableWorker: true,
+                enableWorker: false,
                 lazyLoad: false,
-                liveBufferLatencyChasing: true
+                liveBufferLatencyChasing: true,
+                liveBufferLatencyMaxLatency: 1.5,
+                liveBufferLatencyMinRemain: 0.2,
+                enableStashBuffer: true,
+                stashInitialSize: 32
             });
             mpegtsInstance.attachMediaElement(videoEl);
             mpegtsInstance.load();
@@ -289,10 +297,16 @@
         if (Hls.isSupported()) {
             hlsInstance = new Hls({
                 enableWorker: true,
-                lowLatencyMode: false,
-                manifestLoadingTimeOut: 20000,
-                levelLoadingTimeOut: 20000,
-                fragLoadingTimeOut: 40000
+                lowLatencyMode: true,
+                startLevel: 0,
+                liveSyncDurationCount: 1,
+                liveMaxLatencyDurationCount: 3,
+                startFragPrefetch: true,
+                maxBufferLength: 6,
+                maxMaxBufferLength: 12,
+                manifestLoadingTimeOut: 3000,
+                levelLoadingTimeOut: 3000,
+                fragLoadingTimeOut: 3500
             });
             hlsInstance.loadSource(targetUrl);
             hlsInstance.attachMedia(videoEl);
