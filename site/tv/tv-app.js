@@ -182,21 +182,15 @@
         }
     }
 
-    // ── Rendu de la Grille TV ──
-    function renderGrid() {
-        gridEl.innerHTML = '';
-        if (filteredChannels.length === 0) {
-            gridEl.innerHTML = `
-                <div style="grid-column: 1 / -1; text-align: center; padding: 40px; color: #94a3b8; font-size: 1.2rem;">
-                    Aucune chaîne trouvée dans cette catégorie.
-                </div>
-            `;
-            return;
-        }
+    // ── Rendu de la Grille TV avec pagination dynamique infinie ──
+    let renderedTVCount = 0;
+    const TV_BATCH_SIZE = 120;
 
-        // Virtualisation légère : afficher les premières 120 chaînes par paquet
-        const slice = filteredChannels.slice(0, 120);
-        slice.forEach((ch, idx) => {
+    function appendNextTVBatch() {
+        if (renderedTVCount >= filteredChannels.length) return;
+        const nextSlice = filteredChannels.slice(renderedTVCount, renderedTVCount + TV_BATCH_SIZE);
+        nextSlice.forEach((ch, localIdx) => {
+            const idx = renderedTVCount + localIdx;
             const card = document.createElement('div');
             card.className = 'tv-card' + (ch.id === (channels[currentChannelIndex]?.id) ? ' active' : '');
             card.dataset.index = idx;
@@ -221,6 +215,30 @@
             };
 
             gridEl.appendChild(card);
+        });
+        renderedTVCount += nextSlice.length;
+    }
+
+    function renderGrid() {
+        gridEl.innerHTML = '';
+        renderedTVCount = 0;
+        if (filteredChannels.length === 0) {
+            gridEl.innerHTML = `
+                <div style="grid-column: 1 / -1; text-align: center; padding: 40px; color: #94a3b8; font-size: 1.2rem;">
+                    Aucune chaîne trouvée dans cette catégorie.
+                </div>
+            `;
+            return;
+        }
+
+        appendNextTVBatch();
+    }
+
+    if (gridEl) {
+        gridEl.addEventListener('scroll', () => {
+            if (gridEl.scrollTop + gridEl.clientHeight >= gridEl.scrollHeight - 400) {
+                appendNextTVBatch();
+            }
         });
     }
 
@@ -506,9 +524,11 @@
             focusedZone = 'grid';
             focusedIndex = 0;
         } else if (focusedZone === 'grid') {
-            // Sauter une rangée de 6 cartes
-            const count = gridEl.querySelectorAll('.tv-card').length;
-            if (focusedIndex + 6 < count) {
+            // Sauter une rangée de 6 cartes avec chargement dynamique
+            if (focusedIndex + 6 < filteredChannels.length) {
+                if (focusedIndex + 18 >= renderedTVCount) {
+                    appendNextTVBatch();
+                }
                 focusedIndex += 6;
             }
         }
