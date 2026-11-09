@@ -33,6 +33,8 @@
         'italie':       { label: '🇮🇹 Italie',          icon: '🇮🇹', order: 13 },
         'turquie':      { label: '🇹🇷 Turquie',         icon: '🇹🇷', order: 14 },
         'albanie':      { label: '🇦🇱 Albanie',         icon: '🇦🇱', order: 15 },
+        'exyu':         { label: '🇷🇸 Ex-Yougoslavie',  icon: '🇷🇸', order: 16 },
+        'adulte':       { label: '🔞 Adulte (+18)',     icon: '🔞', order: 98 },
         'monde':        { label: '🌐 International',    icon: '🌐', order: 99 }
     };
 
@@ -517,6 +519,17 @@
         highlightActiveChannel();
         ensureUnmuted();   // ← Rétablir le son si l'utilisateur avait déjà interagi
 
+        // Activer et révéler le lecteur s'il était minimisé
+        const playerStageSec = document.getElementById('player-stage-section');
+        if (playerStageSec && !playerStageSec.classList.contains('active')) {
+            playerStageSec.classList.add('active');
+        }
+        const nowPlayingPill = document.getElementById('now-playing-pill');
+        if (nowPlayingPill) nowPlayingPill.style.display = 'flex';
+        if (typeof updateQuickZappingBar === 'function') {
+            updateQuickZappingBar();
+        }
+
         const activeUrl = (useFallback && channel.fallbackUrl) ? channel.fallbackUrl : channel.url;
         const lowerUrl = (activeUrl || '').toLowerCase().split('?')[0];
 
@@ -558,15 +571,15 @@
                 }, {
                     enableWorker: false,
                     lazyLoad: false,
-                    // ── Démarrage instantané sans latence artificielle ──
+                    // ── Moteur MPEG-TS Anti-Coupure (optimisé débits variables & connexions faibles) ──
                     liveBufferLatencyChasing: true,
-                    liveBufferLatencyMaxLatency: 2.5,
-                    liveBufferLatencyMinRemain: 0.3,    // 0.3s au lieu de 8.0s ! Affichage immédiat
+                    liveBufferLatencyMaxLatency: 3.0,    // Coussin de sécurité de 3s pour absorber les baisses de débit
+                    liveBufferLatencyMinRemain: 0.6,    // 0.6s de flux continu garanti sans caler
                     enableStashBuffer: true,
-                    stashInitialSize: 64,               // 64 KB au lieu de 384 KB
+                    stashInitialSize: 48,               // 48 Ko de cache initial pour affichage rapide et stable
                     autoCleanupSourceBuffer: true,
-                    autoCleanupMaxBackwardDuration: 60,
-                    autoCleanupMinBackwardDuration: 30
+                    autoCleanupMaxBackwardDuration: 30,
+                    autoCleanupMinBackwardDuration: 15
                 });
 
                 mpegtsInstance.attachMediaElement(videoEl);
@@ -607,30 +620,32 @@
                     lowLatencyMode: false,
                     startLevel: 0,                     // Démarre sur le profil le plus léger pour affichage immédiat
                     capLevelToPlayerSize: true,
-                    // ── Calage immédiat sur le 1er segment live (< 1.5s) ──
-                    liveSyncDurationCount: 1,          // 1 seul segment d'avance nécessaire pour jouer tout de suite !
-                    liveMaxLatencyDurationCount: 4,
-                    backBufferLength: 20,
-                    maxBufferLength: 20,
-                    maxMaxBufferLength: 40,
-                    maxBufferSize: 30 * 1000 * 1000,
-                    maxBufferHole: 0.5,
-                    highBufferWatchdogPeriod: 1,
-                    // ── Timeouts ultra-réactifs pour zapping rapide sans freeze prolongé ──
-                    manifestLoadingTimeOut: 3500,      // 3.5s max au lieu de 30s
-                    manifestLoadingMaxRetry: 1,
+                    // ── Coussin de sécurité anti-coupure (connexions faibles & instables) ──
+                    liveSyncDurationCount: 2,          // 2 segments d'avance : absorbe les ralentissements 4G/ADSL
+                    liveMaxLatencyDurationCount: 5,    // Tolère les légères variations sans figer la vidéo
+                    backBufferLength: 8,
+                    maxBufferLength: 12,               // 12s de buffer de sécurité anti-calage
+                    maxMaxBufferLength: 24,
+                    maxBufferSize: 20 * 1000 * 1000,
+                    maxBufferHole: 0.6,                // Tolère les trous de paquets sans bloquer
+                    highBufferWatchdogPeriod: 2,
+                    // ── Timeouts et tolérance aux débits variables ──
+                    manifestLoadingTimeOut: 5000,
+                    manifestLoadingMaxRetry: 2,
                     manifestLoadingRetryDelay: 300,
-                    levelLoadingTimeOut: 3500,
-                    levelLoadingMaxRetry: 1,
-                    fragLoadingTimeOut: 5000,          // 5s max au lieu de 60s
-                    fragLoadingMaxRetry: 2,
-                    fragLoadingRetryDelay: 300,
-                    // ── Bande passante & pré-chargement ──
-                    abrEwmaDefaultEstimate: 2500000,
-                    abrBandWidthFactor: 0.85,
+                    levelLoadingTimeOut: 5000,
+                    levelLoadingMaxRetry: 2,
+                    fragLoadingTimeOut: 6000,          // 6s pour laisser le temps aux connexions lentes de télécharger
+                    fragLoadingMaxRetry: 3,
+                    fragLoadingRetryDelay: 400,
+                    // ── ABR sécurisé (évite les calages en ne sur-estimant jamais la connexion) ──
+                    abrEwmaDefaultEstimate: 1000000,   // 1 Mbps par défaut pour ne pas bloquer
+                    abrBandWidthFactor: 0.70,          // Garde 30% de marge de sécurité réseau
+                    abrBandWidthUpFactor: 0.60,        // Ne monte en qualité que si le réseau est très stable
                     startFragPrefetch: true,           // Télécharge le 1er segment en avance
                     progressive: true,
-                    nudgeMaxRetry: 5,
+                    nudgeMaxRetry: 8,
+                    nudgeOffset: 0.2,
                     maxStarvationDelay: 4
                 });
 
@@ -678,6 +693,27 @@
                 });
 
                 hlsInstance.on(Hls.Events.ERROR, (_, data) => {
+                    // Récupération automatique sur calage ou micro-coupure de connexion (anti-freeze)
+                    if (data.details === 'bufferStalledError' || data.details === 'bufferNudgeOnStall') {
+                        console.warn('[BOKK TV Anti-Freeze] Ralentissement réseau détecté, relance fluide du tampon...');
+                        if (videoEl && !videoEl.paused && videoEl.buffered && videoEl.buffered.length > 0) {
+                            const bufEnd = videoEl.buffered.end(videoEl.buffered.length - 1);
+                            if (bufEnd > videoEl.currentTime + 0.1) {
+                                videoEl.currentTime = bufEnd - 0.2;
+                            }
+                        }
+                        if (hlsInstance) {
+                            if (hlsInstance.autoLevelEnabled && hlsInstance.levels && hlsInstance.levels.length > 1) {
+                                const currentLvl = hlsInstance.currentLevel;
+                                if (currentLvl > 0) {
+                                    hlsInstance.currentLevel = currentLvl - 1;
+                                }
+                            }
+                            hlsInstance.startLoad();
+                        }
+                        return;
+                    }
+
                     // Si le navigateur rejette un codec audio spécifique (ex: E-AC3 Dolby)
                     if (data.details === 'bufferAddCodecError' && data.mimeType && data.mimeType.includes('audio')) {
                         console.warn('[BOKK TV] Codec audio incompatible avec le navigateur, essai piste alternative...');
@@ -1779,6 +1815,428 @@
         }
     }
 
+    // ═══════════════════════════════════════════════════════════════
+    // BOKK TV — MOTEUR DE STREAMING & MATCH CENTER CANAL+ / NETFLIX
+    // ═══════════════════════════════════════════════════════════════
+
+    // ── Recherche de chaîne universelle par ID ou Nom ──
+    function loadChannelByIdOrQuery(targetId, queryName = '') {
+        let foundIdx = -1;
+        if (targetId) {
+            foundIdx = channels.findIndex(c => c.id === targetId || c.stream_id === targetId);
+        }
+        if (foundIdx === -1 && queryName) {
+            const qClean = queryName.toLowerCase().replace(/[^a-z0-9]/g, '');
+            foundIdx = channels.findIndex(c => {
+                const cClean = c.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+                return cClean.includes(qClean) || qClean.includes(cClean);
+            });
+            if (foundIdx === -1) {
+                const tokens = queryName.toLowerCase().split(/\s+/).filter(t => t.length > 2);
+                foundIdx = channels.findIndex(c => {
+                    const cLower = c.name.toLowerCase();
+                    return tokens.every(t => cLower.includes(t));
+                });
+            }
+        }
+
+        if (foundIdx !== -1) {
+            const playerStageSec = document.getElementById('player-stage-section');
+            if (playerStageSec) {
+                playerStageSec.classList.add('active');
+                playerStageSec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+            loadChannel(foundIdx);
+            return true;
+        } else {
+            showToast(`⚠️ Canal "${queryName || targetId}" non disponible dans cette playlist.`);
+            return false;
+        }
+    }
+
+    // ── Configuration du Hero Billboard (Événement Phare) ──
+    function setupHeroBillboard() {
+        const matches = (typeof window !== 'undefined' && window.FEATURED_MATCHES) ? window.FEATURED_MATCHES : [];
+        if (!matches || matches.length === 0) return;
+        const mainMatch = matches[0]; // El Clásico par défaut
+
+        const heroBackdrop      = document.getElementById('hero-backdrop');
+        const heroTitle         = document.getElementById('hero-title');
+        const heroCompBadge     = document.getElementById('hero-comp-badge');
+        const heroTeamALogo     = document.getElementById('hero-team-a-logo');
+        const heroTeamBLogo     = document.getElementById('hero-team-b-logo');
+        const heroTeamAName     = document.getElementById('hero-team-a-name');
+        const heroTeamBName     = document.getElementById('hero-team-b-name');
+        const heroScore         = document.getElementById('hero-score');
+        const heroMinute        = document.getElementById('hero-minute');
+        const heroDesc          = document.getElementById('hero-desc');
+        const heroChannelsPills = document.getElementById('hero-channels-pills');
+        const heroBtnWatch      = document.getElementById('hero-btn-watch');
+        const heroBtnMore       = document.getElementById('hero-btn-more');
+        const btnHeroLaunchPlc  = document.getElementById('btn-hero-launch-placeholder');
+
+        if (heroBackdrop) {
+            heroBackdrop.style.backgroundImage = `url('${mainMatch.poster}')`;
+        }
+        if (heroTitle) heroTitle.textContent = mainMatch.title;
+        if (heroCompBadge) heroCompBadge.textContent = mainMatch.competitionBadge || mainMatch.competition;
+        if (heroDesc) heroDesc.textContent = mainMatch.description;
+
+        if (heroTeamALogo) heroTeamALogo.src = mainMatch.teamA.logo;
+        if (heroTeamBLogo) heroTeamBLogo.src = mainMatch.teamB.logo;
+        if (heroTeamAName) heroTeamAName.textContent = mainMatch.teamA.name;
+        if (heroTeamBName) heroTeamBName.textContent = mainMatch.teamB.name;
+
+        if (heroScore) heroScore.textContent = mainMatch.score || 'VS';
+        if (heroMinute) {
+            if (mainMatch.liveMinute) {
+                heroMinute.textContent = mainMatch.liveMinute;
+                heroMinute.style.display = 'block';
+            } else {
+                heroMinute.style.display = 'none';
+            }
+        }
+
+        // Remplissage des chaînes de diffusion du match
+        if (heroChannelsPills) {
+            heroChannelsPills.innerHTML = '';
+            (mainMatch.channels || []).forEach(ch => {
+                const btn = document.createElement('button');
+                btn.className = 'channel-pill-btn';
+                btn.innerHTML = `<span class="channel-pill-quality">${ch.badge || 'HD'}</span> <span>▶ ${ch.name}</span>`;
+                btn.addEventListener('click', () => {
+                    showToast(`▶ Lancement de ${ch.name} pour ${mainMatch.title}`);
+                    loadChannelByIdOrQuery(ch.id, ch.name);
+                });
+                heroChannelsPills.appendChild(btn);
+            });
+        }
+
+        // Bouton Regarder le Match en Direct
+        if (heroBtnWatch) {
+            heroBtnWatch.onclick = () => {
+                if (mainMatch.channels && mainMatch.channels.length > 0) {
+                    const firstCh = mainMatch.channels[0];
+                    showToast(`▶ Lancement du choc ${mainMatch.title} sur ${firstCh.name}`);
+                    loadChannelByIdOrQuery(firstCh.id, firstCh.name);
+                }
+            };
+        }
+
+        if (btnHeroLaunchPlc) {
+            btnHeroLaunchPlc.onclick = () => {
+                if (heroBtnWatch) heroBtnWatch.click();
+            };
+        }
+
+        if (heroBtnMore) {
+            heroBtnMore.onclick = () => {
+                const sec = document.getElementById('match-center-section');
+                if (sec) sec.scrollIntoView({ behavior: 'smooth' });
+            };
+        }
+    }
+
+    // ── Rendu du Match Center (Affiches des Grands Chocs) ──
+    function renderMatchCenter(filter = 'all') {
+        const matchesGrid = document.getElementById('matches-grid');
+        const matchFilters = document.getElementById('match-filters');
+        if (!matchesGrid) return;
+
+        const matches = (typeof window !== 'undefined' && window.FEATURED_MATCHES) ? window.FEATURED_MATCHES : [];
+        matchesGrid.innerHTML = '';
+
+        const filtered = matches.filter(m => {
+            if (filter === 'all') return true;
+            return m.category === filter;
+        });
+
+        filtered.forEach(m => {
+            const card = document.createElement('article');
+            card.className = 'match-card';
+
+            const statusClass = m.isLive ? 'live' : 'scheduled';
+            const statusHtml = m.isLive 
+                ? `<span class="match-status-pill live"><span class="live-dot"></span> DIRECT ${m.liveMinute || ''}</span>`
+                : `<span class="match-status-pill scheduled">${m.date} • ${m.time}</span>`;
+
+            card.innerHTML = `
+                <div class="match-poster-header" style="background-image: url('${m.poster}');">
+                    <div class="match-poster-overlay"></div>
+                    <div class="match-top-row">
+                        <span class="match-comp-pill">${m.competitionBadge || m.competition}</span>
+                        ${statusHtml}
+                    </div>
+                    <div class="match-teams-showcase">
+                        <div class="card-team">
+                            <img src="${m.teamA.logo}" alt="${m.teamA.name}" class="card-team-logo" referrerpolicy="no-referrer" onerror="this.style.opacity='0.5';">
+                            <span class="card-team-name">${m.teamA.name}</span>
+                        </div>
+                        <div class="match-center-badge">
+                            <span class="match-score-badge">${m.score || 'VS'}</span>
+                            ${m.isLive && m.liveMinute ? `<span class="match-minute-badge">${m.liveMinute}</span>` : ''}
+                        </div>
+                        <div class="card-team">
+                            <img src="${m.teamB.logo}" alt="${m.teamB.name}" class="card-team-logo" referrerpolicy="no-referrer" onerror="this.style.opacity='0.5';">
+                            <span class="card-team-name">${m.teamB.name}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="match-card-body">
+                    <div>
+                        <h3 class="match-card-title">${m.title}</h3>
+                        <p class="match-card-stage">${m.stage}</p>
+                    </div>
+                    <p class="match-card-desc">${m.description}</p>
+                    <div class="match-channels-box">
+                        <span class="match-channels-label">Chaînes de diffusion directe :</span>
+                        <div class="match-channels-list"></div>
+                    </div>
+                </div>
+            `;
+
+            // Boutons chaînes
+            const chListEl = card.querySelector('.match-channels-list');
+            (m.channels || []).forEach(ch => {
+                const btn = document.createElement('button');
+                btn.className = 'match-ch-btn';
+                btn.innerHTML = `<span class="match-ch-quality">${ch.badge || 'HD'}</span> <span>▶ ${ch.name}</span>`;
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    showToast(`▶ Lancement de ${ch.name} (${m.title})`);
+                    loadChannelByIdOrQuery(ch.id, ch.name);
+                });
+                chListEl.appendChild(btn);
+            });
+
+            // Clic sur l'ensemble de la carte lance la première chaîne
+            card.addEventListener('click', () => {
+                if (m.channels && m.channels.length > 0) {
+                    showToast(`▶ Lancement de ${m.channels[0].name} (${m.title})`);
+                    loadChannelByIdOrQuery(m.channels[0].id, m.channels[0].name);
+                }
+            });
+
+            matchesGrid.appendChild(card);
+        });
+
+        // Gestionnaires des filtres
+        if (matchFilters) {
+            matchFilters.querySelectorAll('.filter-pill').forEach(btn => {
+                btn.onclick = () => {
+                    matchFilters.querySelectorAll('.filter-pill').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    renderMatchCenter(btn.dataset.matchFilter);
+                };
+            });
+        }
+    }
+
+    // ── Rendu des Carrousels Thématiques Horizontaux (Netflix Rows) ──
+    function createCarouselCard(channel, index) {
+        const card = document.createElement('div');
+        card.className = 'carousel-card';
+        card.dataset.index = index;
+
+        const isFav = isFavorite(channel.id);
+        const logoSrc = getValidChannelLogo(channel);
+        const quality = channel.badge || (channel.name.includes('4K') ? '4K' : (channel.name.includes('FHD') ? '1080p' : 'HD'));
+
+        card.innerHTML = `
+            <div class="card-visual-box">
+                <div class="card-badges-top">
+                    <span class="card-badge-quality">${quality}</span>
+                    <button class="card-fav-btn ${isFav ? 'active' : ''}" title="Ajouter aux favoris">
+                        <svg width="14" height="14" fill="${isFav ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                        </svg>
+                    </button>
+                </div>
+                <img src="${logoSrc}" alt="${channel.name}" class="card-logo-img" loading="lazy" onerror="this.onerror=null; this.src='${DEFAULT_TV_LOGO}';">
+                <div class="card-play-overlay">
+                    <div class="play-bubble">
+                        <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                    </div>
+                </div>
+            </div>
+            <div class="card-info-box">
+                <div class="card-channel-name" title="${channel.name}">${channel.name}</div>
+                <div class="card-channel-sub">${channel.group || channel.category || 'Direct'}</div>
+            </div>
+        `;
+
+        card.addEventListener('click', () => {
+            const playerStageSec = document.getElementById('player-stage-section');
+            if (playerStageSec) {
+                playerStageSec.classList.add('active');
+                playerStageSec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+            loadChannel(index);
+        });
+
+        const favBtn = card.querySelector('.card-fav-btn');
+        if (favBtn) {
+            favBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                toggleFavorite(channel.id, e);
+                const nowFav = isFavorite(channel.id);
+                favBtn.classList.toggle('active', nowFav);
+                const svg = favBtn.querySelector('svg');
+                if (svg) svg.setAttribute('fill', nowFav ? 'currentColor' : 'none');
+                updateFavoritesRow();
+            });
+        }
+
+        return card;
+    }
+
+    function populateCarouselRow(trackId, filterFn, max = 24) {
+        const track = document.getElementById(trackId);
+        if (!track) return;
+        track.innerHTML = '';
+
+        let count = 0;
+        for (let i = 0; i < channels.length && count < max; i++) {
+            const ch = channels[i];
+            if (ch.name.startsWith('###')) continue;
+            if (filterFn(ch)) {
+                track.appendChild(createCarouselCard(ch, i));
+                count++;
+            }
+        }
+    }
+
+    function updateFavoritesRow() {
+        const row = document.getElementById('row-favoris');
+        const track = document.getElementById('track-favoris');
+        const countEl = document.getElementById('count-favoris');
+        if (!row || !track) return;
+
+        const favIds = getFavorites();
+        if (favIds.length === 0) {
+            row.style.display = 'none';
+            return;
+        }
+
+        row.style.display = 'flex';
+        track.innerHTML = '';
+        let found = 0;
+        favIds.forEach(id => {
+            const idx = channels.findIndex(c => c.id === id);
+            if (idx !== -1) {
+                track.appendChild(createCarouselCard(channels[idx], idx));
+                found++;
+            }
+        });
+        if (countEl) countEl.textContent = `${found} favoris`;
+    }
+
+    function renderStreamingCarousels() {
+        // 1. Sénégal
+        populateCarouselRow('track-senegal', (c) => {
+            return (c.group && c.group.toLowerCase().includes('sénégal')) || 
+                   (c.name && /rts|tfm|2stv|sen tv|walf|sunu/i.test(c.name));
+        }, 24);
+
+        // 2. Sports VIP & beIN Sports
+        populateCarouselRow('track-sports', (c) => {
+            return (c.name && /bein|canal\+ sport|canal\+ foot|rmc|dazn|sky sport|m\+ laliga/i.test(c.name));
+        }, 30);
+
+        // 3. France TNT
+        populateCarouselRow('track-france', (c) => {
+            return (c.name && /\b(tf1|france 2|france 3|france 4|france 5|m6|w9|tmc|arte|c8|canal\+)\b/i.test(c.name));
+        }, 24);
+
+        // 4. Cinéma & Séries 24/7
+        populateCarouselRow('track-cinema', (c) => {
+            return (c.name && /cinema|ciné\+|ocs|action|warner|paramount|hbo/i.test(c.name));
+        }, 24);
+
+        // 5. Espagne & La Liga
+        populateCarouselRow('track-espagne', (c) => {
+            return (c.group && c.group.includes('ES|')) || (c.name && /laliga|movistar/i.test(c.name));
+        }, 24);
+
+        // 6. Allemagne & Sky DE
+        populateCarouselRow('track-allemagne', (c) => {
+            return (c.group && c.group.includes('DE|')) || (c.name && /bundesliga|sky sport/i.test(c.name));
+        }, 24);
+
+        // 7. Favoris
+        updateFavoritesRow();
+
+        // Flèches de navigation carrousel
+        document.querySelectorAll('.carousel-arrow').forEach(btn => {
+            btn.onclick = () => {
+                const targetId = btn.dataset.target;
+                const track = document.getElementById(targetId);
+                if (!track) return;
+                const isNext = btn.classList.contains('next');
+                track.scrollBy({ left: isNext ? 460 : -460, behavior: 'smooth' });
+            };
+        });
+    }
+
+    // ── Quick Zapping Ribbon (Sous le lecteur) ──
+    function updateQuickZappingBar() {
+        const quickZappingScroll = document.getElementById('quick-zapping-scroll');
+        if (!quickZappingScroll) return;
+        quickZappingScroll.innerHTML = '';
+
+        if (currentIndex < 0 || currentIndex >= channels.length) return;
+
+        const start = Math.max(0, currentIndex - 5);
+        const end = Math.min(channels.length, currentIndex + 7);
+
+        for (let i = start; i < end; i++) {
+            const ch = channels[i];
+            if (ch.name.startsWith('###')) continue;
+
+            const pill = document.createElement('button');
+            pill.className = `zap-pill ${i === currentIndex ? 'active' : ''}`;
+            pill.innerHTML = `<span style="font-size:0.65rem; opacity:0.7;">${ch.badge || 'HD'}</span> <span>${ch.name}</span>`;
+            pill.onclick = () => loadChannel(i);
+            quickZappingScroll.appendChild(pill);
+        }
+    }
+
+    // ── Navigation et Défilement Fluide ──
+    function setupNavScroll() {
+        document.querySelectorAll('.nav-link[data-scroll]').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const targetId = link.dataset.scroll;
+                const targetEl = document.getElementById(targetId);
+                if (targetEl) {
+                    targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+                    link.classList.add('active');
+                }
+            });
+        });
+
+        const navBtnCatalogue = document.getElementById('nav-btn-catalogue');
+        if (navBtnCatalogue) {
+            navBtnCatalogue.addEventListener('click', (e) => {
+                e.preventDefault();
+                const catSec = document.getElementById('catalogue-section');
+                if (catSec) {
+                    catSec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    if (searchInput) searchInput.focus();
+                }
+            });
+        }
+
+        const brandHomeLink = document.getElementById('brand-home-link');
+        if (brandHomeLink) {
+            brandHomeLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            });
+        }
+    }
+
     // ── Initialisation ──
     function init() {
         if (isGridView) {
@@ -1796,13 +2254,19 @@
         renderCategories();
         renderChannelList(true);
 
-        // Lancement immédiat sur France 24 (flux vérifié 100% opérationnel)
+        // ── Initialisation du Portail Streaming & Match Center ──
+        setupHeroBillboard();
+        renderMatchCenter('all');
+        renderStreamingCarousels();
+        setupNavScroll();
+
+        // Index par défaut sur France 24 prêt au premier clic
         if (channels.length > 0) {
             const f24Idx = channels.findIndex(c =>
                 (c.name && c.name.toLowerCase().includes('france 24')) ||
                 (c.url && c.url.includes('france24.com'))
             );
-            loadChannel(f24Idx >= 0 ? f24Idx : 0);
+            currentIndex = f24Idx >= 0 ? f24Idx : 0;
         }
 
         // ── Mesure de la vitesse réseau au démarrage ──
