@@ -13,7 +13,10 @@
     }
 
     // Catalogue des chaînes (résolu depuis window.channels ou global)
-    var channels = (typeof window !== 'undefined' && window.channels) ? window.channels : (typeof channels !== 'undefined' ? channels : []);
+    var resolvedChannels = (typeof window !== 'undefined' && Array.isArray(window.channels) && window.channels.length > 0)
+        ? window.channels
+        : ((typeof window !== 'undefined' && window.channels) || (typeof globalThis !== 'undefined' && globalThis.channels) || []);
+    var channels = Array.isArray(resolvedChannels) ? resolvedChannels : [];
 
     // ── Métadonnées des catégories (découverte automatique selon les liens) ──
     const CATEGORY_METADATA = {
@@ -2993,28 +2996,21 @@
             if (window.innerHeight + window.scrollY >= docH - 600) renderNextBatch();
         }, { passive: true });
         // ── Enregistrement Service Worker PWA (Progressive Web App) ──
-        if ('serviceWorker' in navigator && (window.location.protocol === 'https:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js?v=3').then((reg) => {
-                    console.log('[BOKK TV PWA] Service Worker v3 actif :', reg.scope);
-                    // Forcer la mise à jour immédiate si un nouveau SW est en attente
-                    if (reg.waiting) {
-                        reg.waiting.postMessage({ type: 'SKIP_WAITING' });
-                    }
-                    reg.addEventListener('updatefound', () => {
-                        const newWorker = reg.installing;
-                        if (newWorker) {
-                            newWorker.addEventListener('statechange', () => {
-                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                                    newWorker.postMessage({ type: 'SKIP_WAITING' });
-                                }
-                            });
-                        }
-                    });
-                }).catch((err) => {
-                    console.warn('[BOKK TV PWA] Échec Service Worker :', err);
+        if ('serviceWorker' in navigator) {
+            const isLocal = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+            if (isLocal) {
+                // En local : désactiver tout Service Worker pour garantir zéro mise en cache intempestive
+                navigator.serviceWorker.getRegistrations().then((regs) => {
+                    for (let reg of regs) reg.unregister();
+                }).catch(() => {});
+                if ('caches' in window) {
+                    caches.keys().then((keys) => Promise.all(keys.map(k => caches.delete(k)))).catch(() => {});
+                }
+            } else if (window.location.protocol === 'https:') {
+                window.addEventListener('load', () => {
+                    navigator.serviceWorker.register('/sw.js?v=4').catch(() => {});
                 });
-            });
+            }
         }
     }
 

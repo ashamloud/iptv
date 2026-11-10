@@ -1,4 +1,4 @@
-const channels = [
+var channels = [
   {
     "id": 1,
     "stream_id": 1,
@@ -93272,4 +93272,5 @@ const channels = [
     "stream_id": 6039
   }
 ];
-if (typeof module !== "undefined") module.exports = channels;
+if (typeof window !== "undefined") { window.channels = channels; }
+if (typeof module !== "undefined" && module.exports) { module.exports = channels; }

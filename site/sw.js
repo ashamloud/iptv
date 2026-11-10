@@ -1,16 +1,15 @@
 /**
  * BOKK TV — Service Worker PWA (Cache App Shell & Mode Offline)
- * v3 — Correction interception channels.js / epg.js + Network-First absolu
+ * v4 — Correction définitive chargement chaînes & Network-First
  */
 
-const CACHE_NAME = 'bokk-tv-shell-v3';
+const CACHE_NAME = 'bokk-tv-shell-v4';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
   '/style.css',
   '/app.js',
   '/matches.js',
-  '/channels.js',
   '/epg.js',
   '/hls.min.js',
   '/mpegts.js',

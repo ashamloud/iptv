@@ -7,7 +7,7 @@
     'use strict';
 
     // ── Proxies Cloud Haute Disponibilité & Résolution Universelle ──
-    const CF_WORKER    = 'https://bokk-tv-proxy.pgueye866.workers.dev';
+    const CF_WORKER = 'https://bokk-tv-proxy.pgueye866.workers.dev';
 
     function resolveStreamUrl(rawUrl, stage = 0) {
         if (!rawUrl) return '';
@@ -38,26 +38,31 @@
 
     // ── Catégories TV ──
     const CATEGORIES = [
-        { key: 'senegal',     label: '🇸🇳 Sénégal' },
-        { key: 'afrique',     label: 'Afrique' },
+        { key: 'senegal', label: '🇸🇳 Sénégal' },
+        { key: 'afrique', label: 'Afrique' },
         { key: 'francophone', label: '🇫🇷 France & TNT' },
-        { key: 'sport',       label: 'Sport Direct' },
-        { key: 'cinema',      label: 'Films & Séries' },
-        { key: 'music',       label: 'Musique Afrique' },
-        { key: 'documentaire',label: 'Documentaires' },
-        { key: 'jeunesse',    label: 'Jeunesse' },
-        { key: 'favoris',     label: 'Mes Favoris' },
-        { key: 'tous',        label: 'Tout le Catalogue' },
-        { key: 'uk',          label: '🇬🇧 UK & USA' },
-        { key: 'espagne',     label: '🇪🇸 Espagne' },
-        { key: 'allemagne',   label: '🇩🇪 Allemagne' },
-        { key: 'italie',      label: '🇮🇹 Italie' },
-        { key: 'exyu',        label: '🇷🇸 Ex-Yougoslavie' },
-        { key: 'adulte',      label: '🔞 Adulte' },
-        { key: 'monde',       label: '🌐 Monde' }
+        { key: 'sport', label: 'Sport Direct' },
+        { key: 'cinema', label: 'Films & Séries' },
+        { key: 'music', label: 'Musique Afrique' },
+        { key: 'documentaire', label: 'Documentaires' },
+        { key: 'jeunesse', label: 'Jeunesse' },
+        { key: 'favoris', label: 'Mes Favoris' },
+        { key: 'tous', label: 'Tout le Catalogue' },
+        { key: 'uk', label: '🇬🇧 UK & USA' },
+        { key: 'espagne', label: '🇪🇸 Espagne' },
+        { key: 'allemagne', label: '🇩🇪 Allemagne' },
+        { key: 'italie', label: '🇮🇹 Italie' },
+        { key: 'exyu', label: '🇷🇸 Ex-Yougoslavie' },
+        { key: 'adulte', label: '🔞 Adulte' },
+        { key: 'monde', label: '🌐 Monde' }
     ];
 
-    // ── Variables d'état ──
+    // ── Variables d'état & Catalogue Chaînes ──
+    const resolvedChannels = (typeof window !== 'undefined' && Array.isArray(window.channels) && window.channels.length > 0)
+        ? window.channels
+        : ((typeof window !== 'undefined' && window.channels) || (typeof globalThis !== 'undefined' && globalThis.channels) || (typeof channels !== 'undefined' ? channels : []));
+    const channels = Array.isArray(resolvedChannels) ? resolvedChannels : [];
+
     let currentCat = 'senegal';
     let currentBouquet = 'all';
     let searchQuery = '';
@@ -72,26 +77,26 @@
     let focusedIndex = 0;
 
     // ── Éléments DOM ──
-    const videoEl        = document.getElementById('tv-video');
-    const iframeEl       = document.getElementById('tv-iframe');
-    const loaderEl       = document.getElementById('tv-loader');
-    const loaderChanEl   = document.getElementById('tv-loader-channel');
-    const errorEl        = document.getElementById('tv-error');
-    const overlayEl      = document.getElementById('tv-overlay');
-    const catRowEl       = document.getElementById('tv-cat-row');
-    const bouquetRowEl   = document.getElementById('tv-bouquet-row');
-    const gridEl         = document.getElementById('tv-grid');
-    const gridLabelEl    = document.getElementById('tv-grid-label');
-    const countTextEl    = document.getElementById('tv-count-text');
-    const clockEl        = document.getElementById('tv-clock');
-    const tvSearchInput  = document.getElementById('tv-search-input');
+    const videoEl = document.getElementById('tv-video');
+    const iframeEl = document.getElementById('tv-iframe');
+    const loaderEl = document.getElementById('tv-loader');
+    const loaderChanEl = document.getElementById('tv-loader-channel');
+    const errorEl = document.getElementById('tv-error');
+    const overlayEl = document.getElementById('tv-overlay');
+    const catRowEl = document.getElementById('tv-cat-row');
+    const bouquetRowEl = document.getElementById('tv-bouquet-row');
+    const gridEl = document.getElementById('tv-grid');
+    const gridLabelEl = document.getElementById('tv-grid-label');
+    const countTextEl = document.getElementById('tv-count-text');
+    const clockEl = document.getElementById('tv-clock');
+    const tvSearchInput = document.getElementById('tv-search-input');
 
     // OSD
-    const osdEl          = document.getElementById('tv-osd');
-    const osdBadgeEl     = document.getElementById('tv-osd-badge');
-    const osdNumberEl    = document.getElementById('tv-osd-number');
-    const osdNameEl      = document.getElementById('tv-osd-name');
-    const osdDescEl      = document.getElementById('tv-osd-desc');
+    const osdEl = document.getElementById('tv-osd');
+    const osdBadgeEl = document.getElementById('tv-osd-badge');
+    const osdNumberEl = document.getElementById('tv-osd-number');
+    const osdNameEl = document.getElementById('tv-osd-name');
+    const osdDescEl = document.getElementById('tv-osd-desc');
 
     // ── Horloge TV ──
     function updateClock() {
@@ -229,14 +234,6 @@
             const logoUrl = ch.logo && ch.logo.trim() ? ch.logo : '/favicon.png';
             const isFav = favorites.has(ch.id);
 
-            let tvSub = ch.group || ch.category;
-            if (window.BokkEPG) {
-                const prog = window.BokkEPG.getCurrentProgram(ch.name);
-                if (prog && prog.title && !prog.title.includes('24/7')) {
-                    tvSub = `📺 ${prog.title}`;
-                }
-            }
-
             card.innerHTML = `
                 ${ch.badge ? `<span class="tv-card-badge">${ch.badge}</span>` : ''}
                 ${isFav ? `<span class="tv-card-fav">★</span>` : ''}
@@ -244,7 +241,7 @@
                     <img class="tv-card-logo" src="${logoUrl}" alt="${ch.name}" onerror="this.onerror=null;this.src='/favicon.png';">
                 </div>
                 <div class="tv-card-name">${ch.name}</div>
-                <div class="tv-card-sub" title="${tvSub}">${tvSub}</div>
+                <div class="tv-card-sub">${ch.group || ch.category}</div>
             `;
 
             card.onclick = () => {
@@ -337,7 +334,7 @@
             mpegtsInstance.load();
             mpegtsInstance.play().then(() => {
                 loaderEl.classList.remove('visible');
-            }).catch(() => {});
+            }).catch(() => { });
 
             mpegtsInstance.on(mpegts.Events.ERROR, () => {
                 if (stage < 2) {
@@ -374,7 +371,7 @@
                 loaderEl.classList.remove('visible');
                 videoEl.play().catch(() => {
                     videoEl.muted = true;
-                    videoEl.play().catch(() => {});
+                    videoEl.play().catch(() => { });
                 });
             });
 
@@ -398,7 +395,7 @@
             videoEl.src = targetUrl;
             videoEl.play().then(() => {
                 loaderEl.classList.remove('visible');
-            }).catch(() => {});
+            }).catch(() => { });
         }
     }
 
