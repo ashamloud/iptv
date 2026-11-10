@@ -575,15 +575,15 @@
                 }, {
                     enableWorker: false,
                     lazyLoad: false,
-                    // ── Moteur MPEG-TS Anti-Coupure (optimisé débits variables & connexions faibles) ──
-                    liveBufferLatencyChasing: true,
-                    liveBufferLatencyMaxLatency: 3.0,    // Coussin de sécurité de 3s pour absorber les baisses de débit
-                    liveBufferLatencyMinRemain: 0.6,    // 0.6s de flux continu garanti sans caler
+                    // ── Moteur MPEG-TS Anti-Coupure (fluidité maximale sans saccade) ──
+                    liveBufferLatencyChasing: false,     // JAMAIS chasser la latence : évite les sauts et vidages de tampon
+                    liveBufferLatencyMaxLatency: 10.0,   // Coussin généreux absorbant 100% des instabilités
+                    liveBufferLatencyMinRemain: 2.5,     // Maintient toujours un minimum de sécurité
                     enableStashBuffer: true,
-                    stashInitialSize: 48,               // 48 Ko de cache initial pour affichage rapide et stable
+                    stashInitialSize: 256,               // 256 Ko de tampon initial pour un démarrage instantané et solide
                     autoCleanupSourceBuffer: true,
-                    autoCleanupMaxBackwardDuration: 30,
-                    autoCleanupMinBackwardDuration: 15
+                    autoCleanupMaxBackwardDuration: 60,  // Ne nettoie que les données très anciennes (> 1min)
+                    autoCleanupMinBackwardDuration: 30
                 });
 
                 mpegtsInstance.attachMediaElement(videoEl);
@@ -622,35 +622,35 @@
                 hlsInstance = new Hls({
                     enableWorker: true,
                     lowLatencyMode: false,
-                    startLevel: 0,                     // Démarre sur le profil le plus léger pour affichage immédiat
+                    startLevel: -1,
                     capLevelToPlayerSize: true,
-                    // ── Coussin de sécurité anti-coupure (connexions faibles & instables) ──
-                    liveSyncDurationCount: 2,          // 2 segments d'avance : absorbe les ralentissements 4G/ADSL
-                    liveMaxLatencyDurationCount: 5,    // Tolère les légères variations sans figer la vidéo
-                    backBufferLength: 8,
-                    maxBufferLength: 12,               // 12s de buffer de sécurité anti-calage
-                    maxMaxBufferLength: 24,
-                    maxBufferSize: 20 * 1000 * 1000,
-                    maxBufferHole: 0.6,                // Tolère les trous de paquets sans bloquer
-                    highBufferWatchdogPeriod: 2,
-                    // ── Timeouts et tolérance aux débits variables ──
-                    manifestLoadingTimeOut: 5000,
-                    manifestLoadingMaxRetry: 2,
-                    manifestLoadingRetryDelay: 300,
-                    levelLoadingTimeOut: 5000,
-                    levelLoadingMaxRetry: 2,
-                    fragLoadingTimeOut: 6000,          // 6s pour laisser le temps aux connexions lentes de télécharger
-                    fragLoadingMaxRetry: 3,
-                    fragLoadingRetryDelay: 400,
-                    // ── ABR sécurisé (évite les calages en ne sur-estimant jamais la connexion) ──
-                    abrEwmaDefaultEstimate: 1000000,   // 1 Mbps par défaut pour ne pas bloquer
-                    abrBandWidthFactor: 0.70,          // Garde 30% de marge de sécurité réseau
-                    abrBandWidthUpFactor: 0.60,        // Ne monte en qualité que si le réseau est très stable
-                    startFragPrefetch: true,           // Télécharge le 1er segment en avance
+                    // ── Coussin de sécurité anti-calage (flux 100% continu & fluide) ──
+                    liveSyncDurationCount: 3,          // 3 segments de marge de sécurité
+                    liveMaxLatencyDurationCount: 8,    // Tolérance large pour absorber les variations de débit
+                    backBufferLength: 15,
+                    maxBufferLength: 30,               // 30s de tampon en avant pour ne jamais caler
+                    maxMaxBufferLength: 60,            // Jusqu'à 60s si le réseau le permet
+                    maxBufferSize: 40 * 1000 * 1000,   // 40 Mo de cache mémoire
+                    maxBufferHole: 0.5,                // Saut transparent des micro-trous de paquets
+                    highBufferWatchdogPeriod: 3,
+                    // ── Timeouts robustes contre les baisses de débit ──
+                    manifestLoadingTimeOut: 10000,
+                    manifestLoadingMaxRetry: 4,
+                    manifestLoadingRetryDelay: 500,
+                    levelLoadingTimeOut: 10000,
+                    levelLoadingMaxRetry: 4,
+                    fragLoadingTimeOut: 12000,         // 12s pour laisser charger sans interruption
+                    fragLoadingMaxRetry: 5,
+                    fragLoadingRetryDelay: 500,
+                    // ── ABR fluide ──
+                    abrEwmaDefaultEstimate: 1200000,
+                    abrBandWidthFactor: 0.80,
+                    abrBandWidthUpFactor: 0.70,
+                    startFragPrefetch: true,           // Télécharge le segment suivant en avance
                     progressive: true,
-                    nudgeMaxRetry: 8,
-                    nudgeOffset: 0.2,
-                    maxStarvationDelay: 4
+                    nudgeMaxRetry: 5,
+                    nudgeOffset: 0.1,
+                    maxStarvationDelay: 5
                 });
 
                 videoEl.addEventListener('loadeddata', () => clearPlayerOverlays(), { once: true });
@@ -699,13 +699,7 @@
                 hlsInstance.on(Hls.Events.ERROR, (_, data) => {
                     // Récupération automatique sur calage ou micro-coupure de connexion (anti-freeze)
                     if (data.details === 'bufferStalledError' || data.details === 'bufferNudgeOnStall') {
-                        console.warn('[BOKK TV Anti-Freeze] Ralentissement réseau détecté, relance fluide du tampon...');
-                        if (videoEl && !videoEl.paused && videoEl.buffered && videoEl.buffered.length > 0) {
-                            const bufEnd = videoEl.buffered.end(videoEl.buffered.length - 1);
-                            if (bufEnd > videoEl.currentTime + 0.1) {
-                                videoEl.currentTime = bufEnd - 0.2;
-                            }
-                        }
+                        console.warn('[BOKK TV Anti-Freeze] Tampon en cours de chargement...');
                         if (hlsInstance) {
                             if (hlsInstance.autoLevelEnabled && hlsInstance.levels && hlsInstance.levels.length > 1) {
                                 const currentLvl = hlsInstance.currentLevel;

@@ -60,6 +60,7 @@
     // ── Variables d'état ──
     let currentCat = 'senegal';
     let currentBouquet = 'all';
+    let searchQuery = '';
     let currentChannelIndex = -1;
     let filteredChannels = [];
     let favorites = new Set(JSON.parse(localStorage.getItem('bokk_tv_tv_favs') || '[]'));
@@ -83,6 +84,7 @@
     const gridLabelEl    = document.getElementById('tv-grid-label');
     const countTextEl    = document.getElementById('tv-count-text');
     const clockEl        = document.getElementById('tv-clock');
+    const tvSearchInput  = document.getElementById('tv-search-input');
 
     // OSD
     const osdEl          = document.getElementById('tv-osd');
@@ -176,8 +178,17 @@
     }
 
     function updateFilteredChannels() {
+        const q = searchQuery.trim().toLowerCase();
         filteredChannels = channels.filter(ch => {
             if (ch.name.startsWith('###')) return false;
+
+            if (q) {
+                // Recherche globale instantanée dans tout le catalogue TV
+                const nameMatch = ch.name && ch.name.toLowerCase().includes(q);
+                const groupMatch = ch.group && ch.group.toLowerCase().includes(q);
+                const catMatch = ch.category && ch.category.toLowerCase().includes(q);
+                return nameMatch || groupMatch || catMatch;
+            }
 
             if (!isTvChannelInCat(ch, currentCat)) {
                 return false;
@@ -189,8 +200,12 @@
         });
 
         if (gridLabelEl) {
-            const catObj = CATEGORIES.find(c => c.key === currentCat);
-            gridLabelEl.textContent = catObj ? catObj.label : 'Chaînes';
+            if (q) {
+                gridLabelEl.textContent = `🔍 Recherche : "${searchQuery.trim()}"`;
+            } else {
+                const catObj = CATEGORIES.find(c => c.key === currentCat);
+                gridLabelEl.textContent = catObj ? catObj.label : 'Chaînes';
+            }
         }
         if (countTextEl) {
             countTextEl.textContent = `${filteredChannels.length} chaîne${filteredChannels.length > 1 ? 's' : ''}`;
@@ -301,11 +316,14 @@
             }, {
                 enableWorker: false,
                 lazyLoad: false,
-                liveBufferLatencyChasing: true,
-                liveBufferLatencyMaxLatency: 1.5,
-                liveBufferLatencyMinRemain: 0.2,
+                liveBufferLatencyChasing: false,
+                liveBufferLatencyMaxLatency: 10.0,
+                liveBufferLatencyMinRemain: 2.5,
                 enableStashBuffer: true,
-                stashInitialSize: 32
+                stashInitialSize: 256,
+                autoCleanupSourceBuffer: true,
+                autoCleanupMaxBackwardDuration: 60,
+                autoCleanupMinBackwardDuration: 30
             });
             mpegtsInstance.attachMediaElement(videoEl);
             mpegtsInstance.load();
@@ -330,16 +348,16 @@
         if (Hls.isSupported()) {
             hlsInstance = new Hls({
                 enableWorker: true,
-                lowLatencyMode: true,
-                startLevel: 0,
-                liveSyncDurationCount: 1,
-                liveMaxLatencyDurationCount: 3,
+                lowLatencyMode: false,
+                startLevel: -1,
+                liveSyncDurationCount: 3,
+                liveMaxLatencyDurationCount: 8,
                 startFragPrefetch: true,
-                maxBufferLength: 6,
-                maxMaxBufferLength: 12,
-                manifestLoadingTimeOut: 3000,
-                levelLoadingTimeOut: 3000,
-                fragLoadingTimeOut: 3500
+                maxBufferLength: 30,
+                maxMaxBufferLength: 60,
+                manifestLoadingTimeOut: 10000,
+                levelLoadingTimeOut: 10000,
+                fragLoadingTimeOut: 12000
             });
             hlsInstance.loadSource(targetUrl);
             hlsInstance.attachMedia(videoEl);
@@ -602,6 +620,24 @@
         renderBouquets();
         updateFilteredChannels();
         renderGrid();
+
+        if (tvSearchInput) {
+            tvSearchInput.addEventListener('input', (e) => {
+                searchQuery = e.target.value;
+                updateFilteredChannels();
+                renderGrid();
+                focusedIndex = 0;
+            });
+            tvSearchInput.addEventListener('keydown', (e) => {
+                if (e.key === 'ArrowDown' || e.key === 'Enter') {
+                    e.preventDefault();
+                    focusedZone = 'grid';
+                    focusedIndex = 0;
+                    focusCurrentElement();
+                    tvSearchInput.blur();
+                }
+            });
+        }
 
         // Lancement immédiat de la chaîne RTS 1 Sénégal au démarrage
         if (filteredChannels.length > 0) {

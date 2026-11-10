@@ -285,6 +285,44 @@ body.tv-body {
     border-radius: 20px;
 }
 
+.tv-search-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 2px solid rgba(255, 255, 255, 0.12);
+    border-radius: 14px;
+    padding: 8px 18px;
+    width: 380px;
+    transition: 0.2s ease;
+}
+
+.tv-search-wrap:focus-within,
+.tv-search-wrap.focused {
+    background: rgba(0, 112, 243, 0.14);
+    border-color: var(--brand);
+    box-shadow: 0 0 24px var(--brand-glow);
+}
+
+.tv-search-icon {
+    color: var(--text-muted);
+    flex-shrink: 0;
+}
+
+.tv-search-input {
+    background: transparent;
+    border: none;
+    outline: none;
+    color: #fff;
+    font-size: 1rem;
+    font-family: inherit;
+    width: 100%;
+}
+
+.tv-search-input::placeholder {
+    color: var(--text-muted);
+}
+
 .tv-clock {
     font-size: 1.5rem;
     font-weight: 700;

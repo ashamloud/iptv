@@ -323,7 +323,11 @@ h1, h2, h3, .topnav-brand-name, .hero-headline, .home-section-label {
     transition: opacity 0.22s var(--ease); z-index: 20;
 }
 
-.player-container:hover .player-controls-overlay { opacity: 1; pointer-events: auto; }
+.player-container:hover .player-controls-overlay,
+.player-container.show-controls .player-controls-overlay {
+    opacity: 1;
+    pointer-events: auto;
+}
 
 .channel-banner { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; }
 .channel-meta { display: flex; align-items: center; gap: 12px; }

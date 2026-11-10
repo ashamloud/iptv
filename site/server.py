@@ -373,7 +373,7 @@ class BOKKStreamProxyHandler(SimpleHTTPRequestHandler):
             req = urllib.request.Request(req_url, headers=headers)
 
             try:
-                resp = STREAM_OPENER.open(req, timeout=4.0)
+                resp = STREAM_OPENER.open(req, timeout=10.0)
             except urllib.error.HTTPError as he:
                 resp = None
                 # Si 401 ou 403 sur MegaTV, tenter les autres comptes actifs du pool
@@ -385,7 +385,7 @@ class BOKKStreamProxyHandler(SimpleHTTPRequestHandler):
                             alt_url = f"{base_u}{alt_user}/{alt_pwd}/{s_path}"
                             try:
                                 req_alt = urllib.request.Request(alt_url, headers=headers)
-                                resp = STREAM_OPENER.open(req_alt, timeout=3.0)
+                                resp = STREAM_OPENER.open(req_alt, timeout=8.0)
                                 target_url = alt_url
                                 break
                             except Exception:
@@ -407,12 +407,18 @@ class BOKKStreamProxyHandler(SimpleHTTPRequestHandler):
                                 if he.code in (401, 403) and 'Referer' in h2 and not custom_ref:
                                     del h2['Referer']
                                 req2 = urllib.request.Request(target_url, headers=h2)
-                                resp = STREAM_OPENER.open(req2, timeout=3.0)
+                                resp = STREAM_OPENER.open(req2, timeout=8.0)
                                 break
                             except Exception:
                                 continue
                     if resp is None:
                         raise he
+
+            if hasattr(resp, 'fp') and hasattr(resp.fp, 'raw') and hasattr(resp.fp.raw, '_sock'):
+                try:
+                    resp.fp.raw._sock.settimeout(30.0)
+                except Exception:
+                    pass
 
             with resp:
                 final_url = resp.geturl()
@@ -554,9 +560,10 @@ class BOKKStreamProxyHandler(SimpleHTTPRequestHandler):
                 self.end_headers()
 
                 cache_chunks = [] if (is_segment and no_range and cl_int and cl_int <= 10 * 1024 * 1024) else None
+                read_func = getattr(resp, 'read1', resp.read)
                 try:
                     while True:
-                        chunk = resp.read(65536)
+                        chunk = read_func(65536)
                         if not chunk:
                             break
                         self.wfile.write(chunk)
