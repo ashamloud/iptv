@@ -251,7 +251,7 @@
             <p class="login-sub">Entrez votre code d'accès administrateur</p>
             <input type="password" id="pin-input" class="pin-input" placeholder="••••" maxlength="8" autofocus autocomplete="off">
             <button class="btn-login" id="btn-login">Déverrouiller</button>
-            <p class="login-hint">Code par défaut : <strong>1234</strong></p>
+            <p class="login-hint">Accès strictement réservé à la direction BOKK TV</p>
         </div>
     </div>
 
@@ -417,7 +417,7 @@
     (function () {
         'use strict';
 
-        const ADMIN_PIN = '1234';
+        const ADMIN_PIN = '2010';
         let disabledIdsSet = new Set();
         let reportedList = [];
         let hlsInstance = null;
@@ -437,7 +437,7 @@
                 loginScreen.style.display = 'none';
                 initAdmin();
             } else {
-                showToast('❌ Code PIN incorrect ! (Défaut : 1234)');
+                showToast('❌ Code d\'accès incorrect !');
                 pinInput.value = '';
             }
         }

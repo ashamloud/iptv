@@ -247,7 +247,124 @@
     }
 
     // ── Destruction propre des instances de lecture actives ──
+    let streamPreviewTimer = null;
+    let isStreamPreviewLocked = false;
+
+    function isUserRegisteredAndActive() {
+        if (!window.BokkFirebase || typeof window.BokkFirebase.getCurrentSubscriber !== 'function') return false;
+        const sub = window.BokkFirebase.getCurrentSubscriber();
+        if (!sub || !sub.id) return false;
+        if (sub.status === 'suspended') return false;
+        if (sub.expiresAt) {
+            const exp = new Date(sub.expiresAt).getTime();
+            if (exp < Date.now()) return false;
+        }
+        return true;
+    }
+
+    function startStreamPreviewTimer() {
+        if (streamPreviewTimer) {
+            clearTimeout(streamPreviewTimer);
+            streamPreviewTimer = null;
+        }
+
+        // Si l'utilisateur est déjà inscrit et actif, aucun blocage
+        if (isUserRegisteredAndActive()) {
+            return;
+        }
+
+        // Aperçu de 3 secondes pour les visiteurs non inscrits
+        streamPreviewTimer = setTimeout(() => {
+            triggerRegistrationLock();
+        }, 3000);
+    }
+
+    function triggerRegistrationLock() {
+        if (isUserRegisteredAndActive()) return;
+
+        // Pause vidéo
+        if (videoEl) {
+            try { videoEl.pause(); } catch (e) {}
+        }
+        if (hlsInstance) {
+            try { hlsInstance.stopLoad(); } catch (e) {}
+        }
+
+        isStreamPreviewLocked = true;
+
+        const accountModal = document.getElementById('account-modal');
+        const modalTitle = document.getElementById('account-modal-title');
+        const modalSub = document.getElementById('account-modal-sub');
+        const noticeBox = document.getElementById('account-auth-notice');
+        const noticeText = document.getElementById('account-auth-notice-text');
+        const viewAuth = document.getElementById('account-view-auth');
+        const viewProfile = document.getElementById('account-view-profile');
+        const tabRegister = document.getElementById('auth-tab-register');
+        const tabLogin = document.getElementById('auth-tab-login');
+
+        if (viewAuth) viewAuth.style.display = 'block';
+        if (viewProfile) viewProfile.style.display = 'none';
+        if (tabRegister) tabRegister.style.display = 'block';
+        if (tabLogin) tabLogin.style.display = 'none';
+
+        if (modalTitle) {
+            modalTitle.innerHTML = '<span style="color:var(--live-red);">🔒</span> Continuer la Lecture en Direct';
+        }
+        if (modalSub) {
+            modalSub.textContent = 'Aperçu gratuit de 3 secondes terminé';
+        }
+        if (noticeBox && noticeText) {
+            noticeBox.style.background = 'rgba(230, 57, 70, 0.12)';
+            noticeBox.style.borderColor = 'rgba(230, 57, 70, 0.35)';
+            noticeText.innerHTML = '⏱️ <strong>Aperçu gratuit de 3 secondes terminé !</strong><br>Pour continuer à regarder cette chaîne en direct, entrez simplement votre prénom ci-dessous pour obtenir votre <strong>ID BOKK TV</strong> personnel.<br>🎁 <strong>1 mois de streaming 100% offert</strong> immédiatement !';
+        }
+
+        if (accountModal) {
+            accountModal.style.display = 'flex';
+        }
+    }
+
+    function openAccountModalInWelcomeMode() {
+        if (isUserRegisteredAndActive()) return;
+
+        isStreamPreviewLocked = false;
+        const accountModal = document.getElementById('account-modal');
+        const modalTitle = document.getElementById('account-modal-title');
+        const modalSub = document.getElementById('account-modal-sub');
+        const noticeBox = document.getElementById('account-auth-notice');
+        const noticeText = document.getElementById('account-auth-notice-text');
+        const viewAuth = document.getElementById('account-view-auth');
+        const viewProfile = document.getElementById('account-view-profile');
+        const tabRegister = document.getElementById('auth-tab-register');
+        const tabLogin = document.getElementById('auth-tab-login');
+
+        if (viewAuth) viewAuth.style.display = 'block';
+        if (viewProfile) viewProfile.style.display = 'none';
+        if (tabRegister) tabRegister.style.display = 'block';
+        if (tabLogin) tabLogin.style.display = 'none';
+
+        if (modalTitle) {
+            modalTitle.innerHTML = '<span style="color:var(--brand);">👋</span> Bienvenue sur BOKK TV !';
+        }
+        if (modalSub) {
+            modalSub.textContent = 'Obtenez votre ID personnel sans mot de passe';
+        }
+        if (noticeBox && noticeText) {
+            noticeBox.style.background = 'rgba(0, 112, 243, 0.08)';
+            noticeBox.style.borderColor = 'rgba(0, 112, 243, 0.25)';
+            noticeText.innerHTML = '🎁 <strong>1 Mois de Streaming 100% Offert !</strong><br>Entrez simplement votre prénom ci-dessous pour recevoir votre ID d\'accès gratuit et débloquer toutes les chaînes sans interruption.';
+        }
+
+        if (accountModal) {
+            accountModal.style.display = 'flex';
+        }
+    }
+
     function destroyActivePlayer() {
+        if (streamPreviewTimer) {
+            clearTimeout(streamPreviewTimer);
+            streamPreviewTimer = null;
+        }
         if (hlsInstance) {
             try { hlsInstance.destroy(); } catch (e) {}
             hlsInstance = null;
@@ -320,6 +437,7 @@
                     mutedAutoplayToastShown = true;
                     showToast('Lecture automatique active — Cliquez pour le son');
                 }
+                startStreamPreviewTimer();
             }).catch((err) => {
                 console.warn('[BOKK TV] Échec lecture automatique muette :', err && err.message);
                 clearPlayerOverlays();
@@ -649,7 +767,7 @@
                     }
                 }
 
-                videoEl.addEventListener('playing', () => clearPlayerOverlays(), { once: true });
+                videoEl.addEventListener('playing', () => { clearPlayerOverlays(); startStreamPreviewTimer(); });
                 videoEl.addEventListener('loadeddata', () => clearPlayerOverlays(), { once: true });
                 videoEl.addEventListener('canplay', () => clearPlayerOverlays(), { once: true });
 
@@ -3790,7 +3908,12 @@
             if (moreSheetBackdrop) moreSheetBackdrop.style.display = 'none';
         }
 
-        function closeModal() {
+        function closeModal(force = false) {
+            if (isStreamPreviewLocked && !force && !isUserRegisteredAndActive()) {
+                showToast('⚠️ Obtenez votre ID gratuit ci-dessous pour continuer la vidéo');
+                return;
+            }
+            isStreamPreviewLocked = false;
             if (accountModal) accountModal.style.display = 'none';
         }
 
@@ -3799,7 +3922,13 @@
         if (btnCloseAccount) btnCloseAccount.onclick = closeModal;
         if (accountModal) {
             accountModal.onclick = (e) => {
-                if (e.target === accountModal) closeModal();
+                if (e.target === accountModal) {
+                    if (isStreamPreviewLocked && !isUserRegisteredAndActive()) {
+                        showToast('⚠️ Obtenez votre ID gratuit ci-dessous pour reprendre la vidéo');
+                        return;
+                    }
+                    closeModal(true);
+                }
             };
         }
 
@@ -3837,7 +3966,16 @@
 
                     if (res.success && res.subscriber) {
                         updateAccountUI(res.subscriber);
-                        showToast('Felicitations ' + prenom + ' ! Votre ID est ' + res.subscriber.id);
+                        showToast('🎉 Félicitations ' + prenom + ' ! Votre ID est ' + res.subscriber.id + ' (1 mois offert)');
+                        isStreamPreviewLocked = false;
+                        closeModal(true);
+                        // Reprise immédiate du flux
+                        if (hlsInstance) {
+                            try { hlsInstance.startLoad(); } catch (e) {}
+                        }
+                        if (videoEl && videoEl.paused) {
+                            videoEl.play().catch(() => {});
+                        }
                     } else {
                         showToast('Erreur lors de la creation de l ID');
                     }
@@ -3868,7 +4006,16 @@
 
                     if (res.success && res.subscriber) {
                         updateAccountUI(res.subscriber);
-                        showToast('Bon retour ' + (res.subscriber.prenom || '') + ' !');
+                        showToast('✅ Bon retour ' + (res.subscriber.prenom || '') + ' !');
+                        isStreamPreviewLocked = false;
+                        closeModal(true);
+                        // Reprise immédiate du flux
+                        if (hlsInstance) {
+                            try { hlsInstance.startLoad(); } catch (e) {}
+                        }
+                        if (videoEl && videoEl.paused) {
+                            videoEl.play().catch(() => {});
+                        }
                     } else {
                         showToast('ID introuvable. Verifiez la saisie.');
                     }
@@ -3908,6 +4055,16 @@ function init() {
         // ── Initialisation Signalements & Abonnés Firebase Cloud ──
         setupFirebaseReporting();
         setupSubscriberAccount();
+
+        // ── Invitation à l'arrivée (non-bloquante) ──
+        if (!isUserRegisteredAndActive() && !sessionStorage.getItem('bokk_welcome_shown')) {
+            sessionStorage.setItem('bokk_welcome_shown', '1');
+            setTimeout(() => {
+                if (!isStreamPreviewLocked && (!videoEl || videoEl.paused)) {
+                    openAccountModalInWelcomeMode();
+                }
+            }, 1800);
+        }
 
         // ── Horloge Nav (mise à jour toutes les 10s) ──
         updateNavClock();

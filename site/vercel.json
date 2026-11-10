@@ -12,8 +12,8 @@
     { "source": "/proxy", "destination": "/api/proxy" },
     { "source": "/tv", "destination": "/tv/index.html" },
     { "source": "/tv/", "destination": "/tv/index.html" },
-    { "source": "/admin", "destination": "/admin/index.html" },
-    { "source": "/admin/", "destination": "/admin/index.html" }
+    { "source": "/adminee", "destination": "/adminee/index.html" },
+    { "source": "/adminee/", "destination": "/adminee/index.html" }
   ],
   "headers": [
     {
