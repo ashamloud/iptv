@@ -2162,11 +2162,10 @@
             heroHeadline.innerHTML = `${teamAName} <span class="hero-vs">VS</span> ${teamBName}`;
         }
 
-        // Sous-titre descriptif style Reezn (Horreur • Action • Guerre / LaLiga • Dim. 20:00 • 4K)
+        // Sous-titre descriptif — court et lisible sur mobile
         if (heroSub) {
-            const comp = match.competition || match.competitionBadge || 'Sport';
-            const timeInfo = match.isLive ? 'En direct' : `${match.date} ${match.time}`;
-            heroSub.textContent = `${comp} • ${timeInfo} • Diffusion HD & 4K`;
+            const timeInfo = match.isLive ? 'En direct' : `${match.date} · ${match.time}`;
+            heroSub.textContent = `${timeInfo} · HD & 4K`;
         }
 
         // Indication dynamique des chaînes de diffusion directe

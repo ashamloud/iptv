@@ -1901,22 +1901,74 @@ h1, h2, h3, .topnav-brand-name, .hero-headline, .home-section-label {
     .topnav-search { width: 140px; max-width: 45vw; height: 34px; flex-shrink: 1; min-width: 0; }
     .topnav-search:focus-within { width: 175px; }
 
-    /* Hero */
-    .hero-wrapper { padding: 8px 12px 14px 12px; }
-    .hero-card { min-height: 380px; max-height: 480px; border-radius: 16px; }
-    .hero-card-content { padding: 16px 14px 18px 14px; align-items: center; text-align: center; gap: 8px; }
-    .hero-eyebrow { font-size: 0.72rem; }
-    .hero-headline { font-size: 1.35rem; font-weight: 900; line-height: 1.15; }
-    .hero-sub { font-size: 0.78rem; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
-    .hero-channels-box { gap: 6px; align-items: center; justify-content: center; flex-wrap: wrap; }
-    .hero-channels-label { font-size: 0.68rem; }
-    .hero-ch-chip { padding: 3px 9px; font-size: 0.7rem; border-radius: 16px; }
-    .hero-cta-row { width: 100%; justify-content: center; gap: 8px; }
-    .hero-btn-watch, .hero-btn-matches { flex: 1; max-width: 160px; height: 38px; padding: 8px 14px; font-size: 0.82rem; border-radius: 8px; }
-    .hero-tag-pill { padding: 4px 10px; font-size: 0.72rem; border-radius: 16px; }
-    .hero-arrow { width: 32px; height: 32px; opacity: 0.65; }
+    /* Hero — aéré sur mobile */
+    .hero-wrapper { padding: 10px 14px 18px 14px; }
+    .hero-card { min-height: 400px; max-height: 520px; border-radius: 18px; }
+    .hero-card-content {
+        padding: 20px 18px 24px 18px;
+        align-items: center;
+        text-align: center;
+        gap: 14px;        /* ← plus d'espace entre chaque bloc */
+        justify-content: flex-end;
+    }
+    /* Eyebrow : badge de compétition — léger et aéré */
+    .hero-eyebrow {
+        font-size: 0.74rem;
+        letter-spacing: 0.06em;
+        margin-bottom: 2px;
+    }
+    /* Titre équipes — grand, respirant */
+    .hero-headline {
+        font-size: 1.45rem;
+        font-weight: 900;
+        line-height: 1.2;
+        letter-spacing: -0.01em;
+        margin: 0;
+    }
+    /* Sous-titre — 1 seule ligne, tronqué proprement */
+    .hero-sub {
+        font-size: 0.8rem;
+        opacity: 0.75;
+        display: block;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 92%;
+        margin-top: -4px;  /* rapproche légèrement du titre */
+    }
+    /* Chaînes — centré, espacé */
+    .hero-channels-box {
+        gap: 8px;
+        align-items: center;
+        justify-content: center;
+        flex-wrap: wrap;
+        padding: 6px 0;
+    }
+    .hero-channels-label { font-size: 0.68rem; opacity: 0.7; }
+    .hero-ch-chip { padding: 4px 12px; font-size: 0.72rem; border-radius: 20px; }
+    /* Boutons CTA — bien espacés, même hauteur */
+    .hero-cta-row {
+        width: 100%;
+        justify-content: center;
+        gap: 10px;
+        margin-top: 4px;
+    }
+    .hero-btn-watch, .hero-btn-matches {
+        flex: 1;
+        max-width: 158px;
+        height: 42px;
+        padding: 0 14px;
+        font-size: 0.84rem;
+        border-radius: 10px;
+    }
+    .hero-tag-pill { padding: 5px 12px; font-size: 0.72rem; border-radius: 20px; }
+    .hero-arrow { width: 34px; height: 34px; opacity: 0.6; }
     .hero-arrow-prev { left: 8px; }
     .hero-arrow-next { right: 8px; }
+    /* Points de navigation hero — plus visibles */
+    .hero-dots { gap: 7px; margin-top: 2px; }
+    .hero-dot { width: 6px; height: 6px; }
+    .hero-dot.active { width: 20px; }
 
     /* Sections */
     .home-section { padding: 14px 12px; }
