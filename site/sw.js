@@ -1,8 +1,9 @@
 /**
  * BOKK TV — Service Worker PWA (Cache App Shell & Mode Offline)
+ * v3 — Correction interception channels.js / epg.js + Network-First absolu
  */
 
-const CACHE_NAME = 'bokk-tv-shell-v1';
+const CACHE_NAME = 'bokk-tv-shell-v3';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -10,6 +11,7 @@ const STATIC_ASSETS = [
   '/app.js',
   '/matches.js',
   '/channels.js',
+  '/epg.js',
   '/hls.min.js',
   '/mpegts.js',
   '/favicon.png',
@@ -42,25 +44,54 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
   // RÈGLE CRUCIALE : Ne JAMAIS intercepter ni cacher les flux vidéo en direct,
-  // les proxies (/proxy?), les segments (.ts, .m3u8) ni les requêtes API ESPN/CORS
+  // les proxies (/proxy?), les segments (.ts, .m3u8) ni les requêtes API
   if (
     url.pathname.includes('/proxy') ||
     url.pathname.endsWith('.ts') ||
     url.pathname.endsWith('.m3u8') ||
     url.searchParams.has('url') ||
-    url.hostname.includes('espn.com') ||
-    url.hostname.includes('acan.group') ||
-    url.hostname.includes('novatv.xyz') ||
-    url.hostname.includes('megatv5074.com') ||
+    url.hostname !== self.location.hostname ||
     event.request.method !== 'GET'
   ) {
+    return; // Laisser passer sans intercepter
+  }
+
+  // RÈGLE 2 : Les fichiers JS/CSS critiques → Network-First TOUJOURS
+  // (jamais servir une vieille version depuis le cache)
+  const criticalFiles = [
+    'channels.js', 'app.js', 'epg.js', 'matches.js', 'style.css', 'index.html'
+  ];
+  const isCritical = criticalFiles.some(f => url.pathname.endsWith(f));
+
+  if (isCritical) {
+    // Network First — le cache n'est qu'un filet de secours
+    event.respondWith(
+      fetch(event.request, { cache: 'no-cache' })
+        .then((networkResponse) => {
+          if (networkResponse && networkResponse.status === 200) {
+            const responseToCache = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              // Stocker la version sans query string pour éviter les doublons
+              const cacheKey = new Request(url.origin + url.pathname);
+              cache.put(cacheKey, responseToCache);
+            });
+          }
+          return networkResponse;
+        })
+        .catch(() => {
+          // Fallback cache si offline
+          const cacheKey = new Request(url.origin + url.pathname);
+          return caches.match(cacheKey);
+        })
+    );
     return;
   }
 
-  // Network First pour le HTML / JS / CSS avec fallback Cache pour vitesse maximale
+  // Autres ressources statiques (images, fonts...) → Cache First
   event.respondWith(
-    fetch(event.request)
-      .then((networkResponse) => {
+    caches.match(event.request).then((cached) => {
+      if (cached) return cached;
+      return fetch(event.request).then((networkResponse) => {
         if (networkResponse && networkResponse.status === 200) {
           const responseToCache = networkResponse.clone();
           caches.open(CACHE_NAME).then((cache) => {
@@ -68,8 +99,7 @@ self.addEventListener('fetch', (event) => {
           });
         }
         return networkResponse;
-      })
-      .catch(() => caches.match(event.request))
+      });
+    })
   );
 });
-

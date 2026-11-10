@@ -2995,8 +2995,22 @@
         // ── Enregistrement Service Worker PWA (Progressive Web App) ──
         if ('serviceWorker' in navigator && (window.location.protocol === 'https:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js').then((reg) => {
-                    console.log('[BOKK TV PWA] Service Worker actif :', reg.scope);
+                navigator.serviceWorker.register('/sw.js?v=3').then((reg) => {
+                    console.log('[BOKK TV PWA] Service Worker v3 actif :', reg.scope);
+                    // Forcer la mise à jour immédiate si un nouveau SW est en attente
+                    if (reg.waiting) {
+                        reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+                    }
+                    reg.addEventListener('updatefound', () => {
+                        const newWorker = reg.installing;
+                        if (newWorker) {
+                            newWorker.addEventListener('statechange', () => {
+                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                    newWorker.postMessage({ type: 'SKIP_WAITING' });
+                                }
+                            });
+                        }
+                    });
                 }).catch((err) => {
                     console.warn('[BOKK TV PWA] Échec Service Worker :', err);
                 });
