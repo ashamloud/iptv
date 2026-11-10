@@ -6,6 +6,12 @@
     <title>BOKK TV — Streaming Direct, Sport & Cinéma</title>
     <meta name="description" content="Plateforme streaming premium — TV en direct, matchs, films et séries en HD & 4K.">
     <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0070f3">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="BOKK TV">
+    <link rel="apple-touch-icon" href="favicon.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -128,6 +134,13 @@
                         <div class="channel-name-row">
                             <h2 id="player-channel-name">Chaîne en direct</h2>
                             <span id="player-channel-badge" class="badge-tag">HD</span>
+                        </div>
+                        <div id="player-epg-box" class="player-epg-box" style="display:none;">
+                            <div class="player-epg-title" id="player-epg-title">Programme en cours</div>
+                            <div class="player-epg-bar-wrap">
+                                <div class="player-epg-bar" id="player-epg-bar" style="width: 50%;"></div>
+                            </div>
+                            <div class="player-epg-time" id="player-epg-time">20:00 - 20:45</div>
                         </div>
                         <div class="channel-tags">
                             <span id="player-channel-cat" class="badge-tag highlight">Direct</span>
@@ -441,6 +454,7 @@
 <script src="mpegts.js"></script>
 <script src="hls.min.js"></script>
 <script src="matches.js?v=9900"></script>
+<script src="epg.js?v=9900"></script>
 <script src="channels.js?v=9900"></script>
 <script src="app.js?v=9900"></script>
 </body>

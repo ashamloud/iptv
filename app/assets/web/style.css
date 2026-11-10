@@ -233,6 +233,60 @@ h1, h2, h3, .topnav-brand-name, .hero-headline, .home-section-label {
 .player-wrapper {
     background: #000;
     border-bottom: 1px solid var(--border);
+    transition: width 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s, transform 0.25s;
+}
+
+/* ── Mode Mini-Lecteur Flottant (In-App Picture-in-Picture) ── */
+.player-wrapper.is-mini-pip {
+    position: fixed;
+    bottom: 80px;
+    right: 20px;
+    width: 350px;
+    max-width: calc(100vw - 32px);
+    z-index: 150;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.9), 0 0 0 1.5px rgba(255, 255, 255, 0.15), 0 0 24px rgba(0, 112, 243, 0.25);
+    background: #000;
+    animation: pipSlideIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes pipSlideIn {
+    from { opacity: 0; transform: translateY(20px) scale(0.92); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.player-wrapper.is-mini-pip .zapping-strip {
+    display: none !important;
+}
+
+.player-wrapper.is-mini-pip .channel-tags,
+.player-wrapper.is-mini-pip .volume-container,
+.player-wrapper.is-mini-pip .quality-selector {
+    display: none !important;
+}
+
+.player-wrapper.is-mini-pip .player-container {
+    aspect-ratio: 16 / 9;
+    max-width: 100%;
+}
+
+.player-wrapper.is-mini-pip .channel-meta-logo {
+    width: 28px;
+    height: 28px;
+}
+
+.player-wrapper.is-mini-pip .meta-logo-box {
+    width: 30px;
+    height: 30px;
+}
+
+.player-wrapper.is-mini-pip #player-channel-name {
+    font-size: 0.88rem;
+}
+
+.player-wrapper.is-mini-pip .player-controls-overlay {
+    padding: 10px 12px;
 }
 
 .player-container {
@@ -340,8 +394,49 @@ h1, h2, h3, .topnav-brand-name, .hero-headline, .home-section-label {
 }
 
 .channel-meta-logo { width: 100%; height: 100%; object-fit: contain; padding: 4px; }
-.channel-name-row { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.channel-name-row { display: flex; align-items: center; gap: 8px; margin-bottom: 2px; }
 #player-channel-name { font-size: 1.1rem; font-weight: 700; color: #fff; }
+
+/* ── EPG LIVE EN DIRECT ── */
+.player-epg-box {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+
+.player-epg-title {
+    font-weight: 600;
+    color: #fff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 280px;
+}
+
+.player-epg-bar-wrap {
+    width: 60px;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 2px;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.player-epg-bar {
+    height: 100%;
+    background: var(--brand);
+    border-radius: 2px;
+    transition: width 0.3s;
+}
+
+.player-epg-time {
+    font-size: 0.68rem;
+    color: var(--text-muted);
+    white-space: nowrap;
+}
 .channel-tags { display: flex; align-items: center; gap: 7px; }
 
 .badge-tag {

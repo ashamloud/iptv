@@ -393,12 +393,26 @@
         netSpeedBadge.style.display = '';
     }
 
-    // ── Contrôle manuel de la qualité HLS ──
+    // ── Contrôle manuel de la qualité HLS & MPEG-TS ──
     function setQualityLevel(levelKey) {
         forcedQuality = levelKey;
         document.querySelectorAll('.quality-btn').forEach(btn => {
             btn.classList.toggle('active', btn.dataset.level === String(levelKey));
         });
+
+        if (mpegtsInstance && currentChannelIndex !== -1) {
+            const ch = channels[currentChannelIndex];
+            if (ch && ch.fallbackUrl) {
+                if (levelKey === 'sd') {
+                    showToast('🟡 Flux SD / Débit Économique activé');
+                    loadChannel(currentChannelIndex, true, 0);
+                } else {
+                    showToast('🔵 Flux HD / Haute Définition activé');
+                    loadChannel(currentChannelIndex, false, 0);
+                }
+                return;
+            }
+        }
 
         if (!hlsInstance) return;
         const levels = hlsInstance.levels || [];
@@ -513,6 +527,23 @@
                 this.src = DEFAULT_TV_LOGO;
             };
         }
+
+        // ── Mise à jour EPG en direct (Programme actuel) ──
+        const epgBox   = document.getElementById('player-epg-box');
+        const epgTitle = document.getElementById('player-epg-title');
+        const epgBar   = document.getElementById('player-epg-bar');
+        const epgTime  = document.getElementById('player-epg-time');
+        if (window.BokkEPG && epgBox) {
+            const prog = window.BokkEPG.getCurrentProgram(channel.name);
+            if (prog) {
+                epgBox.style.display = 'flex';
+                if (epgTitle) epgTitle.textContent = prog.title;
+                if (epgBar) epgBar.style.width = `${prog.progress}%`;
+                if (epgTime) epgTime.textContent = `${prog.start} - ${prog.end} (${prog.progress}%)`;
+            } else {
+                epgBox.style.display = 'none';
+            }
+        }
         if (playerCat) playerCat.textContent = channel.category.toUpperCase();
         if (playerBadge) playerBadge.textContent = channel.badge || 'HD';
 
@@ -588,6 +619,18 @@
 
                 mpegtsInstance.attachMediaElement(videoEl);
                 mpegtsInstance.load();
+
+                if (qualitySelectorEl) {
+                    qualitySelectorEl.style.display = channel.fallbackUrl ? 'flex' : 'none';
+                    const qHd = document.getElementById('q-hd');
+                    const qSd = document.getElementById('q-sd');
+                    const qAuto = document.getElementById('q-auto');
+                    if (qHd && qSd) {
+                        qHd.classList.toggle('active', !useFallback);
+                        qSd.classList.toggle('active', !!useFallback);
+                        if (qAuto) qAuto.classList.remove('active');
+                    }
+                }
 
                 videoEl.addEventListener('playing', () => clearPlayerOverlays(), { once: true });
                 videoEl.addEventListener('loadeddata', () => clearPlayerOverlays(), { once: true });
@@ -2168,6 +2211,7 @@
     function revealPlayer() {
         const pw = document.getElementById('player-wrapper');
         if (pw) {
+            pw.classList.remove('is-mini-pip');
             pw.style.display = 'block';
             pw.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
@@ -2289,8 +2333,34 @@
         if (playerCloseBtn) {
             playerCloseBtn.addEventListener('click', () => {
                 const pw = document.getElementById('player-wrapper');
-                if (pw) pw.style.display = 'none';
+                if (pw) {
+                    pw.classList.remove('is-mini-pip');
+                    pw.style.display = 'none';
+                }
                 destroyActivePlayer();
+            });
+        }
+
+        // ── Mini-Lecteur Flottant (In-App Picture-in-Picture) au défilement ──
+        const pw = document.getElementById('player-wrapper');
+        window.addEventListener('scroll', () => {
+            if (!pw || pw.style.display === 'none' || (!hlsInstance && !mpegtsInstance && (!videoEl || videoEl.paused))) return;
+            const scrollThreshold = 420;
+            if (window.scrollY > scrollThreshold && !pw.classList.contains('is-mini-pip')) {
+                pw.classList.add('is-mini-pip');
+            } else if (window.scrollY <= scrollThreshold && pw.classList.contains('is-mini-pip')) {
+                pw.classList.remove('is-mini-pip');
+            }
+        }, { passive: true });
+
+        // Clic sur le mini-lecteur flottant pour remonter et le restaurer
+        if (pw) {
+            pw.addEventListener('click', (e) => {
+                if (pw.classList.contains('is-mini-pip')) {
+                    if (e.target.closest('#player-close-btn') || e.target.closest('.ctrl-btn') || e.target.closest('button')) return;
+                    pw.classList.remove('is-mini-pip');
+                    pw.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
             });
         }
 
@@ -2906,6 +2976,16 @@
             const docH = Math.max(document.documentElement.scrollHeight, document.body.scrollHeight);
             if (window.innerHeight + window.scrollY >= docH - 600) renderNextBatch();
         }, { passive: true });
+        // ── Enregistrement Service Worker PWA (Progressive Web App) ──
+        if ('serviceWorker' in navigator && (window.location.protocol === 'https:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js').then((reg) => {
+                    console.log('[BOKK TV PWA] Service Worker actif :', reg.scope);
+                }).catch((err) => {
+                    console.warn('[BOKK TV PWA] Échec Service Worker :', err);
+                });
+            });
+        }
     }
 
     // Lancement au chargement du DOM

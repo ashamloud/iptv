@@ -416,7 +416,16 @@
 
         if (osdNameEl) osdNameEl.textContent = channel.name;
         if (osdBadgeEl) osdBadgeEl.textContent = channel.badge || 'HD';
-        if (osdDescEl) osdDescEl.textContent = `${channel.group || channel.category} • En Direct`;
+        if (osdDescEl) {
+            let descText = `${channel.group || channel.category} • En Direct`;
+            if (window.BokkEPG) {
+                const prog = window.BokkEPG.getCurrentProgram(channel.name);
+                if (prog) {
+                    descText = `📺 ${prog.title} (${prog.start} - ${prog.end})`;
+                }
+            }
+            osdDescEl.textContent = descText;
+        }
         if (osdNumberEl) {
             const num = (channels.findIndex(c => c.id === channel.id) + 1);
             osdNumberEl.textContent = `CH ${String(num).padStart(2, '0')}`;
