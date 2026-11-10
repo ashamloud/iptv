@@ -229,6 +229,14 @@
             const logoUrl = ch.logo && ch.logo.trim() ? ch.logo : '/favicon.png';
             const isFav = favorites.has(ch.id);
 
+            let tvSub = ch.group || ch.category;
+            if (window.BokkEPG) {
+                const prog = window.BokkEPG.getCurrentProgram(ch.name);
+                if (prog && prog.title && !prog.title.includes('24/7')) {
+                    tvSub = `📺 ${prog.title}`;
+                }
+            }
+
             card.innerHTML = `
                 ${ch.badge ? `<span class="tv-card-badge">${ch.badge}</span>` : ''}
                 ${isFav ? `<span class="tv-card-fav">★</span>` : ''}
@@ -236,7 +244,7 @@
                     <img class="tv-card-logo" src="${logoUrl}" alt="${ch.name}" onerror="this.onerror=null;this.src='/favicon.png';">
                 </div>
                 <div class="tv-card-name">${ch.name}</div>
-                <div class="tv-card-sub">${ch.group || ch.category}</div>
+                <div class="tv-card-sub" title="${tvSub}">${tvSub}</div>
             `;
 
             card.onclick = () => {

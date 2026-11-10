@@ -1084,6 +1084,14 @@
         const isFav = isFavorite(ch.id);
         const logoSrc = getValidChannelLogo(ch);
 
+        let subText = ch.group || ch.desc || ch.category || 'Direct';
+        if (window.BokkEPG) {
+            const prog = window.BokkEPG.getCurrentProgram(ch.name);
+            if (prog && prog.title && !prog.title.includes('24/7')) {
+                subText = `📺 ${prog.title}`;
+            }
+        }
+
         card.innerHTML = `
             <div class="card-logo-wrap">
                 <img class="card-logo" src="${logoSrc}" alt="${ch.name}" loading="lazy" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src='${DEFAULT_TV_LOGO}';">
@@ -1093,7 +1101,7 @@
                     <span class="card-title" title="${ch.name}">${ch.name}</span>
                     <span class="card-badge">${ch.badge || 'HD'}</span>
                 </div>
-                <div class="card-subtitle">${ch.group || ch.desc || ch.category}</div>
+                <div class="card-subtitle" title="${subText}">${subText}</div>
             </div>
             <div class="audio-waves">
                 <span class="wave-bar"></span>
@@ -2068,6 +2076,14 @@
         const logoSrc = getValidChannelLogo(channel);
         const quality = channel.badge || (channel.name.includes('4K') ? '4K' : (channel.name.includes('FHD') ? '1080p' : 'HD'));
 
+        let carouselSub = channel.group || channel.category || 'Direct';
+        if (window.BokkEPG) {
+            const prog = window.BokkEPG.getCurrentProgram(channel.name);
+            if (prog && prog.title && !prog.title.includes('24/7')) {
+                carouselSub = `📺 ${prog.title}`;
+            }
+        }
+
         card.innerHTML = `
             <div class="card-visual-box">
                 <div class="card-badges-top">
@@ -2087,7 +2103,7 @@
             </div>
             <div class="card-info-box">
                 <div class="card-channel-name" title="${channel.name}">${channel.name}</div>
-                <div class="card-channel-sub">${channel.group || channel.category || 'Direct'}</div>
+                <div class="card-channel-sub" title="${carouselSub}">${carouselSub}</div>
             </div>
         `;
 

@@ -175,6 +175,13 @@
 
   // Exposer l'EPG mondialement
   window.BokkEPG = {
-    getCurrentProgram: getCurrentProgram
+    getCurrentProgram: getCurrentProgram,
+    getChannelGrid: function (key) {
+      return CHANNEL_GRIDS[key] || null;
+    },
+    getAllGrids: function () {
+      return CHANNEL_GRIDS;
+    }
   };
 })();
+
