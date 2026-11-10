@@ -38,7 +38,9 @@
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-html { scroll-behavior: smooth; color-scheme: dark; }
+html {
+    color-scheme: dark;
+}
 
 body {
     background: var(--bg);
@@ -46,7 +48,21 @@ body {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     min-height: 100vh;
     overflow-x: hidden;
+    overflow-y: auto;
     -webkit-font-smoothing: antialiased;
+}
+
+/* Fluidité absolue des carrousels horizontaux */
+.channels-scroll-row,
+.matches-scroll-row,
+.live-logos-row,
+.categories-bar,
+.hero-tags-wrapper,
+.match-time-filters,
+.zap-strip-scroll {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+    will-change: scroll-position;
 }
 
 h1, h2, h3, .topnav-brand-name, .hero-headline, .home-section-label {
@@ -59,213 +75,138 @@ h1, h2, h3, .topnav-brand-name, .hero-headline, .home-section-label {
 ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
 
 /* ══════════════════════════════════════════════════════
-   TOPNAV — Premium Header (Netflix / Tubi inspired)
+   TOPNAV — Header Épuré & Boutons Rectangulaires
 ══════════════════════════════════════════════════════ */
-
-/* Barre fine au-dessus (statut LIVE + horloge) */
-.topnav-topbar {
-    background: rgba(0,0,0,0.6);
-    border-bottom: 1px solid rgba(255,255,255,0.04);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 28px;
-    height: 28px;
-    font-size: 0.68rem;
-    letter-spacing: 0.08em;
-    color: rgba(255,255,255,0.4);
-}
-
-.topbar-live-pill {
-    display: flex;
-    align-items: center;
-    gap: 7px;
-    font-weight: 600;
-    color: rgba(255,255,255,0.5);
-    text-transform: uppercase;
-}
-
-.topbar-live-dot {
-    width: 7px; height: 7px;
-    border-radius: 50%;
-    background: var(--live-red);
-    box-shadow: 0 0 8px var(--live-red);
-    animation: livePulse 2s ease-in-out infinite;
-    flex-shrink: 0;
-}
-
-@keyframes livePulse {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.5; transform: scale(0.85); }
-}
 
 .topnav {
     position: sticky;
     top: 0;
     z-index: 100;
     background: var(--bg-nav);
-    backdrop-filter: blur(24px) saturate(200%);
-    -webkit-backdrop-filter: blur(24px) saturate(200%);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
     border-bottom: 1px solid rgba(255,255,255,0.06);
-    --nav-h: 60px;
+    height: 54px;
 }
 
 .topnav-inner {
     max-width: 1600px;
     margin: 0 auto;
-    padding: 0 28px;
-    height: var(--nav-h);
+    padding: 0 24px;
+    height: 100%;
     display: flex;
     align-items: center;
-    gap: 20px;
+    gap: 16px;
 }
 
 /* ── Logo ── */
 .topnav-brand {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 9px;
     text-decoration: none;
     color: inherit;
     flex-shrink: 0;
-    padding: 4px 6px 4px 0;
+    padding-right: 12px;
     border-right: 1px solid rgba(255,255,255,0.08);
-    margin-right: 4px;
 }
 
 .topnav-logo-wrap {
-    width: 34px; height: 34px;
-    border-radius: 9px;
+    width: 30px; height: 30px;
+    border-radius: 6px;
     background: linear-gradient(135deg, #0070f3 0%, #7c3aed 100%);
     display: flex; align-items: center; justify-content: center;
     overflow: hidden;
-    box-shadow: 0 4px 14px rgba(0,112,243,0.5);
     flex-shrink: 0;
 }
 
 .topnav-logo-img {
     width: 100%; height: 100%;
     object-fit: cover;
-    border-radius: 9px;
+    border-radius: 6px;
 }
 
 .topnav-brand-name {
-    font-size: 1.2rem;
+    font-size: 1.15rem;
     font-weight: 900;
-    letter-spacing: -0.03em;
+    letter-spacing: -0.02em;
     color: #fff;
     font-family: 'Outfit', sans-serif;
     line-height: 1;
 }
 
 .topnav-brand-accent {
-    color: transparent;
-    background: linear-gradient(90deg, #60a5fa, #a78bfa);
-    -webkit-background-clip: text;
-    background-clip: text;
+    color: var(--brand-light);
 }
 
-/* ── Menu Navigation ── */
+/* ── Menu Navigation — Boutons rectangulaires avec border-radius ── */
 .topnav-menu {
     display: flex;
     align-items: center;
-    gap: 1px;
+    gap: 4px;
     flex: 1;
 }
 
 .tmenu-item {
-    position: relative;
     background: transparent;
-    border: none;
-    color: rgba(255,255,255,0.6);
-    font-size: 0.82rem;
+    border: 1px solid transparent;
+    color: rgba(255,255,255,0.65);
+    font-size: 0.8rem;
     font-weight: 600;
-    letter-spacing: 0.01em;
-    padding: 8px 14px;
-    border-radius: 8px;
+    letter-spacing: 0.02em;
+    padding: 6px 13px;
+    border-radius: 6px;
     cursor: pointer;
-    transition: color 0.18s, background 0.18s;
+    transition: all 0.16s ease;
     white-space: nowrap;
     font-family: 'Inter', sans-serif;
-    display: flex;
-    align-items: center;
-    gap: 6px;
 }
 
 .tmenu-item:hover {
     color: #fff;
-    background: rgba(255,255,255,0.07);
+    background: rgba(255,255,255,0.06);
+    border-color: rgba(255,255,255,0.1);
 }
 
 .tmenu-item.active {
     color: #fff;
-    background: rgba(255,255,255,0.08);
-}
-
-/* Underline active indicator */
-.tmenu-item.active::after {
-    content: '';
-    position: absolute;
-    bottom: -2px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 20px; height: 2px;
-    border-radius: 2px;
     background: var(--brand);
-    box-shadow: 0 0 8px rgba(0,112,243,0.7);
-}
-
-/* Live dot beside "Direct" menu item */
-.tmenu-live-dot {
-    width: 6px; height: 6px;
-    border-radius: 50%;
-    background: var(--live-red);
-    box-shadow: 0 0 6px var(--live-red);
-    animation: livePulse 2s ease-in-out infinite;
-    display: inline-block;
-    flex-shrink: 0;
+    border-color: var(--brand);
+    box-shadow: 0 2px 10px rgba(0,112,243,0.35);
 }
 
 /* ── Actions droites ── */
 .topnav-actions {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
     flex-shrink: 0;
 }
 
-/* Séparateur vertical */
-.topnav-sep {
-    width: 1px;
-    height: 20px;
-    background: rgba(255,255,255,0.1);
-    margin: 0 2px;
-}
-
-/* Search box */
+/* Search box — Rectangulaire avec border-radius */
 .topnav-search {
     display: flex;
     align-items: center;
     gap: 8px;
     background: rgba(255,255,255,0.05);
-    border: 1px solid rgba(255,255,255,0.09);
-    border-radius: var(--radius-full);
-    padding: 0 14px;
-    height: 36px;
-    width: 200px;
-    transition: width 0.3s var(--ease), border-color 0.2s, background 0.2s;
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 6px;
+    padding: 0 10px;
+    height: 34px;
+    width: 190px;
+    transition: width 0.25s var(--ease), border-color 0.2s, background 0.2s;
     color: var(--text-secondary);
 }
 
 .topnav-search:focus-within {
-    width: 280px;
-    border-color: rgba(0,112,243,0.5);
-    background: rgba(0,112,243,0.07);
+    width: 250px;
+    border-color: var(--brand);
+    background: rgba(0,112,243,0.08);
     color: #fff;
 }
 
-.search-icon { flex-shrink: 0; opacity: 0.5; transition: opacity 0.2s; }
-.topnav-search:focus-within .search-icon { opacity: 1; }
+.search-icon { flex-shrink: 0; opacity: 0.5; }
+.topnav-search:focus-within .search-icon { opacity: 1; color: var(--brand-light); }
 
 .topnav-search input {
     flex: 1;
@@ -273,84 +214,72 @@ h1, h2, h3, .topnav-brand-name, .hero-headline, .home-section-label {
     border: none;
     outline: none;
     color: #fff;
-    font-size: 0.83rem;
+    font-size: 0.8rem;
     font-family: inherit;
     min-width: 0;
 }
 
-.topnav-search input::placeholder { color: rgba(255,255,255,0.3); font-size: 0.8rem; }
+.topnav-search input::placeholder { color: rgba(255,255,255,0.35); font-size: 0.78rem; }
 
 .search-clear-btn {
     background: rgba(255,255,255,0.1);
     border: none;
-    border-radius: 50%;
+    border-radius: 4px;
     color: var(--text-muted);
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 18px; height: 18px;
+    width: 16px; height: 16px;
     padding: 0;
-    transition: background 0.15s;
 }
 .search-clear-btn:hover { background: rgba(255,255,255,0.2); color: #fff; }
 
-/* Icon buttons */
-.topnav-icon-btn {
-    display: flex;
-    flex-direction: column;
+/* Boutons rectangulaires avec border-radius */
+.topnav-btn {
+    display: inline-flex;
     align-items: center;
-    justify-content: center;
-    gap: 2px;
-    padding: 6px 10px;
-    border-radius: 8px;
-    background: transparent;
-    border: none;
-    color: rgba(255,255,255,0.55);
+    gap: 6px;
+    height: 34px;
+    padding: 0 12px;
+    border-radius: 6px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: rgba(255,255,255,0.75);
+    font-size: 0.78rem;
+    font-weight: 600;
     cursor: pointer;
-    transition: color 0.18s, background 0.18s;
+    transition: all 0.16s ease;
     text-decoration: none;
-    position: relative;
-    min-width: 44px;
+    font-family: inherit;
 }
 
-.topnav-icon-btn:hover {
-    background: rgba(255,255,255,0.07);
+.topnav-btn:hover {
+    background: rgba(255,255,255,0.1);
+    border-color: rgba(255,255,255,0.18);
     color: #fff;
 }
 
-.topnav-icon-label {
-    font-size: 0.6rem;
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: inherit;
-    line-height: 1;
-}
-
-/* TV mode button — accent cyan */
-.topnav-tv-btn {
-    border: 1px solid rgba(6,182,212,0.25);
-    background: rgba(6,182,212,0.06);
+.topnav-btn-tv {
+    background: rgba(6,182,212,0.08);
+    border-color: rgba(6,182,212,0.3);
     color: var(--cyan);
 }
 
-.topnav-tv-btn:hover {
-    background: rgba(6,182,212,0.15);
-    color: #fff;
+.topnav-btn-tv:hover {
+    background: rgba(6,182,212,0.18);
     border-color: var(--cyan);
+    color: #fff;
 }
 
-/* Legacy compat */
-.tv-btn-label { font-size: 0.6rem; font-weight: 800; letter-spacing: 0.05em; }
-
-/* Clock — now in topbar */
+/* Horloge sobre */
 .topnav-clock {
-    font-size: 0.72rem;
+    font-size: 0.8rem;
     font-weight: 700;
-    color: rgba(255,255,255,0.4);
+    color: rgba(255,255,255,0.45);
     font-variant-numeric: tabular-nums;
     letter-spacing: 0.04em;
+    padding-left: 4px;
 }
 
 /* ══════════════════════════════════════════════════════

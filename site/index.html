@@ -15,40 +15,27 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=9945">
+    <link rel="stylesheet" href="style.css?v=9946">
 </head>
 <body>
 
 <!-- ══════════════════════════════════════════════════════
-     HEADER PREMIUM — Style Netflix / Tubi / myCANAL
+     HEADER ÉPURÉ — Style Compact & Boutons Rectangulaires
 ══════════════════════════════════════════════════════ -->
 <header class="topnav" id="topnav">
-    <!-- Barre supérieure fine (live indicator + horloge) -->
-    <div class="topnav-topbar">
-        <div class="topbar-live-pill">
-            <span class="topbar-live-dot"></span>
-            <span>DIRECT — 6 039 CHAÎNES</span>
-        </div>
-        <span class="topnav-clock" id="topnav-clock">00:00</span>
-    </div>
-
-    <!-- Barre principale -->
     <div class="topnav-inner">
         <!-- Logo -->
-        <a href="#" class="topnav-brand" id="brand-home-link">
+        <a href="#" class="topnav-brand" id="brand-home-link" title="BOKK TV">
             <div class="topnav-logo-wrap">
                 <img src="favicon.png" alt="BOKK TV" class="topnav-logo-img">
             </div>
             <span class="topnav-brand-name">BOKK<span class="topnav-brand-accent">TV</span></span>
         </a>
 
-        <!-- Menu principal -->
+        <!-- Menu principal — Boutons rectangulaires avec border-radius -->
         <nav class="topnav-menu" id="main-menu">
             <button class="tmenu-item active" data-view="home">Accueil</button>
-            <button class="tmenu-item" data-view="live">
-                <span class="tmenu-live-dot"></span>
-                Direct
-            </button>
+            <button class="tmenu-item" data-view="live">Direct</button>
             <button class="tmenu-item" data-view="sport">Sport</button>
             <button class="tmenu-item" data-view="films">Films</button>
             <button class="tmenu-item" data-view="series">Séries</button>
@@ -58,45 +45,42 @@
 
         <!-- Actions droites -->
         <div class="topnav-actions">
-            <!-- Recherche -->
+            <!-- Recherche compacte -->
             <div class="topnav-search" id="topnav-search-box">
-                <svg class="search-icon" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <svg class="search-icon" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                     <circle cx="11" cy="11" r="8"></circle>
                     <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                 </svg>
-                <input type="text" id="search-input" placeholder="Titre, chaîne, pays…" autocomplete="off">
+                <input type="text" id="search-input" placeholder="Rechercher une chaîne…" autocomplete="off">
                 <button id="search-clear-btn" class="search-clear-btn" style="display:none;">
                     <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                 </button>
             </div>
 
-            <!-- Séparateur -->
-            <div class="topnav-sep"></div>
-
-            <!-- Favoris -->
-            <button id="nav-btn-favoris" class="topnav-icon-btn" title="Mes favoris">
-                <svg width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <!-- Boutons d'action rectangulaires avec border-radius -->
+            <button id="nav-btn-favoris" class="topnav-btn" title="Mes favoris">
+                <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                     <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
                 </svg>
-                <span class="topnav-icon-label">Favoris</span>
+                <span>Favoris</span>
             </button>
 
-            <!-- Mode TV -->
-            <a href="tv/" class="topnav-icon-btn topnav-tv-btn" title="Mode Smart TV">
-                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <a href="tv/" class="topnav-btn topnav-btn-tv" title="Mode Smart TV">
+                <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                     <rect x="2" y="7" width="20" height="15" rx="2" ry="2"></rect>
                     <polyline points="17 2 12 7 7 2"></polyline>
                 </svg>
-                <span class="topnav-icon-label">TV</span>
+                <span>TV</span>
             </a>
 
-            <!-- M3U Import -->
-            <button id="btn-open-m3u" class="topnav-icon-btn" title="Importer une playlist M3U">
-                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <button id="btn-open-m3u" class="topnav-btn" title="Importer une playlist M3U">
+                <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                     <path d="M12 5v14M5 12h14"></path>
                 </svg>
-                <span class="topnav-icon-label">M3U</span>
+                <span>M3U</span>
             </button>
+
+            <span class="topnav-clock" id="topnav-clock">00:00</span>
         </div>
     </div>
 </header>
@@ -500,10 +484,10 @@
 <!-- Scripts -->
 <script src="mpegts.js"></script>
 <script src="hls.min.js"></script>
-<script src="matches.js?v=9945"></script>
+<script src="matches.js?v=9946"></script>
 <script src="epg-data.js?v=9941"></script>
-<script src="epg.js?v=9944"></script>
+<script src="epg.js?v=9946"></script>
 <script src="channels.js?v=9941"></script>
-<script src="app.js?v=9945"></script>
+<script src="app.js?v=9946"></script>
 </body>
 </html>

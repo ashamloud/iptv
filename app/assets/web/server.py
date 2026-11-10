@@ -189,8 +189,10 @@ class BOKKStreamProxyHandler(SimpleHTTPRequestHandler):
         if parsed.path == '/proxy':
             self.handle_proxy(parsed, is_head=False)
         elif parsed.path == '/api/epg':
+            self.path = '/epg_data.json'
             self.handle_static_with_gzip('/epg_data.json')
         elif parsed.path == '/api/matches':
+            self.path = '/matches_data.json'
             self.handle_static_with_gzip('/matches_data.json')
         elif parsed.path == '/api/matches/update':
             def _bg_matches_update():

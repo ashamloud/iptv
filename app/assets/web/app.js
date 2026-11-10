@@ -619,14 +619,14 @@
                 }, {
                     enableWorker: false,
                     lazyLoad: false,
-                    // ── Moteur MPEG-TS Anti-Coupure (fluidité maximale & rattrapage auto) ──
-                    liveBufferLatencyChasing: true,      // Rattrape en douceur le direct sans caler ni geler
-                    liveBufferLatencyMaxLatency: 3.0,    // Tolérance max 3s avant rattrapage doux
-                    liveBufferLatencyMinRemain: 0.6,     // 0.6s de flux continu garanti sans caler
+                    // ── Moteur MPEG-TS Anti-Coupure (fluidité maximale sans calage) ──
+                    liveBufferLatencyChasing: false,     // Désactivé : évite les calages, gels et désynchronisations
+                    liveBufferLatencyMaxLatency: 8.0,    // Tolérance large pour continuité absolue du flux
+                    liveBufferLatencyMinRemain: 1.0,     // 1s de flux continu garanti sans freeze
                     enableStashBuffer: true,
-                    stashInitialSize: 64,                // 64 Ko de cache initial pour démarrage ultra-rapide (<0.5s)
+                    stashInitialSize: 128,               // 128 Ko de tampon pour débit stable
                     autoCleanupSourceBuffer: true,
-                    autoCleanupMaxBackwardDuration: 30,  // Nettoyage régulier pour éviter la surcharge mémoire
+                    autoCleanupMaxBackwardDuration: 30,
                     autoCleanupMinBackwardDuration: 15
                 });
 
@@ -681,23 +681,23 @@
                     startLevel: 0,                     // Démarre sur le profil le plus fluide pour affichage immédiat
                     capLevelToPlayerSize: true,
                     // ── Coussin de sécurité anti-calage (flux continu et fluide) ──
-                    liveSyncDurationCount: 2,          // 2 segments d'avance : absorbe les ralentissements 4G/ADSL
-                    liveMaxLatencyDurationCount: 5,    // Tolère les légères variations sans caler
-                    backBufferLength: 8,
-                    maxBufferLength: 15,               // 15s de buffer optimal
-                    maxMaxBufferLength: 30,
-                    maxBufferSize: 30 * 1000 * 1000,
-                    maxBufferHole: 0.6,                // Tolère les micro-trous sans bloquer
+                    liveSyncDurationCount: 3,          // 3 segments d'avance : absorbe les variations réseau
+                    liveMaxLatencyDurationCount: 8,    // Tolère les légères variations sans caler ni couper
+                    backBufferLength: 15,
+                    maxBufferLength: 30,               // 30s de buffer optimal anti-freeze
+                    maxMaxBufferLength: 60,
+                    maxBufferSize: 40 * 1000 * 1000,
+                    maxBufferHole: 1.0,                // Tolère les micro-trous sans bloquer
                     highBufferWatchdogPeriod: 2,
                     // ── Timeouts et tolérance aux débits variables ──
-                    manifestLoadingTimeOut: 6000,
-                    manifestLoadingMaxRetry: 3,
-                    manifestLoadingRetryDelay: 300,
-                    levelLoadingTimeOut: 6000,
-                    levelLoadingMaxRetry: 3,
-                    fragLoadingTimeOut: 8000,
-                    fragLoadingMaxRetry: 4,
-                    fragLoadingRetryDelay: 400,
+                    manifestLoadingTimeOut: 10000,
+                    manifestLoadingMaxRetry: 4,
+                    manifestLoadingRetryDelay: 500,
+                    levelLoadingTimeOut: 10000,
+                    levelLoadingMaxRetry: 4,
+                    fragLoadingTimeOut: 12000,
+                    fragLoadingMaxRetry: 5,
+                    fragLoadingRetryDelay: 500,
                     // ── ABR fluide ──
                     abrEwmaDefaultEstimate: 1200000,
                     abrBandWidthFactor: 0.75,
@@ -1522,23 +1522,30 @@
         searchInput.oninput = (e) => {
             currentQuery = e.target.value;
             if (searchClearBtn) searchClearBtn.classList.toggle('visible', !!currentQuery);
-            // Dès que l'utilisateur tape, basculer automatiquement sur la vue catalogue pour afficher les résultats
             if (currentQuery.trim() !== '') {
-                if (window._bokkSwitchView) window._bokkSwitchView('catalogue');
+                const pc = document.getElementById('page-catalogue');
+                if (pc && pc.style.display === 'none') {
+                    if (window._bokkSwitchView) window._bokkSwitchView('catalogue', true);
+                }
             }
             renderChannelList(true);
         };
 
         searchInput.onfocus = () => {
             if (searchInput.value.trim() !== '' && window._bokkSwitchView) {
-                window._bokkSwitchView('catalogue');
+                const pc = document.getElementById('page-catalogue');
+                if (pc && pc.style.display === 'none') {
+                    window._bokkSwitchView('catalogue', true);
+                }
             }
         };
 
         searchInput.onkeydown = (e) => {
             if (e.key === 'Enter') {
-                e.preventDefault();
-                if (window._bokkSwitchView) window._bokkSwitchView('catalogue');
+                const pc = document.getElementById('page-catalogue');
+                if (pc && pc.style.display === 'none' && window._bokkSwitchView) {
+                    window._bokkSwitchView('catalogue', true);
+                }
                 renderChannelList(true);
                 searchInput.blur();
             }
@@ -1603,20 +1610,15 @@
 
     // ── Raccourcis clavier globaux ──
     document.addEventListener('keydown', (e) => {
-        // Ignorer si l'utilisateur est en train de taper dans la barre de recherche
-        if (document.activeElement === searchInput) {
-            if (e.key === 'Escape') {
+        // Ignorer si l'utilisateur est dans un champ de saisie
+        if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA' || document.activeElement.tagName === 'SELECT')) {
+            if (e.key === 'Escape' && document.activeElement === searchInput) {
                 searchInput.blur();
             }
             return;
         }
 
         switch (e.key.toLowerCase()) {
-            case ' ':
-                e.preventDefault();
-                if (videoEl.paused) videoEl.play().catch(() => {});
-                else videoEl.pause();
-                break;
             case 'f':
                 e.preventDefault();
                 toggleFullscreen();
@@ -1628,14 +1630,6 @@
             case 'm':
                 e.preventDefault();
                 videoEl.muted = !videoEl.muted;
-                break;
-            case 'arrowdown':
-                e.preventDefault();
-                playNextChannel();
-                break;
-            case 'arrowup':
-                e.preventDefault();
-                playPrevChannel();
                 break;
             case '/':
                 e.preventDefault();
@@ -2517,7 +2511,7 @@
         const pageHome      = document.getElementById('page-home');
         const pageCatalogue = document.getElementById('page-catalogue');
 
-        function switchView(view) {
+        function switchView(view, skipScroll = false) {
             // Mettre à jour les onglets actifs desktop et mobile
             document.querySelectorAll('.tmenu-item').forEach(btn => {
                 btn.classList.toggle('active', btn.dataset.view === view);
@@ -2529,11 +2523,11 @@
             if (view === 'home') {
                 if (pageHome) pageHome.style.display = 'block';
                 if (pageCatalogue) pageCatalogue.style.display = 'none';
-                window.scrollTo({ top: 0, behavior: 'smooth' });
+                if (!skipScroll) window.scrollTo({ top: 0, behavior: 'smooth' });
             } else {
                 if (pageHome) pageHome.style.display = 'none';
                 if (pageCatalogue) pageCatalogue.style.display = 'block';
-                window.scrollTo({ top: 0, behavior: 'smooth' });
+                if (!skipScroll) window.scrollTo({ top: 0, behavior: 'smooth' });
 
                 // Activer la bonne catégorie selon l'onglet
                 const catMap = {

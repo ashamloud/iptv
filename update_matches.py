@@ -328,3 +328,4 @@ if (typeof module !== 'undefined' && module.exports) {{
 
 if __name__ == '__main__':
     generate_matches_files()
+
