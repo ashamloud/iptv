@@ -880,6 +880,11 @@
         return channels
             .map((ch, index) => ({ ...ch, index }))
             .filter(ch => {
+                // Masquer automatiquement les flux désactivés par l'administrateur dans Firebase
+                if (window.BokkFirebase && window.BokkFirebase.isDisabled(ch.id)) {
+                    return false;
+                }
+
                 // En mode recherche textuelle : recherche globale instantanée sur les 6 039 chaînes
                 if (query) {
                     const text = `${ch.name} ${ch.group || ''} ${ch.desc || ''} ${ch.category || ''} ${ch.country || ''}`.toLowerCase();
@@ -3673,11 +3678,19 @@
             });
         }
 
-        // Écouter les mises à jour Firebase en temps réel
-        if (window.BokkFirebase && typeof window.BokkFirebase.listenReports === 'function') {
-            window.BokkFirebase.listenReports((reports) => {
-                updateReportsBadge(reports);
-            });
+        // Écouter les mises à jour Firebase en temps réel (signalements et désactivations)
+        if (window.BokkFirebase) {
+            if (typeof window.BokkFirebase.listenReports === 'function') {
+                window.BokkFirebase.listenReports((reports) => {
+                    updateReportsBadge(reports);
+                });
+            }
+            if (typeof window.BokkFirebase.listenDisabledChannels === 'function') {
+                window.BokkFirebase.listenDisabledChannels((disabledIds) => {
+                    console.log(`[BOKK TV] 🔥 Synchronisation Firebase : ${disabledIds.length} chaînes masquées`);
+                    renderChannelList(false);
+                });
+            }
         } else {
             updateReportsBadge();
         }

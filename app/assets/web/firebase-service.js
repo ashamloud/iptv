@@ -1,12 +1,11 @@
 /**
  * BOKK TV — Firebase Cloud Firestore Service
- * Gestion en temps réel des signalements de chaînes et synchronisation Cloud
+ * Gestion en temps réel des signalements, désactivations et statut des chaînes
  */
 
 (function () {
     'use strict';
 
-    // Configuration Firebase fournie
     const firebaseConfig = {
         apiKey: "AIzaSyCjLE8JX5n2CrtEwvX-SyYnjVeEgHkQJyM",
         authDomain: "bokk-tv.firebaseapp.com",
@@ -19,53 +18,40 @@
     let db = null;
     let isInitialized = false;
     let reportedChannelsCache = new Set();
-    let brokenChannelsCache = new Set();
+    let disabledChannelsCache = new Set();
 
-    // Initialisation
     try {
         if (typeof firebase !== 'undefined' && !firebase.apps.length) {
             firebase.initializeApp(firebaseConfig);
             db = firebase.firestore();
             isInitialized = true;
-            console.log('[BOKK TV] 🔥 Firebase Firestore initialisé avec succès !');
+            console.log('[BOKK TV] 🔥 Firebase Firestore initialisé !');
         } else if (typeof firebase !== 'undefined' && firebase.apps.length) {
             db = firebase.firestore();
             isInitialized = true;
         }
     } catch (e) {
-        console.warn('[BOKK TV] Impossible d\'initialiser Firebase Firestore:', e);
+        console.warn('[BOKK TV] Erreur initialisation Firebase:', e);
     }
 
-    /**
-     * Signaler une chaîne qui ne fonctionne pas
-     * @param {Object} channel { id, name, group, url }
-     * @param {string} errorDetails motif (ex: network_error, 404, direct)
-     */
+    // ── Signalement de chaîne HS ──
     async function reportBrokenChannel(channel, errorDetails = 'flux_indisponible') {
-        if (!channel || !channel.id) return { success: false, error: 'invalid_channel' };
-
-        // Enregistrement local immédiat
+        if (!channel || !channel.id) return { success: false };
         reportedChannelsCache.add(String(channel.id));
 
-        if (!isInitialized || !db) {
-            console.warn('[BOKK TV] Firebase non connecté, signalement gardé en local');
-            saveLocalReport(channel, errorDetails);
-            return { success: true, localOnly: true };
-        }
+        if (!isInitialized || !db) return { success: true, localOnly: true };
 
         try {
             const docRef = db.collection('reported_channels').doc(String(channel.id));
             const doc = await docRef.get();
 
             if (doc.exists) {
-                // Incrémenter le nombre de signalements
                 await docRef.update({
                     reportCount: firebase.firestore.FieldValue.increment(1),
                     lastReportedAt: firebase.firestore.FieldValue.serverTimestamp(),
                     lastError: errorDetails
                 });
             } else {
-                // Créer le signalement
                 await docRef.set({
                     channelId: channel.id,
                     name: channel.name || 'Inconnue',
@@ -75,127 +61,151 @@
                     firstReportedAt: firebase.firestore.FieldValue.serverTimestamp(),
                     lastReportedAt: firebase.firestore.FieldValue.serverTimestamp(),
                     lastError: errorDetails,
-                    status: 'reported' // 'reported' | 'confirmed_broken' | 'resolved'
+                    status: 'reported'
                 });
             }
-
-            console.log(`[BOKK TV] ✅ Signalement envoyé à Firebase pour #${channel.id} ${channel.name}`);
             return { success: true };
         } catch (err) {
-            console.warn('[BOKK TV] Erreur envoi signalement Firebase:', err);
-            saveLocalReport(channel, errorDetails);
+            console.warn('[BOKK TV] Erreur Firestore report:', err);
             return { success: false, error: err.message };
         }
     }
 
-    /**
-     * Récupérer toutes les chaînes signalées depuis Firestore
-     */
+    // ── Récupérer les signalements ──
     async function getReportedChannels() {
-        if (!isInitialized || !db) {
-            return getLocalReports();
-        }
-
+        if (!isInitialized || !db) return [];
         try {
             const snapshot = await db.collection('reported_channels')
                 .orderBy('reportCount', 'desc')
-                .limit(200)
+                .limit(300)
                 .get();
 
             const reports = [];
-            snapshot.forEach(doc => {
-                reports.push({ id: doc.id, ...doc.data() });
-            });
+            snapshot.forEach(doc => reports.push({ id: doc.id, ...doc.data() }));
             return reports;
         } catch (err) {
-            console.warn('[BOKK TV] Erreur lecture Firestore:', err);
-            return getLocalReports();
-        }
-    }
-
-    /**
-     * Supprimer un signalement (si la chaîne refonctionne)
-     */
-    async function deleteReport(channelId) {
-        if (!channelId) return;
-        reportedChannelsCache.delete(String(channelId));
-
-        if (isInitialized && db) {
-            try {
-                await db.collection('reported_channels').doc(String(channelId)).delete();
-            } catch (e) {
-                console.warn(e);
-            }
-        }
-    }
-
-    // Sauvegarde de secours en LocalStorage
-    function saveLocalReport(channel, errorDetails) {
-        try {
-            const list = JSON.parse(localStorage.getItem('bokk_reported_channels') || '[]');
-            const exists = list.find(item => item.id === channel.id);
-            if (exists) {
-                exists.count = (exists.count || 1) + 1;
-                exists.lastReport = new Date().toISOString();
-            } else {
-                list.push({
-                    id: channel.id,
-                    name: channel.name,
-                    group: channel.group,
-                    error: errorDetails,
-                    count: 1,
-                    date: new Date().toISOString()
-                });
-            }
-            localStorage.setItem('bokk_reported_channels', JSON.stringify(list));
-        } catch (e) {}
-    }
-
-    function getLocalReports() {
-        try {
-            return JSON.parse(localStorage.getItem('bokk_reported_channels') || '[]');
-        } catch (e) {
+            console.warn('[BOKK TV] Erreur lecture reports:', err);
             return [];
         }
     }
 
-    // Écoute en temps réel des signalements
-    function listenToReportedChannels(callback) {
+    // ── Supprimer un signalement ──
+    async function deleteReport(channelId) {
+        if (!channelId) return;
+        reportedChannelsCache.delete(String(channelId));
+        if (isInitialized && db) {
+            try {
+                await db.collection('reported_channels').doc(String(channelId)).delete();
+            } catch (e) {}
+        }
+    }
+
+    // ── DÉSACTIVER UNE CHAÎNE POUR TOUS LES UTILISATEURS (ADMIN) ──
+    async function disableChannel(channelId, channelData = {}) {
+        if (!channelId) return { success: false };
+        const idStr = String(channelId);
+        disabledChannelsCache.add(idStr);
+
+        if (!isInitialized || !db) return { success: true, localOnly: true };
+
+        try {
+            await db.collection('disabled_channels').doc(idStr).set({
+                channelId: channelId,
+                name: channelData.name || '',
+                group: channelData.group || '',
+                disabledAt: firebase.firestore.FieldValue.serverTimestamp(),
+                reason: channelData.reason || 'admin_disabled'
+            });
+            return { success: true };
+        } catch (err) {
+            console.warn('[BOKK TV] Erreur disableChannel:', err);
+            return { success: false, error: err.message };
+        }
+    }
+
+    // ── RÉACTIVER UNE CHAÎNE (ADMIN) ──
+    async function enableChannel(channelId) {
+        if (!channelId) return { success: false };
+        const idStr = String(channelId);
+        disabledChannelsCache.delete(idStr);
+
+        if (!isInitialized || !db) return { success: true };
+
+        try {
+            await db.collection('disabled_channels').doc(idStr).delete();
+            return { success: true };
+        } catch (err) {
+            console.warn('[BOKK TV] Erreur enableChannel:', err);
+            return { success: false, error: err.message };
+        }
+    }
+
+    // ── Récupérer la liste des chaînes désactivées ──
+    async function getDisabledChannels() {
+        if (!isInitialized || !db) return Array.from(disabledChannelsCache);
+
+        try {
+            const snapshot = await db.collection('disabled_channels').get();
+            const list = [];
+            snapshot.forEach(doc => {
+                list.push(doc.id);
+                disabledChannelsCache.add(doc.id);
+            });
+            return list;
+        } catch (err) {
+            console.warn('[BOKK TV] Erreur getDisabledChannels:', err);
+            return Array.from(disabledChannelsCache);
+        }
+    }
+
+    // ── Écouter les chaînes désactivées en temps réel ──
+    function listenDisabledChannels(callback) {
         if (!isInitialized || !db) return () => {};
 
         try {
-            return db.collection('reported_channels')
-                .onSnapshot(snapshot => {
-                    const reports = [];
-                    snapshot.forEach(doc => {
-                        const data = doc.data();
-                        reports.push({ id: doc.id, ...data });
-                        reportedChannelsCache.add(String(doc.id));
-                        if (data.status === 'confirmed_broken' || data.reportCount >= 3) {
-                            brokenChannelsCache.add(String(doc.id));
-                        }
-                    });
-                    if (typeof callback === 'function') {
-                        callback(reports);
-                    }
-                }, err => {
-                    console.warn('[BOKK TV] Erreur écoute snapshot:', err);
-                });
+            return db.collection('disabled_channels').onSnapshot(snapshot => {
+                const disabledIds = new Set();
+                snapshot.forEach(doc => disabledIds.add(String(doc.id)));
+                disabledChannelsCache = disabledIds;
+                if (typeof callback === 'function') {
+                    callback(Array.from(disabledIds));
+                }
+            }, err => console.warn(err));
         } catch (e) {
             return () => {};
         }
     }
 
-    // Exposer l'API globale
+    // ── Écouter les signalements en temps réel ──
+    function listenToReportedChannels(callback) {
+        if (!isInitialized || !db) return () => {};
+
+        try {
+            return db.collection('reported_channels').onSnapshot(snapshot => {
+                const reports = [];
+                snapshot.forEach(doc => {
+                    reports.push({ id: doc.id, ...doc.data() });
+                    reportedChannelsCache.add(String(doc.id));
+                });
+                if (typeof callback === 'function') callback(reports);
+            }, err => console.warn(err));
+        } catch (e) {
+            return () => {};
+        }
+    }
+
     window.BokkFirebase = {
         isReady: () => isInitialized,
         reportBroken: reportBrokenChannel,
         getReports: getReportedChannels,
         deleteReport: deleteReport,
         listenReports: listenToReportedChannels,
-        isReported: (channelId) => reportedChannelsCache.has(String(channelId)),
-        isConfirmedBroken: (channelId) => brokenChannelsCache.has(String(channelId))
+        disableChannel: disableChannel,
+        enableChannel: enableChannel,
+        getDisabledChannels: getDisabledChannels,
+        listenDisabledChannels: listenDisabledChannels,
+        isDisabled: (id) => disabledChannelsCache.has(String(id)),
+        isReported: (id) => reportedChannelsCache.has(String(id))
     };
 
 })();
-
