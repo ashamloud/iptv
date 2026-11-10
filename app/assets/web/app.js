@@ -2250,15 +2250,12 @@
                 btn.classList.toggle('active', btn.dataset.view === view);
             });
 
+            if (pageHome) pageHome.style.display = '';
+            if (pageCatalogue) pageCatalogue.style.display = '';
+
             if (view === 'home') {
-                if (pageHome) pageHome.style.display = '';
-                if (pageCatalogue) pageCatalogue.style.display = 'none';
                 window.scrollTo({ top: 0, behavior: 'smooth' });
             } else {
-                if (pageHome) pageHome.style.display = 'none';
-                if (pageCatalogue) pageCatalogue.style.display = '';
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-
                 // Activer la bonne catégorie selon l'onglet
                 const catMap = {
                     'live': 'francophone',
@@ -2268,10 +2265,13 @@
                     'senegal': 'senegal',
                     'catalogue': 'tous'
                 };
-                if (catMap[view] && catMap[view] !== currentCategory) {
-                    currentCategory = catMap[view];
-                    renderCategories();
-                    renderChannelList(true);
+                const targetCat = catMap[view] || 'tous';
+                currentCategory = targetCat;
+                renderCategories();
+                renderChannelList(true);
+
+                if (pageCatalogue) {
+                    pageCatalogue.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 }
             }
         }
