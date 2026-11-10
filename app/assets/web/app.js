@@ -20,25 +20,25 @@
 
     // ── Métadonnées des catégories (découverte automatique selon les liens) ──
     const CATEGORY_METADATA = {
-        'playlist':     { label: '📂 Ma Playlist',     icon: '📂', order: 0.1 },
-        'senegal':      { label: '🇸🇳 Sénégal',         icon: '🇸🇳', order: 1 },
-        'francophone':  { label: '🇫🇷 France & TNT',    icon: '🇫🇷', order: 2 },
-        'sport':        { label: '⚽ Sport Direct',     icon: '⚽', order: 3 },
-        'cinema':       { label: '🎬 Films & Séries',   icon: '🎬', order: 4 },
-        'info':         { label: '📰 Actualités & Info', icon: '📰', order: 5 },
-        'afrique':      { label: '🌍 Afrique',         icon: '🌍', order: 6 },
-        'documentaire': { label: '🌍 Documentaire',    icon: '🌍', order: 7 },
-        'jeunesse':     { label: '🧸 Jeunesse',        icon: '🧸', order: 8 },
-        'music':        { label: '🎵 Musique',         icon: '🎵', order: 9 },
-        'uk':           { label: '🇬🇧 UK & USA',        icon: '🇬🇧', order: 10 },
-        'espagne':      { label: '🇪🇸 Espagne',         icon: '🇪🇸', order: 11 },
-        'allemagne':    { label: '🇩🇪 Allemagne',       icon: '🇩🇪', order: 12 },
-        'italie':       { label: '🇮🇹 Italie',          icon: '🇮🇹', order: 13 },
-        'turquie':      { label: '🇹🇷 Turquie',         icon: '🇹🇷', order: 14 },
-        'albanie':      { label: '🇦🇱 Albanie',         icon: '🇦🇱', order: 15 },
-        'exyu':         { label: '🇷🇸 Ex-Yougoslavie',  icon: '🇷🇸', order: 16 },
-        'adulte':       { label: '🔞 Adulte (+18)',     icon: '🔞', order: 98 },
-        'monde':        { label: '🌐 International',    icon: '🌐', order: 99 }
+        'playlist':     { label: 'Ma Playlist',          icon: '',   order: 0.1 },
+        'senegal':      { label: 'Sénégal',               icon: '',   order: 1 },
+        'francophone':  { label: 'France & TNT',          icon: '',   order: 2 },
+        'sport':        { label: 'Sport Direct',          icon: '',   order: 3 },
+        'cinema':       { label: 'Films & Séries',        icon: '',   order: 4 },
+        'info':         { label: 'Actualités & Info',     icon: '',   order: 5 },
+        'afrique':      { label: 'Afrique',               icon: '',   order: 6 },
+        'documentaire': { label: 'Documentaire',          icon: '',   order: 7 },
+        'jeunesse':     { label: 'Jeunesse',              icon: '',   order: 8 },
+        'music':        { label: 'Musique',               icon: '',   order: 9 },
+        'uk':           { label: 'UK & USA',              icon: '',   order: 10 },
+        'espagne':      { label: 'Espagne',               icon: '',   order: 11 },
+        'allemagne':    { label: 'Allemagne',             icon: '',   order: 12 },
+        'italie':       { label: 'Italie',                icon: '',   order: 13 },
+        'turquie':      { label: 'Turquie',               icon: '',   order: 14 },
+        'albanie':      { label: 'Albanie',               icon: '',   order: 15 },
+        'exyu':         { label: 'Ex-Yougoslavie',        icon: '',   order: 16 },
+        'adulte':       { label: 'Adulte (+18)',           icon: '',   order: 98 },
+        'monde':        { label: 'International',          icon: '',   order: 99 }
     };
 
     // ── État de l'application ──
@@ -84,7 +84,7 @@
         // Toast feedback
         const ch = channels.find(c => c.id === channelId);
         const name = ch ? ch.name : 'Chaîne';
-        showToast(added ? `⭐ "${name}" ajoutée aux favoris` : `Retirée des favoris`);
+        showToast(added ? `"${name}" ajoutée aux favoris` : `Retirée des favoris`);
 
         // Mettre à jour l'affichage
         updateFavButtons();
@@ -195,7 +195,7 @@
         }
         channel._broken = true;
 
-        showToast(`⚠️ "${channel.name}" ne répond pas — masquée.`);
+        showToast(`"${channel.name}" ne répond pas — masquée.`);
 
         // Supprimer immédiatement du catalogue actif
         const chIdx = channels.findIndex(c => (c.id && c.id === channel.id) || c.url === channel.url);
@@ -318,14 +318,14 @@
                     videoEl.volume = parseFloat(localStorage.getItem('bokk_volume') || '1');
                 } else if (!mutedAutoplayToastShown) {
                     mutedAutoplayToastShown = true;
-                    showToast('🔇 Lecture automatique active — Cliquez pour le son');
+                    showToast('Lecture automatique active — Cliquez pour le son');
                 }
             }).catch((err) => {
                 console.warn('[BOKK TV] Échec lecture automatique muette :', err && err.message);
                 clearPlayerOverlays();
                 if (!mutedAutoplayToastShown) {
                     mutedAutoplayToastShown = true;
-                    showToast('🔇 Lecture automatique active — Touchez pour le son');
+                    showToast('Lecture automatique active — Touchez pour le son');
                 }
             });
         }
@@ -382,13 +382,13 @@
         if (!netSpeedBadge) return;
         let label, cls;
         if (kbps >= 4000) {
-            label = `⚡ ${Math.round(kbps / 1000 * 10) / 10} Mbps`;
+            label = `${Math.round(kbps / 1000 * 10) / 10} Mbps`;
             cls = 'speed-fast';
         } else if (kbps >= 1000) {
-            label = `🟡 ${Math.round(kbps / 1000 * 10) / 10} Mbps`;
+            label = `${Math.round(kbps / 1000 * 10) / 10} Mbps`;
             cls = 'speed-ok';
         } else {
-            label = `🔴 ${kbps} Kbps`;
+            label = `${kbps} Kbps`;
             cls = 'speed-slow';
         }
         netSpeedBadge.textContent = label;
@@ -407,10 +407,10 @@
             const ch = channels[currentChannelIndex];
             if (ch && ch.fallbackUrl) {
                 if (levelKey === 'sd') {
-                    showToast('🟡 Flux SD / Débit Économique activé');
+                    showToast('Flux SD / Débit Économique activé');
                     loadChannel(currentChannelIndex, true, 0);
                 } else {
-                    showToast('🔵 Flux HD / Haute Définition activé');
+                    showToast('Flux HD / Haute Définition activé');
                     loadChannel(currentChannelIndex, false, 0);
                 }
                 return;
@@ -430,13 +430,13 @@
             const sdIdx = 0;
             hlsInstance.currentLevel = sdIdx;
             hlsInstance.loadLevel    = sdIdx;
-            showToast('🟡 Qualité forcée : Définition Standard');
+            showToast('Qualité forcée : Définition Standard');
         } else if (levelKey === 'hd') {
             // HD : choisir le niveau de plus haut débit
             const hdIdx = Math.max(0, levels.length - 1);
             hlsInstance.currentLevel = hdIdx;
             hlsInstance.loadLevel    = hdIdx;
-            showToast('🟮 Qualité forcée : Haute Définition');
+            showToast('Qualité forcée : Haute Définition');
         }
     }
 
@@ -543,9 +543,16 @@
             const prog = window.BokkEPG.getCurrentProgram(channel.name);
             if (prog) {
                 epgBox.style.display = 'flex';
-                if (epgTitle) epgTitle.textContent = prog.title;
+                if (epgTitle) {
+                    const catBadge = prog.category ? ` [${prog.category}]` : '';
+                    epgTitle.textContent = `${prog.title}${catBadge}`;
+                    if (prog.desc) epgTitle.title = prog.desc;
+                }
                 if (epgBar) epgBar.style.width = `${prog.progress}%`;
-                if (epgTime) epgTime.textContent = `${prog.start} - ${prog.end} (${prog.progress}%)`;
+                if (epgTime) {
+                    const nextInfo = prog.nextTitle ? ` • Suiv. : ${prog.nextTitle} (${prog.nextStart})` : '';
+                    epgTime.textContent = `${prog.start} - ${prog.end} (${prog.progress}%)${nextInfo}`;
+                }
             } else {
                 epgBox.style.display = 'none';
             }
@@ -896,7 +903,7 @@
             }
         });
 
-        bouquetFilter.innerHTML = `<option value="all">⚡ Tous les bouquets M3U (${channels.length.toLocaleString('fr-FR')} chaînes)</option>`;
+        bouquetFilter.innerHTML = `<option value="all">Tous les bouquets M3U (${channels.length.toLocaleString('fr-FR')} chaînes)</option>`;
         const sortedGroups = Array.from(groups.entries()).sort((a, b) => a[0].localeCompare(b[0], 'fr'));
         sortedGroups.forEach(([grp, count]) => {
             const opt = document.createElement('option');
@@ -915,7 +922,7 @@
     // ── Découverte dynamique des catégories présentes dans les liens ──
     function getDynamicCategories() {
         const catMap = new Map();
-        catMap.set('tous', { key: 'tous', label: 'Toutes les chaînes', icon: '📺', count: channels.length, order: 0 });
+        catMap.set('tous', { key: 'tous', label: 'Toutes les chaînes', icon: '',   count: channels.length, order: 0 });
 
         const favs = getFavorites();
         const favCount = channels.filter(ch => favs.includes(ch.id)).length;
@@ -928,7 +935,7 @@
             if (!catMap.has(rawCat)) {
                 const meta = CATEGORY_METADATA[rawCat] || {
                     label: rawCat.charAt(0).toUpperCase() + rawCat.slice(1),
-                    icon: '📺',
+                    icon: '',
                     order: 50
                 };
                 catMap.set(rawCat, {
@@ -1067,9 +1074,84 @@
 
     function getValidChannelLogo(ch) {
         if (!ch || !ch.logo || ch.logo.trim() === '') {
-            return DEFAULT_TV_LOGO;
+            return getLogo(ch);
         }
         return ch.logo.trim();
+    }
+
+    // ── Base de logos de secours pour les chaînes sans logo dans la playlist ──
+    const CHANNEL_LOGOS = {
+        // ── Sénégal ──
+        'rts1':         'https://upload.wikimedia.org/wikipedia/fr/0/0c/Logo_RTS1.png',
+        'rts 1':        'https://upload.wikimedia.org/wikipedia/fr/0/0c/Logo_RTS1.png',
+        'rts2':         'https://upload.wikimedia.org/wikipedia/fr/4/4d/RTS2_logo.png',
+        'rts 2':        'https://upload.wikimedia.org/wikipedia/fr/4/4d/RTS2_logo.png',
+        '2stv':         'https://upload.wikimedia.org/wikipedia/fr/9/9d/2stv-senegal.png',
+        'tfm':          'https://upload.wikimedia.org/wikipedia/fr/5/5e/TFM_logo.png',
+        'tfm sénégal':  'https://upload.wikimedia.org/wikipedia/fr/5/5e/TFM_logo.png',
+        'sen tv':       'https://upload.wikimedia.org/wikipedia/fr/e/e1/SEN_TV_Logo.png',
+        'sentv':        'https://upload.wikimedia.org/wikipedia/fr/e/e1/SEN_TV_Logo.png',
+        'walf tv':      'https://upload.wikimedia.org/wikipedia/fr/2/26/Walf_TV_logo.png',
+        'walftv':       'https://upload.wikimedia.org/wikipedia/fr/2/26/Walf_TV_logo.png',
+        '7tv':          'https://7tv.sn/wp-content/uploads/2021/01/logo-7tv.png',
+        'dakar tv':     'https://upload.wikimedia.org/wikipedia/fr/8/85/Dakar_TV_logo.png',
+        'tsen':         'https://upload.wikimedia.org/wikipedia/fr/e/e1/SEN_TV_Logo.png',
+        // ── France ──
+        'tf1':          'https://upload.wikimedia.org/wikipedia/commons/thumb/5/5f/TF1_logo_2013.svg/180px-TF1_logo_2013.svg.png',
+        'france 2':     'https://upload.wikimedia.org/wikipedia/commons/thumb/f/fc/France_2_logo.svg/160px-France_2_logo.svg.png',
+        'france 3':     'https://upload.wikimedia.org/wikipedia/commons/thumb/5/50/France_3_logo.svg/160px-France_3_logo.svg.png',
+        'france 4':     'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e3/France_4_logo.svg/160px-France_4_logo.svg.png',
+        'france 5':     'https://upload.wikimedia.org/wikipedia/commons/thumb/5/5c/France_5_logo.svg/160px-France_5_logo.svg.png',
+        'm6':           'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9c/M6_-_2009.svg/180px-M6_-_2009.svg.png',
+        'w9':           'https://upload.wikimedia.org/wikipedia/commons/thumb/f/f4/W9_2017.svg/160px-W9_2017.svg.png',
+        'tmc':          'https://upload.wikimedia.org/wikipedia/commons/thumb/6/67/TMC_logo_2018.svg/160px-TMC_logo_2018.svg.png',
+        'tf1 séries':   'https://upload.wikimedia.org/wikipedia/commons/thumb/f/fb/TF1_S%C3%A9ries_Films_logo.svg/160px-TF1_S%C3%A9ries_Films_logo.svg.png',
+        'cstar':        'https://upload.wikimedia.org/wikipedia/commons/thumb/9/95/CStar_logo_2016.svg/160px-CStar_logo_2016.svg.png',
+        'gulli':        'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Logo_Gulli_2014.svg/180px-Logo_Gulli_2014.svg.png',
+        'france 24':    'https://upload.wikimedia.org/wikipedia/commons/thumb/6/6e/France_24_logo.svg/200px-France_24_logo.svg.png',
+        'tv5 monde':    'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d2/TV5_Monde_logo.svg/200px-TV5_Monde_logo.svg.png',
+        'tv5monde':     'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d2/TV5_Monde_logo.svg/200px-TV5_Monde_logo.svg.png',
+        // ── Canal+ ──
+        'canal+':       'https://upload.wikimedia.org/wikipedia/commons/thumb/2/22/Canal%2B.svg/200px-Canal%2B.svg.png',
+        'canal+ sport': 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/fb/Canal%2B_Sport_logo_2010.svg/200px-Canal%2B_Sport_logo_2010.svg.png',
+        // ── Sport ──
+        'bein sports':      'https://upload.wikimedia.org/wikipedia/commons/thumb/5/51/Logo_beIN_Sports_2017.svg/200px-Logo_beIN_Sports_2017.svg.png',
+        'bein sports 1':    'https://upload.wikimedia.org/wikipedia/commons/thumb/5/51/Logo_beIN_Sports_2017.svg/200px-Logo_beIN_Sports_2017.svg.png',
+        'bein sports 2':    'https://upload.wikimedia.org/wikipedia/commons/thumb/5/51/Logo_beIN_Sports_2017.svg/200px-Logo_beIN_Sports_2017.svg.png',
+        'bein sports 3':    'https://upload.wikimedia.org/wikipedia/commons/thumb/5/51/Logo_beIN_Sports_2017.svg/200px-Logo_beIN_Sports_2017.svg.png',
+        'eurosport 1':      'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9e/Eurosport_1_logo.svg/200px-Eurosport_1_logo.svg.png',
+        'eurosport 2':      'https://upload.wikimedia.org/wikipedia/commons/thumb/5/5a/Eurosport_2_logo.svg/200px-Eurosport_2_logo.svg.png',
+        // ── International ──
+        'bbc world':        'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9f/BBC_World_News_2019.svg/200px-BBC_World_News_2019.svg.png',
+        'bbc world news':   'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9f/BBC_World_News_2019.svg/200px-BBC_World_News_2019.svg.png',
+        'cnn':              'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b1/CNN.svg/200px-CNN.svg.png',
+        'cnn international':'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b1/CNN.svg/200px-CNN.svg.png',
+        'al jazeera':       'https://upload.wikimedia.org/wikipedia/commons/thumb/f/f5/Al_Jazeera_Media_Network_Logo.svg/200px-Al_Jazeera_Media_Network_Logo.svg.png',
+        'africa 24':        'https://upload.wikimedia.org/wikipedia/fr/e/e4/Africa24_logo.png',
+        'trace africa':     'https://upload.wikimedia.org/wikipedia/fr/9/90/TRACE_AFRICA_LOGO.jpg',
+        'trace mziki':      'https://upload.wikimedia.org/wikipedia/commons/thumb/4/4c/Trace_Mziki.svg/200px-Trace_Mziki.svg.png',
+        'mbc 1':            'https://upload.wikimedia.org/wikipedia/commons/thumb/5/5b/MBC1_Logo.svg/200px-MBC1_Logo.svg.png',
+        'mbc 2':            'https://upload.wikimedia.org/wikipedia/commons/thumb/f/f9/MBC2.svg/200px-MBC2.svg.png',
+        '2m':               'https://upload.wikimedia.org/wikipedia/commons/thumb/5/5b/2M_Maroc_logo.svg/200px-2M_Maroc_logo.svg.png',
+        '2m maroc':         'https://upload.wikimedia.org/wikipedia/commons/thumb/5/5b/2M_Maroc_logo.svg/200px-2M_Maroc_logo.svg.png',
+        'al aoula':         'https://upload.wikimedia.org/wikipedia/fr/0/00/Al_Aoula_logo.png',
+        'rtm':              'https://upload.wikimedia.org/wikipedia/fr/0/00/Al_Aoula_logo.png',
+        // ── Afrique ──
+        'ortm':             'https://upload.wikimedia.org/wikipedia/fr/8/8b/ORTM_Mali_logo.png',
+        'rti':              'https://upload.wikimedia.org/wikipedia/fr/d/de/RTI_1_logo.png',
+        'rti 1':            'https://upload.wikimedia.org/wikipedia/fr/d/de/RTI_1_logo.png',
+        'rtb':              'https://upload.wikimedia.org/wikipedia/fr/4/4b/RTB_Burkina_Faso.png',
+    };
+
+    function getLogo(ch) {
+        if (!ch) return DEFAULT_TV_LOGO;
+        const name = (ch.name || '').toLowerCase().replace(/\s*(hd|fhd|4k|uhd|ar|fr)\s*/gi, '').trim();
+        if (CHANNEL_LOGOS[name]) return CHANNEL_LOGOS[name];
+        // Partial match
+        for (const [key, url] of Object.entries(CHANNEL_LOGOS)) {
+            if (name.includes(key) || key.includes(name)) return url;
+        }
+        return DEFAULT_TV_LOGO;
     }
 
     // ── Création d'une carte de chaîne ──
@@ -1093,7 +1175,7 @@
         if (window.BokkEPG) {
             const prog = window.BokkEPG.getCurrentProgram(ch.name);
             if (prog && prog.title && !prog.title.includes('24/7')) {
-                subText = `📺 ${prog.title}`;
+                subText = prog.title;
             }
         }
 
@@ -1597,7 +1679,7 @@
         renderCategories();
         renderChannelList(true);
         updateM3uModalStatus();
-        showToast(`✅ ${newChannels.length.toLocaleString('fr-FR')} chaîne(s) importée(s) avec succès !`);
+        showToast(`${newChannels.length.toLocaleString('fr-FR')} chaîne(s) importée(s) avec succès`);
         closeM3uModal();
     }
 
@@ -1918,7 +2000,7 @@
             loadChannel(foundIdx);
             return true;
         } else {
-            showToast(`⚠️ Canal "${queryName || targetId}" non disponible dans cette playlist.`);
+            showToast(`Canal "${queryName || targetId}" non disponible dans cette playlist.`);
             return false;
         }
     }
@@ -2081,7 +2163,7 @@
         if (window.BokkEPG) {
             const prog = window.BokkEPG.getCurrentProgram(channel.name);
             if (prog && prog.title && !prog.title.includes('24/7')) {
-                carouselSub = `📺 ${prog.title}`;
+                carouselSub = prog.title;
             }
         }
 
@@ -2734,12 +2816,12 @@
     async function fetchLiveMatchData() {
         try {
             const leagues = [
-                { slug: 'uefa.champions', name: 'UEFA Champions League', badge: '🏆 UCL' },
-                { slug: 'fra.1',          name: 'Ligue 1',               badge: '🇫🇷 Ligue 1' },
-                { slug: 'esp.1',          name: 'LaLiga',                badge: '🇪🇸 LaLiga' },
-                { slug: 'eng.1',          name: 'Premier League',        badge: '🇬🇧 Premier League' },
-                { slug: 'ita.1',          name: 'Serie A',               badge: '🇮🇹 Serie A' },
-                { slug: 'ger.1',          name: 'Bundesliga',            badge: '🇩🇪 Bundesliga' }
+                { slug: 'uefa.champions', name: 'UEFA Champions League', badge: 'UCL' },
+                { slug: 'fra.1',          name: 'Ligue 1',               badge: 'L1' },
+                { slug: 'esp.1',          name: 'LaLiga',                badge: 'LaLiga' },
+                { slug: 'eng.1',          name: 'Premier League',        badge: 'PL' },
+                { slug: 'ita.1',          name: 'Serie A',               badge: 'Serie A' },
+                { slug: 'ger.1',          name: 'Bundesliga',            badge: 'Bundesliga' }
             ];
 
             const allMatches = [];
@@ -2841,7 +2923,7 @@
                 }
 
                 console.log(`[BOKK TV] ✅ ${allMatches.length} vrais matchs ESPN chargés en direct !`);
-                showToast(`⚽ ${allMatches.length} matchs réels synchronisés en direct`);
+                showToast(`${allMatches.length} matchs synchronisés en direct`);
             }
         } catch (e) {
             console.warn('[BOKK TV] Erreur API Live :', e.message);

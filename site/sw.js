@@ -3,13 +3,14 @@
  * v4 — Correction définitive chargement chaînes & Network-First
  */
 
-const CACHE_NAME = 'bokk-tv-shell-v4';
+const CACHE_NAME = 'bokk-tv-shell-v5';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
   '/style.css',
   '/app.js',
   '/matches.js',
+  '/epg-data.js',
   '/epg.js',
   '/hls.min.js',
   '/mpegts.js',
@@ -58,7 +59,7 @@ self.addEventListener('fetch', (event) => {
   // RÈGLE 2 : Les fichiers JS/CSS critiques → Network-First TOUJOURS
   // (jamais servir une vieille version depuis le cache)
   const criticalFiles = [
-    'channels.js', 'app.js', 'epg.js', 'matches.js', 'style.css', 'index.html'
+    'channels.js', 'app.js', 'epg.js', 'epg-data.js', 'epg_data.json', 'matches.js', 'style.css', 'index.html'
   ];
   const isCritical = criticalFiles.some(f => url.pathname.endsWith(f));
 

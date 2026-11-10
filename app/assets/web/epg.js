@@ -112,25 +112,11 @@
     return parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
   }
 
-  // Cache mémoire instantané EPG (invalidation automatique chaque minute)
-  const _epgCache = new Map();
-  let _lastMinute = -1;
-
   /**
    * Trouve le programme en cours pour une chaîne donnée à l'heure actuelle
    */
   function getCurrentProgram(channelName) {
     if (!channelName) return null;
-
-    const now = new Date();
-    const curMin = now.getHours() * 60 + now.getMinutes();
-    if (curMin !== _lastMinute) {
-      _epgCache.clear();
-      _lastMinute = curMin;
-    } else if (_epgCache.has(channelName)) {
-      return _epgCache.get(channelName);
-    }
-
     const lower = channelName.toLowerCase();
 
     let matchedKey = null;
@@ -141,57 +127,50 @@
     else if (lower.includes('bein')) matchedKey = 'bein';
     else if (lower.includes('rts') || lower.includes('senegal')) matchedKey = 'rts';
 
-    let result = null;
     if (!matchedKey || !CHANNEL_GRIDS[matchedKey]) {
       // Pour les autres chaînes, programme générique intelligent
-      result = {
+      return {
         title: 'Diffusion Directe 24/7',
         start: '00:00',
         end: '23:59',
         progress: 50,
         desc: `${channelName} en streaming direct haute fidélité.`
       };
-    } else {
-      const grid = CHANNEL_GRIDS[matchedKey];
-      const now = new Date();
-      const currentMinutes = now.getHours() * 60 + now.getMinutes();
+    }
 
-      for (const prog of grid) {
-        const sMin = timeToMinutes(prog.start);
-        let eMin = timeToMinutes(prog.end);
-        if (eMin <= sMin) eMin += 24 * 60; // Dépasse minuit
+    const grid = CHANNEL_GRIDS[matchedKey];
+    const now = new Date();
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
 
-        let checkNow = currentMinutes;
-        if (checkNow < sMin && eMin > 24 * 60) checkNow += 24 * 60;
+    for (const prog of grid) {
+      const sMin = timeToMinutes(prog.start);
+      let eMin = timeToMinutes(prog.end);
+      if (eMin <= sMin) eMin += 24 * 60; // Dépasse minuit
 
-        if (checkNow >= sMin && checkNow < eMin) {
-          const total = eMin - sMin;
-          const elapsed = checkNow - sMin;
-          const progress = Math.min(100, Math.max(0, Math.round((elapsed / total) * 100)));
-          result = {
-            title: prog.title,
-            start: prog.start,
-            end: prog.end,
-            desc: prog.desc,
-            progress: progress
-          };
-          break;
-        }
-      }
+      let checkNow = currentMinutes;
+      if (checkNow < sMin && eMin > 24 * 60) checkNow += 24 * 60;
 
-      if (!result) {
-        result = {
-          title: 'Programmes de la nuit',
-          start: '01:00',
-          end: '06:00',
-          progress: 30,
-          desc: 'Diffusion en continu.'
+      if (checkNow >= sMin && checkNow < eMin) {
+        const total = eMin - sMin;
+        const elapsed = checkNow - sMin;
+        const progress = Math.min(100, Math.max(0, Math.round((elapsed / total) * 100)));
+        return {
+          title: prog.title,
+          start: prog.start,
+          end: prog.end,
+          desc: prog.desc,
+          progress: progress
         };
       }
     }
 
-    _epgCache.set(channelName, result);
-    return result;
+    return {
+      title: 'Programmes de la nuit',
+      start: '01:00',
+      end: '06:00',
+      progress: 30,
+      desc: 'Diffusion en continu.'
+    };
   }
 
   // Exposer l'EPG mondialement

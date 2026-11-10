@@ -188,6 +188,27 @@ class BOKKStreamProxyHandler(SimpleHTTPRequestHandler):
         parsed = urllib.parse.urlparse(self.path)
         if parsed.path == '/proxy':
             self.handle_proxy(parsed, is_head=False)
+        elif parsed.path == '/api/epg':
+            self.handle_static_with_gzip('/epg_data.json')
+        elif parsed.path == '/api/epg/update':
+            def _bg_update():
+                try:
+                    root_dir = os.path.dirname(SITE_DIR)
+                    script_path = os.path.join(root_dir, 'update_epg.py')
+                    if os.path.exists(script_path):
+                        import importlib.util
+                        spec = importlib.util.spec_from_file_location("update_epg", script_path)
+                        mod = importlib.util.module_from_spec(spec)
+                        spec.loader.exec_module(mod)
+                        mod.download_xmltv(force=True)
+                        mod.parse_and_generate()
+                except Exception as e:
+                    print(f"[BOKK EPG API] Erreur update : {e}")
+            threading.Thread(target=_bg_update, daemon=True).start()
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json; charset=utf-8')
+            self.end_headers()
+            self.wfile.write(b'{"status":"updating","message":"Mise a jour EPG lancee en arriere-plan"}')
         elif parsed.path == '/speedtest':
             # Endpoint test de vitesse : renvoie un blob aléatoire de 200 KB
             payload = os.urandom(200 * 1024)
@@ -634,6 +655,25 @@ if __name__ == '__main__':
     print(f"   Multi-threading actif pour streaming fluide.")
     print("=" * 60)
     sys.stdout.flush()
+
+    # Démarrage de la vérification EPG en arrière-plan (sans bloquer le serveur)
+    def _bg_epg_check():
+        time.sleep(3)
+        try:
+            root_dir = os.path.dirname(SITE_DIR)
+            script_path = os.path.join(root_dir, 'update_epg.py')
+            if os.path.exists(script_path):
+                import importlib.util
+                spec = importlib.util.spec_from_file_location("update_epg", script_path)
+                mod = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(mod)
+                mod.download_xmltv(force=False)
+                mod.parse_and_generate()
+        except Exception as e:
+            sys.stderr.write(f"[BOKK EPG] Mise a jour automatique ignoree : {e}\n")
+
+    threading.Thread(target=_bg_epg_check, daemon=True).start()
+
     try:
         server.serve_forever()
     except KeyboardInterrupt:

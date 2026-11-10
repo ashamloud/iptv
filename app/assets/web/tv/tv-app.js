@@ -38,9 +38,9 @@
 
     // ── Catégories TV ──
     const CATEGORIES = [
-        { key: 'senegal', label: '🇸🇳 Sénégal' },
+        { key: 'senegal', label: 'Sénégal' },
         { key: 'afrique', label: 'Afrique' },
-        { key: 'francophone', label: '🇫🇷 France & TNT' },
+        { key: 'francophone', label: 'France & TNT' },
         { key: 'sport', label: 'Sport Direct' },
         { key: 'cinema', label: 'Films & Séries' },
         { key: 'music', label: 'Musique Afrique' },
@@ -48,13 +48,13 @@
         { key: 'jeunesse', label: 'Jeunesse' },
         { key: 'favoris', label: 'Mes Favoris' },
         { key: 'tous', label: 'Tout le Catalogue' },
-        { key: 'uk', label: '🇬🇧 UK & USA' },
-        { key: 'espagne', label: '🇪🇸 Espagne' },
-        { key: 'allemagne', label: '🇩🇪 Allemagne' },
-        { key: 'italie', label: '🇮🇹 Italie' },
-        { key: 'exyu', label: '🇷🇸 Ex-Yougoslavie' },
-        { key: 'adulte', label: '🔞 Adulte' },
-        { key: 'monde', label: '🌐 Monde' }
+        { key: 'uk', label: 'UK & USA' },
+        { key: 'espagne', label: 'Espagne' },
+        { key: 'allemagne', label: 'Allemagne' },
+        { key: 'italie', label: 'Italie' },
+        { key: 'exyu', label: 'Ex-Yougoslavie' },
+        { key: 'adulte', label: 'Adulte (+18)' },
+        { key: 'monde', label: 'Monde' }
     ];
 
     // ── Variables d'état & Catalogue Chaînes ──
@@ -150,7 +150,7 @@
         list.slice(0, 30).forEach((b, idx) => {
             const btn = document.createElement('button');
             btn.className = 'tv-bouquet-btn' + (b === currentBouquet ? ' active' : '');
-            btn.textContent = b === 'all' ? '⚡ Tous les bouquets' : b;
+            btn.textContent = b === 'all' ? 'Tous les bouquets' : b;
             btn.dataset.index = idx;
             btn.dataset.bouquet = b;
             btn.onclick = () => {
@@ -206,7 +206,7 @@
 
         if (gridLabelEl) {
             if (q) {
-                gridLabelEl.textContent = `🔍 Recherche : "${searchQuery.trim()}"`;
+                gridLabelEl.textContent = `Recherche : "${searchQuery.trim()}"`;
             } else {
                 const catObj = CATEGORIES.find(c => c.key === currentCat);
                 gridLabelEl.textContent = catObj ? catObj.label : 'Chaînes';
@@ -426,7 +426,7 @@
             if (window.BokkEPG) {
                 const prog = window.BokkEPG.getCurrentProgram(channel.name);
                 if (prog) {
-                    descText = `📺 ${prog.title} (${prog.start} - ${prog.end})`;
+                    descText = `${prog.title} (${prog.start} - ${prog.end})`;
                 }
             }
             osdDescEl.textContent = descText;
