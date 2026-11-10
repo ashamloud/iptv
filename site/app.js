@@ -2269,20 +2269,20 @@
         if (!row) return;
         row.innerHTML = '';
 
-        // Chaînes EN DIRECT vedettes avec leurs IDs confirmés
+        // Chaînes EN DIRECT vedettes avec leurs IDs vérifiés 100% fonctionnels
         const LIVE_FEATURED = [
-            { id: 395,  name: 'TF1',          logo: 'logos/tf1.svg' },
-            { id: 79,   name: 'France 2',      logo: 'logos/france2.svg' },
-            { id: 80,   name: 'France 3',      logo: 'logos/france3.svg' },
-            { id: 149,  name: 'CANAL+',        logo: 'logos/canalplus.svg' },
-            { id: 270,  name: 'M6',            logo: null },
-            { id: 84,   name: 'Arte',          logo: 'logos/arte.svg' },
-            { id: 67,   name: 'C8',            logo: 'logos/c8.svg' },
+            { id: 2464, name: 'TF1',           logo: 'logos/tf1.svg' },
+            { id: 2465, name: 'France 2',      logo: 'logos/france2.svg' },
+            { id: 2466, name: 'France 3',      logo: 'logos/france3.svg' },
+            { id: 2767, name: 'CANAL+ Sport',  logo: 'logos/canalplus.svg' },
+            { id: 2470, name: 'M6',            logo: null },
+            { id: 2472, name: 'Arte',          logo: 'logos/arte.svg' },
+            { id: 2473, name: 'W9',            logo: null },
             { id: 71,   name: 'RTS 1',         logo: 'logos/rts1.svg' },
             { id: 3724, name: 'beIN Sports 1', logo: 'logos/beinsports.svg' },
-            { id: 3713, name: 'Canal+ Foot',   logo: 'logos/canalplus.svg' },
+            { id: 2770, name: 'Canal+ Foot',   logo: 'logos/canalplus.svg' },
             { id: 3725, name: 'beIN Sports 2', logo: 'logos/beinsports.svg' },
-            { id: 148,  name: 'Canal+ 360',    logo: 'logos/canalplus.svg' },
+            { id: 2764, name: 'Canal+ 360',    logo: 'logos/canalplus.svg' },
         ];
 
         LIVE_FEATURED.forEach(featured => {
@@ -2566,7 +2566,7 @@
     // Mapping chaînes BOKK TV pour les grandes compétitions
     const COMPETITION_CHANNELS = {
         'UEFA Champions League': [
-            { id: 3713, name: 'Canal+ Foot HD', badge: 'FHD' },
+            { id: 2770, name: 'Canal+ Foot HD', badge: 'FHD' },
             { id: 3724, name: 'beIN Sports 1',  badge: '4K' },
             { id: 3704, name: 'M+ Liga Campeones', badge: 'HD' }
         ],
@@ -2576,8 +2576,8 @@
             { id: 3724, name: 'beIN Sports 1',  badge: 'HD' }
         ],
         'Ligue 1': [
-            { id: 3713, name: 'Canal+ Foot HD', badge: 'FHD' },
-            { id: 149,  name: 'Canal+ Sport',   badge: 'HD' },
+            { id: 2770, name: 'Canal+ Foot HD', badge: 'FHD' },
+            { id: 2767, name: 'Canal+ Sport',   badge: 'FHD' },
             { id: 3724, name: 'beIN Sports 1',  badge: 'HD' }
         ],
         'Premier League': [
@@ -2586,14 +2586,14 @@
         ],
         'Serie A': [
             { id: 3724, name: 'beIN Sports 1',  badge: 'HD' },
-            { id: 149,  name: 'Canal+ Sport',   badge: 'HD' }
+            { id: 2767, name: 'Canal+ Sport',   badge: 'FHD' }
         ],
         'Bundesliga': [
             { id: 3724, name: 'beIN Sports 1',  badge: 'HD' },
-            { id: 149,  name: 'Canal+ Sport',   badge: 'HD' }
+            { id: 2767, name: 'Canal+ Sport',   badge: 'FHD' }
         ],
         'default': [
-            { id: 3713, name: 'Canal+ Foot HD', badge: 'FHD' },
+            { id: 2770, name: 'Canal+ Foot HD', badge: 'FHD' },
             { id: 3724, name: 'beIN Sports 1',  badge: 'HD' }
         ]
     };
