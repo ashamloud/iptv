@@ -507,6 +507,9 @@
         currentIndex = index;
         isTryingFallback = useFallback;
 
+        // Révéler le lecteur vidéo dès qu'une chaîne est sélectionnée
+        revealPlayer();
+
         // Détruire tout lecteur actif (HLS ou MPEG-TS)
         destroyActivePlayer();
 
@@ -1912,11 +1915,7 @@
         }
 
         if (foundIdx !== -1) {
-            const playerStageSec = document.getElementById('player-stage-section');
-            if (playerStageSec) {
-                playerStageSec.classList.add('active');
-                playerStageSec.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }
+            revealPlayer();
             loadChannel(foundIdx);
             return true;
         } else {
@@ -2111,11 +2110,8 @@
         `;
 
         card.addEventListener('click', () => {
-            const playerStageSec = document.getElementById('player-stage-section');
-            if (playerStageSec) {
-                playerStageSec.classList.add('active');
-                playerStageSec.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }
+            enableAudioOnFirstGesture();
+            revealPlayer();
             loadChannel(index);
         });
 
@@ -2250,12 +2246,15 @@
                 btn.classList.toggle('active', btn.dataset.view === view);
             });
 
-            if (pageHome) pageHome.style.display = '';
-            if (pageCatalogue) pageCatalogue.style.display = '';
-
             if (view === 'home') {
+                if (pageHome) pageHome.style.display = 'block';
+                if (pageCatalogue) pageCatalogue.style.display = 'none';
                 window.scrollTo({ top: 0, behavior: 'smooth' });
             } else {
+                if (pageHome) pageHome.style.display = 'none';
+                if (pageCatalogue) pageCatalogue.style.display = 'block';
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+
                 // Activer la bonne catégorie selon l'onglet
                 const catMap = {
                     'live': 'francophone',
@@ -2267,12 +2266,9 @@
                 };
                 const targetCat = catMap[view] || 'tous';
                 currentCategory = targetCat;
+                userManuallySelectedCategory = true;
                 renderCategories();
                 renderChannelList(true);
-
-                if (pageCatalogue) {
-                    pageCatalogue.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                }
             }
         }
 
