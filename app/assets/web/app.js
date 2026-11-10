@@ -519,6 +519,12 @@
         highlightActiveChannel();
         ensureUnmuted();   // ← Rétablir le son si l'utilisateur avait déjà interagi
 
+        // ── Révéler le lecteur (nouveau design myCANAL) ──
+        const playerWrapper = document.getElementById('player-wrapper');
+        if (playerWrapper && playerWrapper.style.display === 'none') {
+            playerWrapper.style.display = 'block';
+        }
+
         // Activer et révéler le lecteur s'il était minimisé
         const playerStageSec = document.getElementById('player-stage-section');
         if (playerStageSec && !playerStageSec.classList.contains('active')) {
@@ -2132,38 +2138,10 @@
     }
 
     function renderStreamingCarousels() {
-        // 1. Sénégal
-        populateCarouselRow('track-senegal', (c) => {
-            return (c.group && c.group.toLowerCase().includes('sénégal')) || 
-                   (c.name && /rts|tfm|2stv|sen tv|walf|sunu/i.test(c.name));
-        }, 24);
+        // Les carousels home sont maintenant gérés par renderHomeCarousels()
+        // Cette fonction gère uniquement les favoris et les flèches de navigation
 
-        // 2. Sports VIP & beIN Sports
-        populateCarouselRow('track-sports', (c) => {
-            return (c.name && /bein|canal\+ sport|canal\+ foot|rmc|dazn|sky sport|m\+ laliga/i.test(c.name));
-        }, 30);
-
-        // 3. France TNT
-        populateCarouselRow('track-france', (c) => {
-            return (c.name && /\b(tf1|france 2|france 3|france 4|france 5|m6|w9|tmc|arte|c8|canal\+)\b/i.test(c.name));
-        }, 24);
-
-        // 4. Cinéma & Séries 24/7
-        populateCarouselRow('track-cinema', (c) => {
-            return (c.name && /cinema|ciné\+|ocs|action|warner|paramount|hbo/i.test(c.name));
-        }, 24);
-
-        // 5. Espagne & La Liga
-        populateCarouselRow('track-espagne', (c) => {
-            return (c.group && c.group.includes('ES|')) || (c.name && /laliga|movistar/i.test(c.name));
-        }, 24);
-
-        // 6. Allemagne & Sky DE
-        populateCarouselRow('track-allemagne', (c) => {
-            return (c.group && c.group.includes('DE|')) || (c.name && /bundesliga|sky sport/i.test(c.name));
-        }, 24);
-
-        // 7. Favoris
+        // Favoris
         updateFavoritesRow();
 
         // Flèches de navigation carrousel
@@ -2201,6 +2179,396 @@
         }
     }
 
+    // ── Horloge Nav ──
+    function updateNavClock() {
+        const cl = document.getElementById('topnav-clock');
+        if (!cl) return;
+        const now = new Date();
+        cl.textContent = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
+    }
+
+    // ── Révéler le lecteur ──
+    function revealPlayer() {
+        const pw = document.getElementById('player-wrapper');
+        if (pw) {
+            pw.style.display = 'block';
+            pw.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+    }
+
+    // ── Switcher de vues (page-home / page-catalogue) ──
+    function setupViewSwitching() {
+        const pageHome      = document.getElementById('page-home');
+        const pageCatalogue = document.getElementById('page-catalogue');
+
+        function switchView(view) {
+            // Mettre à jour les onglets actifs
+            document.querySelectorAll('.tmenu-item').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.view === view);
+            });
+
+            if (view === 'home') {
+                if (pageHome) pageHome.style.display = '';
+                if (pageCatalogue) pageCatalogue.style.display = 'none';
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            } else {
+                if (pageHome) pageHome.style.display = 'none';
+                if (pageCatalogue) pageCatalogue.style.display = '';
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+
+                // Activer la bonne catégorie selon l'onglet
+                const catMap = {
+                    'live': 'francophone',
+                    'sport': 'sport',
+                    'films': 'cinema',
+                    'series': 'cinema',
+                    'senegal': 'senegal',
+                    'catalogue': 'tous'
+                };
+                if (catMap[view] && catMap[view] !== currentCategory) {
+                    currentCategory = catMap[view];
+                    renderCategories();
+                    renderChannelList(true);
+                }
+            }
+        }
+
+        // Boutons du menu principal
+        document.querySelectorAll('.tmenu-item[data-view]').forEach(btn => {
+            btn.addEventListener('click', () => switchView(btn.dataset.view));
+        });
+
+        // Boutons "Tout voir →"
+        document.querySelectorAll('.see-all-btn[data-view]').forEach(btn => {
+            btn.addEventListener('click', () => switchView(btn.dataset.view));
+        });
+
+        // Logo → accueil
+        const brandHomeLink = document.getElementById('brand-home-link');
+        if (brandHomeLink) {
+            brandHomeLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                switchView('home');
+            });
+        }
+
+        // Bouton Favoris → catalogue filtré
+        const navFavoris = document.getElementById('nav-btn-favoris');
+        if (navFavoris) {
+            navFavoris.addEventListener('click', () => {
+                switchView('catalogue');
+                setTimeout(() => {
+                    currentCategory = 'favoris';
+                    userManuallySelectedCategory = true;
+                    renderCategories();
+                    renderChannelList(true);
+                }, 50);
+            });
+        }
+
+        // Bouton Regarder en direct du hero
+        const heroBtnWatch = document.getElementById('hero-btn-watch');
+        if (heroBtnWatch && !heroBtnWatch._switched) {
+            heroBtnWatch._switched = true;
+            const originalClick = heroBtnWatch.onclick;
+            heroBtnWatch.addEventListener('click', () => {
+                revealPlayer();
+            });
+        }
+
+        // Bouton Voir tous les matchs du hero
+        const heroBtnMatches = document.getElementById('hero-btn-matches');
+        if (heroBtnMatches) {
+            heroBtnMatches.addEventListener('click', () => {
+                const matchSec = document.getElementById('section-matchs');
+                if (matchSec) matchSec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            });
+        }
+
+        // Fermeture du lecteur
+        const playerCloseBtn = document.getElementById('player-close-btn');
+        if (playerCloseBtn) {
+            playerCloseBtn.addEventListener('click', () => {
+                const pw = document.getElementById('player-wrapper');
+                if (pw) pw.style.display = 'none';
+                destroyActivePlayer();
+            });
+        }
+
+        // Exposer switchView globalement
+        window._bokkSwitchView = switchView;
+    }
+
+    // ── EN DIRECT — Logos des grandes chaînes (style exact myCANAL) ──
+    function renderLiveLogosRow() {
+        const row = document.getElementById('live-logos-row');
+        if (!row) return;
+        row.innerHTML = '';
+
+        // Chaînes EN DIRECT vedettes avec leurs IDs confirmés
+        const LIVE_FEATURED = [
+            { id: 395,  name: 'TF1',          logo: 'logos/tf1.svg' },
+            { id: 79,   name: 'France 2',      logo: 'logos/france2.svg' },
+            { id: 80,   name: 'France 3',      logo: 'logos/france3.svg' },
+            { id: 149,  name: 'CANAL+',        logo: 'logos/canalplus.svg' },
+            { id: 270,  name: 'M6',            logo: null },
+            { id: 84,   name: 'Arte',          logo: 'logos/arte.svg' },
+            { id: 67,   name: 'C8',            logo: 'logos/c8.svg' },
+            { id: 71,   name: 'RTS 1',         logo: 'logos/rts1.svg' },
+            { id: 3724, name: 'beIN Sports 1', logo: 'logos/beinsports.svg' },
+            { id: 3713, name: 'Canal+ Foot',   logo: 'logos/canalplus.svg' },
+            { id: 3725, name: 'beIN Sports 2', logo: 'logos/beinsports.svg' },
+            { id: 148,  name: 'Canal+ 360',    logo: 'logos/canalplus.svg' },
+        ];
+
+        LIVE_FEATURED.forEach(featured => {
+            // Trouver l'index dans le tableau des chaînes
+            const idx = channels.findIndex(c => c.id === featured.id);
+
+            const card = document.createElement('div');
+            card.className = 'live-logo-card' + (idx === currentIndex ? ' now-playing' : '');
+            card.title = featured.name;
+
+            // Badge LIVE
+            const badge = document.createElement('span');
+            badge.className = 'live-channel-mini-badge';
+            badge.textContent = 'LIVE';
+            card.appendChild(badge);
+
+            // Logo ou texte
+            if (featured.logo) {
+                const img = document.createElement('img');
+                img.src = featured.logo;
+                img.alt = featured.name;
+                img.onerror = function() {
+                    this.onerror = null;
+                    this.remove();
+                    const txt = document.createElement('span');
+                    txt.className = 'logo-name-fallback';
+                    txt.textContent = featured.name;
+                    card.appendChild(txt);
+                };
+                card.appendChild(img);
+            } else {
+                const txt = document.createElement('span');
+                txt.className = 'logo-name-fallback';
+                txt.textContent = featured.name;
+                card.appendChild(txt);
+            }
+
+            card.addEventListener('click', () => {
+                enableAudioOnFirstGesture();
+                revealPlayer();
+                if (idx !== -1) {
+                    loadChannel(idx);
+                } else {
+                    loadChannelByIdOrQuery(featured.id, featured.name);
+                }
+                // Mettre à jour le highlight
+                row.querySelectorAll('.live-logo-card').forEach(c => c.classList.remove('now-playing'));
+                card.classList.add('now-playing');
+            });
+
+            row.appendChild(card);
+        });
+    }
+
+    // ── À LA UNE — Poster cards par thème (style exact myCANAL) ──
+    function renderUneCards() {
+        const row = document.getElementById('une-cards-row');
+        if (!row) return;
+        row.innerHTML = '';
+
+        const UNE_CATEGORIES = [
+            {
+                label: 'Ligue 1',
+                img: 'https://images.unsplash.com/photo-1522778119026-d647f0596c20?auto=format&fit=crop&w=600&q=80',
+                view: 'sport',
+                catKey: 'sport'
+            },
+            {
+                label: 'Aventure',
+                img: 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?auto=format&fit=crop&w=600&q=80',
+                view: 'films',
+                catKey: 'cinema'
+            },
+            {
+                label: 'Action',
+                img: 'https://images.unsplash.com/photo-1569701813229-33284b643e3c?auto=format&fit=crop&w=600&q=80',
+                view: 'films',
+                catKey: 'cinema'
+            },
+            {
+                label: 'Comédie',
+                img: 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=600&q=80',
+                view: 'series',
+                catKey: 'cinema'
+            },
+            {
+                label: 'Documentaire',
+                img: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=600&q=80',
+                view: 'catalogue',
+                catKey: 'documentaire'
+            },
+            {
+                label: 'Sénégal',
+                img: 'https://images.unsplash.com/photo-1547471080-7cc2caa01a7e?auto=format&fit=crop&w=600&q=80',
+                view: 'senegal',
+                catKey: 'senegal'
+            },
+            {
+                label: 'Football',
+                img: 'https://images.unsplash.com/photo-1568430462989-44163eb1752f?auto=format&fit=crop&w=600&q=80',
+                view: 'sport',
+                catKey: 'sport'
+            },
+        ];
+
+        UNE_CATEGORIES.forEach(cat => {
+            const card = document.createElement('div');
+            card.className = 'une-card';
+
+            const bg = document.createElement('div');
+            bg.className = 'une-card-bg';
+            bg.style.backgroundImage = `url('${cat.img}')`;
+
+            const overlay = document.createElement('div');
+            overlay.className = 'une-card-overlay';
+
+            const label = document.createElement('div');
+            label.className = 'une-card-label';
+            label.textContent = cat.label;
+
+            card.appendChild(bg);
+            card.appendChild(overlay);
+            card.appendChild(label);
+
+            card.addEventListener('click', () => {
+                if (window._bokkSwitchView) window._bokkSwitchView(cat.view);
+                setTimeout(() => {
+                    if (cat.catKey && cat.catKey !== currentCategory) {
+                        currentCategory = cat.catKey;
+                        userManuallySelectedCategory = true;
+                        renderCategories();
+                        renderChannelList(true);
+                    }
+                }, 50);
+            });
+
+            row.appendChild(card);
+        });
+    }
+
+    // ── Rendu des mini-cartes matchs (scroll row sur la home) ──
+    function renderMatchesScrollRow() {
+        const row = document.getElementById('matches-scroll-row');
+        if (!row) return;
+        row.innerHTML = '';
+
+        const matches = (typeof window !== 'undefined' && window.FEATURED_MATCHES) ? window.FEATURED_MATCHES : [];
+        if (!matches || matches.length === 0) return;
+
+        matches.forEach(m => {
+            const card = document.createElement('div');
+            card.className = 'match-mini-card';
+
+            const statusHtml = m.isLive
+                ? `<span class="match-status-live"><span class="live-dot"></span> LIVE ${m.liveMinute || ''}</span>`
+                : `<span class="match-status-scheduled">${m.date} • ${m.time}</span>`;
+
+            const channelBtnsHtml = (m.channels || []).slice(0, 3).map(ch =>
+                `<button class="mm-ch-btn" data-chid="${ch.id}" data-chname="${ch.name}">
+                    <span class="mm-ch-quality">${ch.badge || 'HD'}</span>
+                    ▶ ${ch.name}
+                </button>`
+            ).join('');
+
+            card.innerHTML = `
+                <div class="match-mini-poster" style="background-image: url('${m.poster}');">
+                    <div class="match-mini-poster-overlay"></div>
+                    <div class="match-mini-toprow">
+                        <span class="match-comp-badge">${m.competitionBadge || m.competition}</span>
+                        ${statusHtml}
+                    </div>
+                    <div class="match-mini-teams">
+                        <div class="mm-team">
+                            <img src="${m.teamA.logo}" alt="${m.teamA.name}" class="mm-team-crest" onerror="this.style.opacity='0.4'">
+                            <span class="mm-team-name">${m.teamA.name}</span>
+                        </div>
+                        <div class="mm-score">
+                            <span class="mm-score-val">${m.score || 'VS'}</span>
+                            ${m.isLive && m.liveMinute ? `<span class="mm-minute">${m.liveMinute}</span>` : ''}
+                        </div>
+                        <div class="mm-team">
+                            <img src="${m.teamB.logo}" alt="${m.teamB.name}" class="mm-team-crest" onerror="this.style.opacity='0.4'">
+                            <span class="mm-team-name">${m.teamB.name}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="match-mini-body">
+                    <div class="match-mini-title">${m.title}</div>
+                    <div class="match-mini-channels">${channelBtnsHtml}</div>
+                </div>
+            `;
+
+            // Clic sur les boutons de chaîne
+            card.querySelectorAll('.mm-ch-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const chId = parseInt(btn.dataset.chid);
+                    const chName = btn.dataset.chname;
+                    showToast(`▶ ${chName} — ${m.title}`);
+                    enableAudioOnFirstGesture();
+                    revealPlayer();
+                    loadChannelByIdOrQuery(chId, chName);
+                });
+            });
+
+            // Clic global sur la carte → première chaîne
+            card.addEventListener('click', () => {
+                if (m.channels && m.channels.length > 0) {
+                    const ch = m.channels[0];
+                    showToast(`▶ ${ch.name} — ${m.title}`);
+                    enableAudioOnFirstGesture();
+                    revealPlayer();
+                    loadChannelByIdOrQuery(ch.id, ch.name);
+                }
+            });
+
+            row.appendChild(card);
+        });
+    }
+
+    // ── Carousels thématiques — relie les IDs corrects du HTML ──
+    function renderHomeCarousels() {
+        // Sénégal
+        populateCarouselRow('carousel-senegal', c =>
+            (c.name && /rts|tfm|2stv|sen tv|walf|sunu/i.test(c.name)) ||
+            (c.group && c.group.toLowerCase().includes('sénégal')),
+        24);
+
+        // Sport
+        populateCarouselRow('carousel-sports', c =>
+            c.name && /bein|canal\+ sport|canal\+ foot|rmc|dazn|sky sport|m\+ laliga/i.test(c.name),
+        30);
+
+        // Cinéma
+        populateCarouselRow('carousel-cinema', c =>
+            c.name && /cinema|ciné\+|ocs|action|warner|paramount|hbo/i.test(c.name),
+        24);
+
+        // France
+        populateCarouselRow('carousel-france', c =>
+            c.name && /\b(tf1|france 2|france 3|france 4|france 5|m6|w9|tmc|arte|c8|canal\+)\b/i.test(c.name),
+        24);
+
+        // Espagne
+        populateCarouselRow('carousel-espagne', c =>
+            (c.group && c.group.includes('ES|')) ||
+            (c.name && /laliga|movistar/i.test(c.name)),
+        24);
+    }
+
     // ── Navigation et Défilement Fluide ──
     function setupNavScroll() {
         document.querySelectorAll('.nav-link[data-scroll]').forEach(link => {
@@ -2216,20 +2584,9 @@
             });
         });
 
-        const navBtnCatalogue = document.getElementById('nav-btn-catalogue');
-        if (navBtnCatalogue) {
-            navBtnCatalogue.addEventListener('click', (e) => {
-                e.preventDefault();
-                const catSec = document.getElementById('catalogue-section');
-                if (catSec) {
-                    catSec.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    if (searchInput) searchInput.focus();
-                }
-            });
-        }
-
         const brandHomeLink = document.getElementById('brand-home-link');
-        if (brandHomeLink) {
+        if (brandHomeLink && !brandHomeLink._navScrollBound) {
+            brandHomeLink._navScrollBound = true;
             brandHomeLink.addEventListener('click', (e) => {
                 e.preventDefault();
                 window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -2237,30 +2594,273 @@
         }
     }
 
-    // ── Initialisation ──
-    function init() {
-        if (isGridView) {
-            if (btnViewGrid) btnViewGrid.classList.add('active');
-            if (btnViewList) btnViewList.classList.remove('active');
-            document.body.classList.add('grid-view-active');
-            if (appSidebar) appSidebar.classList.add('grid-expanded');
+    // ═══════════════════════════════════════════════════════════════
+    // DONNÉES LIVE — Matchs en temps réel (TheSportsDB API gratuite)
+    // Mise à jour automatique toutes les 5 minutes
+    // ═══════════════════════════════════════════════════════════════
+
+    // Mapping chaînes BOKK TV pour les grandes compétitions
+    const COMPETITION_CHANNELS = {
+        'UEFA Champions League': [
+            { id: 3724, name: 'beIN Sports 1', badge: '4K' },
+            { id: 3725, name: 'beIN Sports 2', badge: 'HD' },
+            { id: 149,  name: 'Canal+ Sport',  badge: 'HD' }
+        ],
+        'LaLiga': [
+            { id: 5245, name: 'M+ LaLiga 4K',  badge: '4K' },
+            { id: 5293, name: 'DAZN LaLiga',   badge: 'HD' },
+            { id: 3724, name: 'beIN Sports 1', badge: 'HD' }
+        ],
+        'Ligue 1': [
+            { id: 149,  name: 'Canal+ Sport',   badge: 'HD' },
+            { id: 3713, name: 'Canal+ Foot HD', badge: 'FHD' },
+            { id: 3724, name: 'beIN Sports 1',  badge: 'HD' }
+        ],
+        'Premier League': [
+            { id: 2774, name: 'Canal+ Premier League', badge: 'HD' },
+            { id: 3724, name: 'beIN Sports 1',         badge: 'HD' }
+        ],
+        'Serie A': [
+            { id: 3724, name: 'beIN Sports 1', badge: 'HD' },
+            { id: 149,  name: 'Canal+ Sport',  badge: 'HD' }
+        ],
+        'Bundesliga': [
+            { id: 3724, name: 'beIN Sports 1', badge: 'HD' },
+            { id: 149,  name: 'Canal+ Sport',  badge: 'HD' }
+        ],
+        'default': [
+            { id: 3724, name: 'beIN Sports 1', badge: 'HD' },
+            { id: 149,  name: 'Canal+ Sport',  badge: 'HD' }
+        ]
+    };
+
+    // Logos équipes via TheSportsDB ou Wikipedia
+    function getTeamLogo(teamName) {
+        const known = {
+            'Real Madrid':     'https://upload.wikimedia.org/wikipedia/en/5/56/Real_Madrid_CF.svg',
+            'Barcelona':       'https://upload.wikimedia.org/wikipedia/en/4/47/FC_Barcelona_%28crest%29.svg',
+            'FC Barcelona':    'https://upload.wikimedia.org/wikipedia/en/4/47/FC_Barcelona_%28crest%29.svg',
+            'Manchester City': 'https://upload.wikimedia.org/wikipedia/en/e/eb/Manchester_City_FC_badge.svg',
+            'Manchester United':'https://upload.wikimedia.org/wikipedia/en/7/7a/Manchester_United_FC_crest.svg',
+            'Arsenal':         'https://upload.wikimedia.org/wikipedia/en/5/53/Arsenal_FC.svg',
+            'Liverpool':       'https://upload.wikimedia.org/wikipedia/en/0/0c/Liverpool_FC.svg',
+            'Chelsea':         'https://upload.wikimedia.org/wikipedia/en/c/cc/Chelsea_FC.svg',
+            'PSG':             'https://upload.wikimedia.org/wikipedia/en/a/a7/Paris_Saint-Germain_F.C..svg',
+            'Paris Saint-Germain': 'https://upload.wikimedia.org/wikipedia/en/a/a7/Paris_Saint-Germain_F.C..svg',
+            'Bayern Munich':   'https://upload.wikimedia.org/wikipedia/commons/1/1b/FC_Bayern_M%C3%BCnchen_logo_%282002%E2%80%932017%29.svg',
+            'FC Bayern München': 'https://upload.wikimedia.org/wikipedia/commons/1/1b/FC_Bayern_M%C3%BCnchen_logo_%282002%E2%80%932017%29.svg',
+            'Borussia Dortmund': 'https://upload.wikimedia.org/wikipedia/commons/6/67/Borussia_Dortmund_logo.svg',
+            'Juventus':        'https://upload.wikimedia.org/wikipedia/commons/1/15/Juventus_FC_2017_logo.svg',
+            'AC Milan':        'https://upload.wikimedia.org/wikipedia/commons/d/d0/Logo_of_AC_Milan.svg',
+            'Inter Milan':     'https://upload.wikimedia.org/wikipedia/commons/0/05/FC_Internazionale_Milano_2021.svg',
+            'Atletico Madrid': 'https://upload.wikimedia.org/wikipedia/en/f/f4/Atletico_Madrid_2017_logo.svg',
+            'Atlético de Madrid': 'https://upload.wikimedia.org/wikipedia/en/f/f4/Atletico_Madrid_2017_logo.svg',
+            'Marseille':       'https://upload.wikimedia.org/wikipedia/commons/d/d8/Olympique_Marseille_logo.svg',
+            'Olympique de Marseille': 'https://upload.wikimedia.org/wikipedia/commons/d/d8/Olympique_Marseille_logo.svg',
+            'Lyon':            'https://upload.wikimedia.org/wikipedia/en/e/e9/Olympique_Lyonnais.svg',
+            'Monaco':          'https://upload.wikimedia.org/wikipedia/en/e/ea/AS_Monaco_FC.svg',
+            'Sénégal':         'https://upload.wikimedia.org/wikipedia/commons/f/fd/Flag_of_Senegal.svg',
+            'Morocco':         'https://upload.wikimedia.org/wikipedia/commons/2/2c/Flag_of_Morocco.svg',
+            'Nigeria':         'https://upload.wikimedia.org/wikipedia/commons/7/79/Flag_of_Nigeria.svg',
+        };
+        for (const [key, url] of Object.entries(known)) {
+            if (teamName && teamName.toLowerCase().includes(key.toLowerCase())) return url;
+        }
+        // Fallback: TheSportsDB search
+        return `https://www.thesportsdb.com/images/media/team/badge/${encodeURIComponent(teamName)}_200x200.webp`;
+    }
+
+    // Poster de match par compétition
+    function getMatchPoster(competition, teamA, teamB) {
+        const posters = {
+            'UEFA Champions League': 'https://images.unsplash.com/photo-1522778119026-d647f0596c20?auto=format&fit=crop&w=1200&q=80',
+            'LaLiga': 'https://images.unsplash.com/photo-1543326727-cf6c39e8f84c?auto=format&fit=crop&w=1200&q=80',
+            'Ligue 1': 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1200&q=80',
+            'Premier League': 'https://images.unsplash.com/photo-1529900748604-07564a03e7a6?auto=format&fit=crop&w=1200&q=80',
+            'Serie A': 'https://images.unsplash.com/photo-1517466787929-bc90951d0974?auto=format&fit=crop&w=1200&q=80',
+            'Bundesliga': 'https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?auto=format&fit=crop&w=1200&q=80',
+        };
+        return posters[competition] || 'https://images.unsplash.com/photo-1568430462989-44163eb1752f?auto=format&fit=crop&w=1200&q=80';
+    }
+
+    // Fetch matchs live & prochains depuis TheSportsDB
+    async function fetchLiveMatchData() {
+        try {
+            // Leagues à surveiller (IDs TheSportsDB)
+            const leagues = [
+                { id: 4480, name: 'UEFA Champions League', badge: '🏆 UCL' },
+                { id: 4335, name: 'LaLiga',                badge: '🇪🇸 LaLiga' },
+                { id: 4334, name: 'Ligue 1',               badge: '🇫🇷 Ligue 1' },
+                { id: 4328, name: 'Premier League',        badge: '🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier League' },
+                { id: 4332, name: 'Serie A',               badge: '🇮🇹 Serie A' },
+                { id: 4331, name: 'Bundesliga',            badge: '🇩🇪 Bundesliga' },
+            ];
+
+            // Season courante
+            const year = new Date().getFullYear();
+            const season = new Date().getMonth() >= 7 ? year : year - 1;
+
+            const allMatches = [];
+
+            // Fetch les prochains matchs pour chaque ligue (en parallèle)
+            await Promise.allSettled(leagues.map(async (league) => {
+                try {
+                    const url = `https://www.thesportsdb.com/api/v1/json/3/eventsnextleague.php?id=${league.id}`;
+                    const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
+                    if (!res.ok) return;
+                    const data = await res.json();
+                    const events = data.events || [];
+
+                    events.slice(0, 3).forEach(ev => {
+                        // Date formatée
+                        const evDate = new Date(ev.dateEvent + 'T' + (ev.strTime || '20:00:00') + 'Z');
+                        const isLive = Math.abs(Date.now() - evDate.getTime()) < 2 * 60 * 60 * 1000; // ±2h
+
+                        const channels = COMPETITION_CHANNELS[league.name] || COMPETITION_CHANNELS['default'];
+
+                        allMatches.push({
+                            id: ev.idEvent,
+                            title: `${ev.strHomeTeam} vs ${ev.strAwayTeam}`,
+                            competition: league.name,
+                            competitionBadge: league.badge,
+                            category: 'football',
+                            teamA: { name: ev.strHomeTeam, logo: ev.strHomeTeamBadge || getTeamLogo(ev.strHomeTeam) },
+                            teamB: { name: ev.strAwayTeam, logo: ev.strAwayTeamBadge || getTeamLogo(ev.strAwayTeam) },
+                            poster: ev.strThumb || getMatchPoster(league.name, ev.strHomeTeam, ev.strAwayTeam),
+                            score: ev.intHomeScore !== null && ev.intAwayScore !== null
+                                ? `${ev.intHomeScore}-${ev.intAwayScore}` : 'VS',
+                            date: evDate.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' }),
+                            time: evDate.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
+                            isLive: isLive && (ev.strStatus === 'Match Finished' ? false : isLive),
+                            liveMinute: isLive ? '🔴 LIVE' : null,
+                            stage: ev.strRound ? `Journée ${ev.strRound}` : league.name,
+                            description: `${ev.strHomeTeam} affronte ${ev.strAwayTeam} en ${league.name}`,
+                            channels: channels
+                        });
+                    });
+                } catch (e) {
+                    // Silencieux — garde les données statiques de matches.js
+                }
+            }));
+
+            if (allMatches.length > 0) {
+                // Trier : live d'abord, puis par date
+                allMatches.sort((a, b) => {
+                    if (a.isLive && !b.isLive) return -1;
+                    if (!a.isLive && b.isLive) return 1;
+                    return 0;
+                });
+
+                // Fusionner avec les matchs statiques de matches.js (statiques en dernier)
+                const staticMatches = window.FEATURED_MATCHES || [];
+                window.FEATURED_MATCHES = [...allMatches, ...staticMatches].slice(0, 12);
+
+                // Rafraîchir l'interface
+                renderMatchesScrollRow();
+                renderMatchCenter('all');
+                updateHeroBillboardFromLiveData(allMatches[0]);
+
+                console.log(`[BOKK TV] ✅ ${allMatches.length} matchs chargés en temps réel`);
+                showToast(`⚽ ${allMatches.length} matchs à venir chargés`);
+            }
+        } catch (e) {
+            console.warn('[BOKK TV] Données live indisponibles, utilisation des données statiques :', e.message);
         }
 
-        // Affichage par défaut de l'ensemble du catalogue (MegaTV & Nationales)
-        currentCategory = 'tous';
+        // Re-fetch automatique toutes les 5 minutes
+        setTimeout(fetchLiveMatchData, 5 * 60 * 1000);
+    }
 
+    // Mise à jour du Hero avec un match live réel
+    function updateHeroBillboardFromLiveData(match) {
+        if (!match) return;
+
+        const heroHeadline = document.getElementById('hero-headline');
+        const heroBgImg    = document.getElementById('hero-bg-img');
+        const heroEyebrow  = document.getElementById('hero-eyebrow');
+        const heroSub      = document.getElementById('hero-sub');
+        const heroTagsRow  = document.getElementById('hero-tags-row') || document.querySelector('.hero-tags-row');
+
+        if (heroBgImg && match.poster) {
+            heroBgImg.style.backgroundImage = `url('${match.poster}')`;
+        }
+
+        if (heroHeadline) {
+            heroHeadline.textContent = match.isLive
+                ? match.title.toUpperCase()
+                : `PROCHAINS GRANDS MATCHS`;
+        }
+
+        if (heroEyebrow) {
+            const dot = heroEyebrow.querySelector('.hero-live-dot');
+            const txt = heroEyebrow.querySelector('span:last-child');
+            if (match.isLive) {
+                if (dot) dot.style.display = 'block';
+                if (txt) txt.textContent = 'EN DIRECT';
+            } else {
+                if (dot) dot.style.display = 'none';
+                if (txt) txt.textContent = match.competitionBadge || match.competition;
+            }
+        }
+
+        if (heroSub && !match.isLive) {
+            heroSub.textContent = `${match.teamA.name} · ${match.teamB.name} — ${match.date} à ${match.time}`;
+        }
+
+        // Mettre à jour les pills en haut
+        if (heroTagsRow) {
+            const liveMatches = (window.FEATURED_MATCHES || []).filter(m => m.isLive);
+            if (liveMatches.length > 0) {
+                heroTagsRow.innerHTML = liveMatches.slice(0, 4).map(m =>
+                    `<span class="hero-tag-pill live-tag" style="cursor:pointer;" 
+                        onclick="window._bokkLaunchMatch && window._bokkLaunchMatch(${JSON.stringify(m.channels && m.channels[0] ? m.channels[0].id : 0)}, '${(m.title || '').replace(/'/g, '')}')">
+                        <span class="live-dot-sm"></span> ${m.teamA.name.split(' ').slice(-1)[0]} - ${m.teamB.name.split(' ').slice(-1)[0]}
+                    </span>`
+                ).join('');
+            }
+        }
+
+        // Exposer helper global pour les onclick inline
+        window._bokkLaunchMatch = (chId, matchTitle) => {
+            showToast(`▶ Lancement de ${matchTitle}`);
+            enableAudioOnFirstGesture();
+            revealPlayer();
+            loadChannelByIdOrQuery(chId, matchTitle);
+        };
+    }
+
+    // ── Initialisation ──
+    function init() {
+        // ── Horloge Nav (mise à jour toutes les 10s) ──
+        updateNavClock();
+        setInterval(updateNavClock, 10000);
+
+        // ── Configuration du switcher de vues (home / catalogue) ──
+        setupViewSwitching();
+
+        // ── Catalogue ──
+        currentCategory = 'tous';
         applyCustomChannels();
         populateBouquetFilter();
         renderCategories();
         renderChannelList(true);
 
-        // ── Initialisation du Portail Streaming & Match Center ──
+        // ── Portail Home (style myCANAL) ──
+        renderLiveLogosRow();
+        renderUneCards();
+        renderMatchesScrollRow();
+        renderHomeCarousels();
+
+        // ── Match Center & carousels ──
         setupHeroBillboard();
         renderMatchCenter('all');
         renderStreamingCarousels();
         setupNavScroll();
 
-        // Index par défaut sur France 24 prêt au premier clic
+        // ── Données matchs en temps réel ──
+        fetchLiveMatchData();
+
+        // ── Index par défaut (France 24 ou premier canal) ──
         if (channels.length > 0) {
             const f24Idx = channels.findIndex(c =>
                 (c.name && c.name.toLowerCase().includes('france 24')) ||
@@ -2269,9 +2869,15 @@
             currentIndex = f24Idx >= 0 ? f24Idx : 0;
         }
 
-        // ── Mesure de la vitesse réseau au démarrage ──
+        // ── Vue grille/liste ──
+        if (isGridView) {
+            if (btnViewGrid) btnViewGrid.classList.add('active');
+            if (btnViewList) btnViewList.classList.remove('active');
+            document.body.classList.add('grid-view-active');
+        }
+
+        // ── Mesure vitesse réseau ──
         measureNetworkSpeed();
-        // Re-mesure toutes les 2 minutes pour s'adapter aux changements
         setInterval(measureNetworkSpeed, 120000);
 
         // ── Boutons qualité ──
@@ -2279,27 +2885,19 @@
             btn.addEventListener('click', () => setQualityLevel(btn.dataset.level));
         });
 
-        // Écouteurs de défilement pour le chargement infini (Desktop & Mobile)
+        // ── Chargement infini ──
         const checkScrollAndLoadMore = (container) => {
             if (!container) return;
             if (container.scrollTop + container.clientHeight >= container.scrollHeight - 350) {
                 renderNextBatch();
             }
         };
-
         if (channelListEl) {
             channelListEl.addEventListener('scroll', () => checkScrollAndLoadMore(channelListEl), { passive: true });
         }
-        const appMainEl = document.querySelector('.app-main');
-        if (appMainEl) {
-            appMainEl.addEventListener('scroll', () => checkScrollAndLoadMore(appMainEl), { passive: true });
-        }
         window.addEventListener('scroll', () => {
-            const docHeight = Math.max(document.documentElement.scrollHeight, document.body.scrollHeight, document.body.offsetHeight);
-            const scrollPos = window.innerHeight + window.scrollY;
-            if (scrollPos >= docHeight - 600) {
-                renderNextBatch();
-            }
+            const docH = Math.max(document.documentElement.scrollHeight, document.body.scrollHeight);
+            if (window.innerHeight + window.scrollY >= docH - 600) renderNextBatch();
         }, { passive: true });
     }
 
