@@ -1901,9 +1901,19 @@ h1, h2, h3, .topnav-brand-name, .hero-headline, .home-section-label {
     .topnav-search { width: 140px; max-width: 45vw; height: 34px; flex-shrink: 1; min-width: 0; }
     .topnav-search:focus-within { width: 175px; }
 
-    /* Hero — aéré sur mobile */
+    /* Hero — taille fixe uniforme sur mobile */
     .hero-wrapper { padding: 10px 14px 18px 14px; }
-    .hero-card { min-height: 400px; max-height: 520px; border-radius: 18px; }
+    .hero-card {
+        height: 460px;        /* hauteur fixe = toutes les affiches identiques */
+        min-height: unset;
+        max-height: unset;
+        border-radius: 18px;
+    }
+    /* Image de fond : couvre toujours exactement le cadre, recadrée au centre */
+    .hero-bg-img {
+        background-size: cover !important;
+        background-position: center center !important;
+    }
     .hero-card-content {
         padding: 20px 18px 24px 18px;
         align-items: center;
@@ -1991,7 +2001,7 @@ h1, h2, h3, .topnav-brand-name, .hero-headline, .home-section-label {
 }
 
 @media (max-width: 480px) {
-    .hero-card { min-height: 350px; }
+    .hero-card { height: 420px; }   /* légèrement plus petit sur tout petits écrans */
     .hero-headline { font-size: 1.22rem; }
     .hero-btn-watch, .hero-btn-matches { max-width: 140px; font-size: 0.78rem; height: 36px; }
     .match-mini-card { flex: 0 0 220px; }
