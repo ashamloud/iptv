@@ -2144,11 +2144,11 @@
             heroHeadline.innerHTML = `${teamAName} <span class="hero-vs">VS</span> ${teamBName}`;
         }
 
-        // Sous-titre descriptif
+        // Sous-titre descriptif style Reezn (Horreur • Action • Guerre / LaLiga • Dim. 20:00 • 4K)
         if (heroSub) {
-            heroSub.textContent = match.isLive
-                ? `${match.competition || ''} — En direct maintenant sur BOKK TV (Score : ${match.score || 'En cours'}).`
-                : (match.description || `${match.competition} — ${match.teamA.name} contre ${match.teamB.name}. Diffusion en direct en HD & 4K.`);
+            const comp = match.competition || match.competitionBadge || 'Sport';
+            const timeInfo = match.isLive ? 'En direct' : `${match.date} ${match.time}`;
+            heroSub.textContent = `${comp} • ${timeInfo} • Diffusion HD & 4K`;
         }
 
         // Indication dynamique des chaînes de diffusion directe
@@ -2556,7 +2556,18 @@
             btn.addEventListener('click', () => switchView(btn.dataset.view));
         });
 
-        // Bouton recherche sur mobile
+        // Bouton recherche sur mobile / topnav
+        const topnavSearchToggle = document.getElementById('topnav-search-toggle');
+        if (topnavSearchToggle) {
+            topnavSearchToggle.addEventListener('click', () => {
+                if (searchInput) {
+                    searchInput.focus();
+                    const box = document.getElementById('topnav-search-box');
+                    if (box) box.classList.toggle('active');
+                }
+            });
+        }
+
         const mnavBtnSearch = document.getElementById('mnav-btn-search');
         if (mnavBtnSearch) {
             mnavBtnSearch.addEventListener('click', () => {
@@ -2569,6 +2580,70 @@
                 }
             });
         }
+
+        // Bouton Ma Liste sur Mobile
+        const mnavBtnFav = document.getElementById('mnav-btn-fav');
+        if (mnavBtnFav) {
+            mnavBtnFav.addEventListener('click', () => {
+                switchView('catalogue');
+                document.querySelectorAll('.mnav-item').forEach(b => b.classList.remove('active'));
+                mnavBtnFav.classList.add('active');
+                setTimeout(() => {
+                    currentCategory = 'favoris';
+                    userManuallySelectedCategory = true;
+                    renderCategories();
+                    renderChannelList(true);
+                }, 50);
+            });
+        }
+
+        // Bouton Plus sur Mobile (Ouvre le bottom sheet)
+        const mnavBtnMore = document.getElementById('mnav-btn-more');
+        const moreSheetBackdrop = document.getElementById('more-sheet-backdrop');
+        const moreSheetClose = document.getElementById('more-sheet-close');
+        if (mnavBtnMore && moreSheetBackdrop) {
+            mnavBtnMore.addEventListener('click', () => {
+                moreSheetBackdrop.style.display = 'flex';
+            });
+            if (moreSheetClose) {
+                moreSheetClose.addEventListener('click', () => {
+                    moreSheetBackdrop.style.display = 'none';
+                });
+            }
+            moreSheetBackdrop.addEventListener('click', (e) => {
+                if (e.target === moreSheetBackdrop) {
+                    moreSheetBackdrop.style.display = 'none';
+                }
+            });
+        }
+
+        const moreActionM3u = document.getElementById('more-action-m3u');
+        if (moreActionM3u) {
+            moreActionM3u.addEventListener('click', () => {
+                if (moreSheetBackdrop) moreSheetBackdrop.style.display = 'none';
+                const m3uModal = document.getElementById('m3u-modal');
+                if (m3uModal) m3uModal.style.display = 'flex';
+            });
+        }
+
+        const moreActionFav = document.getElementById('more-action-fav');
+        if (moreActionFav) {
+            moreActionFav.addEventListener('click', () => {
+                if (moreSheetBackdrop) moreSheetBackdrop.style.display = 'none';
+                switchView('catalogue');
+                setTimeout(() => {
+                    currentCategory = 'favoris';
+                    userManuallySelectedCategory = true;
+                    renderCategories();
+                    renderChannelList(true);
+                }, 50);
+            });
+        }
+
+        // Titres de sections cliquables avec chevrons style Reezn
+        document.querySelectorAll('.home-section-label[data-view]').forEach(lbl => {
+            lbl.addEventListener('click', () => switchView(lbl.dataset.view));
+        });
 
         // Boutons "Tout voir →"
         document.querySelectorAll('.see-all-btn[data-view]').forEach(btn => {
@@ -2602,13 +2677,12 @@
         const heroBtnWatch = document.getElementById('hero-btn-watch');
         if (heroBtnWatch && !heroBtnWatch._switched) {
             heroBtnWatch._switched = true;
-            const originalClick = heroBtnWatch.onclick;
             heroBtnWatch.addEventListener('click', () => {
                 revealPlayer();
             });
         }
 
-        // Bouton Voir tous les matchs du hero
+        // Bouton Voir tous les matchs / Ma liste du hero
         const heroBtnMatches = document.getElementById('hero-btn-matches');
         if (heroBtnMatches) {
             heroBtnMatches.addEventListener('click', () => {
