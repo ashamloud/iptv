@@ -50,6 +50,7 @@
     let renderedCount = 0;
     const BATCH_SIZE = 80;
     let currentFiltered = [];
+    let userManuallySelectedCategory = false;
 
     // ── Gestion des favoris via localStorage ──
     function getFavorites() {
@@ -1724,7 +1725,7 @@
     }
 
     // ── Détection automatique du pays de l'utilisateur ──
-    let userManuallySelectedCategory = false;
+    // (userManuallySelectedCategory déclaré dans les variables d'état globales)
 
     function detectUserCountry() {
         try {
