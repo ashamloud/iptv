@@ -1828,6 +1828,238 @@ h1, h2, h3, .topnav-brand-name, .hero-headline, .home-section-label {
     color: var(--text-muted);
 }
 
+
+/* ══════════════════════════════════════════════════════
+   PAGE TV & CATALOGUE AMÉLIORÉE (Desktop & Base)
+══════════════════════════════════════════════════════ */
+.page-tv-view {
+    max-width: 1600px;
+    margin: 0 auto;
+    padding: 20px 24px 60px 24px;
+}
+
+.catalogue-header-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.catalogue-subtitle {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+.tv-search-box {
+    display: flex;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-full);
+    padding: 8px 16px;
+    gap: 10px;
+    width: 100%;
+    max-width: 520px;
+    transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+}
+
+.tv-search-box:focus-within {
+    border-color: var(--brand);
+    background: rgba(255, 255, 255, 0.08);
+    box-shadow: 0 0 0 3px var(--brand-dim);
+}
+
+.tv-search-box svg {
+    color: var(--text-muted);
+    flex-shrink: 0;
+}
+
+.tv-search-box input {
+    background: transparent;
+    border: none;
+    color: #fff;
+    font-size: 0.88rem;
+    outline: none;
+    width: 100%;
+    font-family: inherit;
+}
+
+.tv-search-box input::placeholder {
+    color: var(--text-muted);
+}
+
+.cat-search-clear {
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    color: var(--text-muted);
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    font-size: 0.75rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: 0.15s;
+    flex-shrink: 0;
+}
+
+.cat-search-clear:hover {
+    background: rgba(255, 255, 255, 0.2);
+    color: #fff;
+}
+
+.catalogue-subcontrols {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+/* ══════════════════════════════════════════════════════
+   PAGE DÉCOUVRIR (Style Reezn / Netflix)
+══════════════════════════════════════════════════════ */
+.page-discover {
+    max-width: 1600px;
+    margin: 0 auto;
+    padding: 16px 20px 80px 20px;
+}
+
+.discover-hero-banner {
+    background: linear-gradient(135deg, rgba(230, 57, 70, 0.18) 0%, rgba(13, 19, 34, 0.95) 60%, #07090e 100%),
+                radial-gradient(circle at top right, rgba(0, 112, 243, 0.15), transparent 70%);
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    border-radius: 20px;
+    padding: 28px 24px;
+    margin-bottom: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
+}
+
+.discover-hero-badge {
+    align-self: flex-start;
+    font-size: 0.68rem;
+    font-weight: 900;
+    letter-spacing: 0.08em;
+    color: var(--live-red);
+    background: rgba(230, 57, 70, 0.12);
+    border: 1px solid rgba(230, 57, 70, 0.28);
+    padding: 3px 10px;
+    border-radius: var(--radius-full);
+}
+
+.discover-hero-title {
+    font-size: 1.8rem;
+    font-weight: 900;
+    color: #fff;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+    margin: 0;
+}
+
+.discover-hero-desc {
+    font-size: 0.88rem;
+    color: var(--text-secondary);
+    line-height: 1.45;
+    max-width: 640px;
+    margin: 0;
+}
+
+.discover-quick-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 6px;
+}
+
+.discover-action-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 18px;
+    border-radius: 10px;
+    font-size: 0.84rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: 0.2s;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: #fff;
+}
+
+.discover-action-btn:hover {
+    background: rgba(255, 255, 255, 0.14);
+    transform: translateY(-1px);
+}
+
+.discover-action-btn#discover-btn-surprise {
+    background: var(--brand-gradient);
+    border-color: transparent;
+    box-shadow: 0 4px 16px rgba(0, 112, 243, 0.4);
+}
+
+.discover-matches-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+    margin-top: 8px;
+}
+
+/* ══════════════════════════════════════════════════════
+   PAGE MA LISTE (Favoris)
+══════════════════════════════════════════════════════ */
+.page-favorites {
+    max-width: 1600px;
+    margin: 0 auto;
+    padding: 20px 24px 80px 24px;
+}
+
+.favorites-header-bar {
+    margin-bottom: 20px;
+}
+
+.favorites-empty-box {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text-muted);
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px dashed rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    margin-top: 20px;
+}
+
+.fav-empty-icon {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.04);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 16px auto;
+    color: rgba(255, 255, 255, 0.4);
+}
+
+.fav-empty-title {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 6px;
+}
+
+.fav-empty-desc {
+    font-size: 0.84rem;
+    color: var(--text-muted);
+    max-width: 360px;
+    margin: 0 auto;
+    line-height: 1.45;
+}
+
 /* ══════════════════════════════════════════════════════
    RESPONSIVE
 ══════════════════════════════════════════════════════ */
@@ -1998,6 +2230,95 @@ h1, h2, h3, .topnav-brand-name, .hero-headline, .home-section-label {
     .card-channel-name { font-size: 0.72rem; }
     .card-channel-sub { font-size: 0.6rem; }
     .mobile-nav { display: flex; }
+
+    /* ── TV / Catalogue Mobile ── */
+    .page-tv-view, .page-catalogue {
+        padding: 12px 12px 90px 12px !important;
+    }
+    .catalogue-topbar {
+        gap: 12px !important;
+        margin-bottom: 14px !important;
+    }
+    .catalogue-title {
+        font-size: 1.25rem !important;
+    }
+    .catalogue-subtitle {
+        font-size: 0.78rem !important;
+    }
+    .tv-search-box {
+        max-width: 100% !important;
+        padding: 8px 14px !important;
+    }
+    .tv-search-box input {
+        font-size: 0.82rem !important;
+    }
+    .catalogue-subcontrols {
+        width: 100% !important;
+        justify-content: space-between !important;
+    }
+    .bouquet-filter-wrapper {
+        flex: 1 !important;
+        min-width: 0 !important;
+    }
+    .bouquet-select {
+        width: 100% !important;
+        font-size: 0.76rem !important;
+        padding: 6px 10px !important;
+    }
+    .channel-list-scroll {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 8px !important;
+    }
+    .channel-card {
+        padding: 10px 10px !important;
+        gap: 8px !important;
+        border-radius: 10px !important;
+    }
+    .card-logo-wrap {
+        width: 38px !important;
+        height: 38px !important;
+        border-radius: 8px !important;
+    }
+    .card-title {
+        font-size: 0.76rem !important;
+    }
+    .card-sub {
+        font-size: 0.64rem !important;
+    }
+
+    /* ── Découvrir Mobile ── */
+    .page-discover {
+        padding: 12px 12px 90px 12px !important;
+    }
+    .discover-hero-banner {
+        padding: 20px 16px !important;
+        border-radius: 16px !important;
+        margin-bottom: 16px !important;
+    }
+    .discover-hero-title {
+        font-size: 1.4rem !important;
+    }
+    .discover-hero-desc {
+        font-size: 0.8rem !important;
+    }
+    .discover-action-btn {
+        flex: 1 !important;
+        justify-content: center !important;
+        padding: 9px 14px !important;
+        font-size: 0.8rem !important;
+    }
+    .discover-matches-container {
+        grid-template-columns: 1fr !important;
+        gap: 12px !important;
+    }
+    .discover-section {
+        padding: 14px 0 !important;
+    }
+
+    /* ── Ma Liste Mobile ── */
+    .page-favorites {
+        padding: 12px 12px 90px 12px !important;
+    }
 }
 
 @media (max-width: 480px) {

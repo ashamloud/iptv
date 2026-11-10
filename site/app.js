@@ -2039,6 +2039,83 @@
     let heroCurrentIndex = 0;
     let heroAutoTimer = null;
     let heroIsPaused = false;
+    let heroCleanTimer = null;
+
+    // Détection stricte d'un événement passé ou expiré (selon l'heure exacte et le jour)
+    function isMatchPassed(m, now = new Date()) {
+        if (!m) return true;
+        if (m.isFinished) return true;
+        if (m.isLive) return false;
+
+        const nowTs = now.getTime();
+
+        // 1. Timestamp brut en secondes ou millisecondes
+        if (m.rawDate) {
+            const matchTs = m.rawDate < 10000000000 ? m.rawDate * 1000 : m.rawDate;
+            if (matchTs + (2.25 * 3600 * 1000) < nowTs) {
+                return true;
+            }
+            const matchDateObj = new Date(matchTs);
+            const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+            const startOfMatchDay = new Date(matchDateObj.getFullYear(), matchDateObj.getMonth(), matchDateObj.getDate()).getTime();
+            if (startOfMatchDay < startOfToday) {
+                return true;
+            }
+            return false;
+        }
+
+        // 2. Vérification textuelle de date (ex. "Dim. 8 Nov.", "2 nov", "Hier")
+        if (m.date) {
+            const dStr = m.date.toLowerCase();
+            if (dStr.includes('hier') || dStr.includes('terminé')) return true;
+
+            const numMatch = dStr.match(/(\d{1,2})\s*(nov|déc|dec|jan|fév|fev|mar|avr|mai|juin|juil|août|aout|sep|oct)/i);
+            if (numMatch) {
+                const dayNum = parseInt(numMatch[1], 10);
+                const monthStr = numMatch[2].toLowerCase();
+                const curMonth = now.getMonth(); // 10 = Nov
+                const curDay = now.getDate();
+                if (monthStr.startsWith('nov') && curMonth === 10) {
+                    if (dayNum < curDay) return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    // Purge automatique en temps réel des affiches du header dès qu'un match expire
+    function cleanAndRefreshHeroMatches() {
+        const all = (typeof window !== 'undefined' && Array.isArray(window.FEATURED_MATCHES))
+            ? window.FEATURED_MATCHES
+            : [];
+        if (!all || all.length === 0) return;
+
+        const now = new Date();
+        const valid = all.filter(m => !isMatchPassed(m, now));
+
+        const countChanged = valid.length !== (heroMatches ? heroMatches.length : 0);
+        window.FEATURED_MATCHES = valid;
+        heroMatches = valid;
+
+        const billboard = document.getElementById('hero-billboard');
+        if (heroMatches.length === 0) {
+            if (billboard) billboard.style.display = 'none';
+            return;
+        } else {
+            if (billboard) billboard.style.display = '';
+        }
+
+        if (heroCurrentIndex >= heroMatches.length) {
+            heroCurrentIndex = 0;
+        }
+
+        if (countChanged) {
+            renderHeroSlide(heroCurrentIndex);
+            if (typeof renderMatchesScrollRow === 'function') {
+                renderMatchesScrollRow(currentMatchFilter);
+            }
+        }
+    }
 
     // ── Configuration du Hero Billboard (Slider interactif avec chaînes et défilement) ──
     function setupHeroBillboard() {
@@ -2047,8 +2124,12 @@
             : [];
         if (!matches || matches.length === 0) return;
 
-        heroMatches = matches;
+        const now = new Date();
+        heroMatches = matches.filter(m => !isMatchPassed(m, now));
         heroCurrentIndex = 0;
+
+        if (heroCleanTimer) clearInterval(heroCleanTimer);
+        heroCleanTimer = setInterval(cleanAndRefreshHeroMatches, 30000);
 
         const prevBtn = document.getElementById('hero-arrow-prev');
         const nextBtn = document.getElementById('hero-arrow-next');
@@ -2530,9 +2611,124 @@
     }
 
     // ── Switcher de vues (page-home / page-catalogue) ──
+        // ── VUE DÉCOUVRIR (Style Reezn / Netflix Mobile & Desktop) ──
+    function renderDiscoverPage() {
+        // 1. Grands Chocs en Vedette
+        const matchesContainer = document.getElementById('discover-matches-container');
+        if (matchesContainer) {
+            matchesContainer.innerHTML = '';
+            const allMatches = (typeof window !== 'undefined' && Array.isArray(window.FEATURED_MATCHES))
+                ? window.FEATURED_MATCHES
+                : [];
+            const upcoming = allMatches.filter(m => !isMatchPassed(m)).slice(0, 6);
+            if (upcoming.length > 0) {
+                upcoming.forEach(m => {
+                    const card = createMatchMiniCard(m);
+                    matchesContainer.appendChild(card);
+                });
+            } else {
+                matchesContainer.innerHTML = '<p style="color:var(--text-muted); font-size:0.85rem; padding:12px;">Aucun grand choc en attente pour le moment.</p>';
+            }
+        }
+
+        // 2. Carrousel Cinéma & Séries
+        populateCarouselRow('discover-cinema-row', c =>
+            c.name && /cinema|ciné\+|ocs|action|warner|paramount|hbo/i.test(c.name),
+        24);
+
+        // 3. Carrousel Sénégal
+        populateCarouselRow('discover-senegal-row', c =>
+            (c.name && /rts|tfm|2stv|sen tv|walf|sunu/i.test(c.name)) ||
+            (c.group && c.group.toLowerCase().includes('sénégal')),
+        24);
+
+        // 4. Carrousel Sports
+        populateCarouselRow('discover-sports-row', c =>
+            c.name && /bein|canal\+ sport|canal\+ foot|rmc|dazn|sky sport|m\+ laliga/i.test(c.name),
+        24);
+
+        // Bouton Zapping Surprise (lance une chaîne premium au hasard)
+        const surpriseBtn = document.getElementById('discover-btn-surprise');
+        if (surpriseBtn) {
+            surpriseBtn.onclick = () => {
+                const premiumKeywords = ['canal+', 'bein', 'tf1', 'rts', 'm6', 'arte', 'france 2'];
+                const pool = channels.filter(c => premiumKeywords.some(k => (c.name || '').toLowerCase().includes(k)));
+                const chosen = (pool.length > 0) ? pool[Math.floor(Math.random() * pool.length)] : channels[Math.floor(Math.random() * channels.length)];
+                if (chosen) {
+                    const idx = channels.indexOf(chosen);
+                    showToast(`🎲 Zapping Surprise : ${chosen.name}`);
+                    enableAudioOnFirstGesture();
+                    revealPlayer();
+                    loadChannel(idx >= 0 ? idx : 0);
+                }
+            };
+        }
+
+        // Bouton Toutes les Chaînes
+        const liveTvBtn = document.getElementById('discover-btn-live-tv');
+        if (liveTvBtn) {
+            liveTvBtn.onclick = () => {
+                switchView('tv');
+            };
+        }
+
+        // Bouton Tout voir Chocs
+        const seeAllMatchesBtn = document.getElementById('discover-see-all-matches');
+        if (seeAllMatchesBtn) {
+            seeAllMatchesBtn.onclick = () => {
+                switchView('home');
+                setTimeout(() => {
+                    const sec = document.getElementById('section-matchs');
+                    if (sec) sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 100);
+            };
+        }
+    }
+
+    // ── VUE MA LISTE (Favoris) ──
+    function renderFavoritesPage() {
+        const listEl = document.getElementById('favorites-channel-list');
+        const emptyBox = document.getElementById('favorites-empty-box');
+        const countSub = document.getElementById('fav-count-subtitle');
+        if (!listEl) return;
+
+        const favIds = getFavorites();
+        if (favIds.length === 0) {
+            listEl.innerHTML = '';
+            if (emptyBox) emptyBox.style.display = 'block';
+            if (countSub) countSub.textContent = '0 chaîne enregistrée';
+            const goTvBtn = document.getElementById('fav-go-tv');
+            if (goTvBtn) {
+                goTvBtn.onclick = () => switchView('tv');
+            }
+            return;
+        }
+
+        if (emptyBox) emptyBox.style.display = 'none';
+        listEl.innerHTML = '';
+        let found = 0;
+        const frag = document.createDocumentFragment();
+
+        favIds.forEach(id => {
+            const idx = channels.findIndex(c => c.id === id);
+            if (idx !== -1) {
+                frag.appendChild(createChannelCard(channels[idx]));
+                found++;
+            }
+        });
+        listEl.appendChild(frag);
+        if (countSub) {
+            countSub.textContent = `${found} chaîne${found > 1 ? 's' : ''} favorite${found > 1 ? 's' : ''}`;
+        }
+    }
+
+    // ── Switcher de vues (home / tv / discover / favorites / catalogue) ──
     function setupViewSwitching() {
         const pageHome      = document.getElementById('page-home');
         const pageCatalogue = document.getElementById('page-catalogue');
+        const pageDiscover  = document.getElementById('page-discover');
+        const pageFavorites = document.getElementById('page-favorites');
+        const pw            = document.getElementById('player-wrapper');
 
         function switchView(view, skipScroll = false) {
             // Mettre à jour les onglets actifs desktop et mobile
@@ -2543,25 +2739,39 @@
                 btn.classList.toggle('active', btn.dataset.view === view);
             });
 
+            // Masquer toutes les vues
+            if (pageHome) pageHome.style.display = 'none';
+            if (pageCatalogue) pageCatalogue.style.display = 'none';
+            if (pageDiscover) pageDiscover.style.display = 'none';
+            if (pageFavorites) pageFavorites.style.display = 'none';
+
             if (view === 'home') {
                 if (pageHome) pageHome.style.display = 'block';
-                if (pageCatalogue) pageCatalogue.style.display = 'none';
+                if (!skipScroll) window.scrollTo({ top: 0, behavior: 'smooth' });
+            } else if (view === 'discover') {
+                if (pageDiscover) pageDiscover.style.display = 'block';
+                renderDiscoverPage();
+                if (!skipScroll) window.scrollTo({ top: 0, behavior: 'smooth' });
+            } else if (view === 'favorites') {
+                if (pageFavorites) pageFavorites.style.display = 'block';
+                renderFavoritesPage();
                 if (!skipScroll) window.scrollTo({ top: 0, behavior: 'smooth' });
             } else {
-                if (pageHome) pageHome.style.display = 'none';
+                // Vue TV / Catalogue
                 if (pageCatalogue) pageCatalogue.style.display = 'block';
                 if (!skipScroll) window.scrollTo({ top: 0, behavior: 'smooth' });
 
                 // Activer la bonne catégorie selon l'onglet
                 const catMap = {
-                    'live': 'francophone',
+                    'tv': 'tous',          // Sur TV : TOUTES les 6 039 chaînes sont là, plus de filtre forcé !
+                    'live': 'tous',
+                    'catalogue': 'tous',
                     'sport': 'sport',
                     'films': 'cinema',
                     'series': 'cinema',
-                    'senegal': 'senegal',
-                    'catalogue': 'tous'
+                    'senegal': 'senegal'
                 };
-                const targetCat = catMap[view] || 'tous';
+                const targetCat = catMap[view] || (view === 'tous' ? 'tous' : view);
                 currentCategory = targetCat;
                 userManuallySelectedCategory = true;
                 renderCategories();
@@ -2569,15 +2779,35 @@
             }
         }
 
-        // Boutons du menu principal desktop
+        // Boutons du menu principal desktop & mobile
         document.querySelectorAll('.tmenu-item[data-view]').forEach(btn => {
             btn.addEventListener('click', () => switchView(btn.dataset.view));
         });
 
-        // Boutons de la barre de navigation mobile
         document.querySelectorAll('.mnav-item[data-view]').forEach(btn => {
             btn.addEventListener('click', () => switchView(btn.dataset.view));
         });
+
+        // Recherche rapide dans la vue TV
+        const catSearchInput = document.getElementById('catalogue-search-input');
+        const catSearchClear = document.getElementById('catalogue-search-clear');
+        if (catSearchInput) {
+            catSearchInput.addEventListener('input', (e) => {
+                currentQuery = e.target.value;
+                if (catSearchClear) catSearchClear.style.display = currentQuery ? 'flex' : 'none';
+                if (searchInput) searchInput.value = currentQuery;
+                renderChannelList(true);
+            });
+            if (catSearchClear) {
+                catSearchClear.addEventListener('click', () => {
+                    catSearchInput.value = '';
+                    currentQuery = '';
+                    catSearchClear.style.display = 'none';
+                    if (searchInput) searchInput.value = '';
+                    renderChannelList(true);
+                });
+            }
+        }
 
         // Bouton recherche sur mobile / topnav
         const topnavSearchToggle = document.getElementById('topnav-search-toggle');
@@ -2594,29 +2824,13 @@
         const mnavBtnSearch = document.getElementById('mnav-btn-search');
         if (mnavBtnSearch) {
             mnavBtnSearch.addEventListener('click', () => {
-                switchView('catalogue');
+                switchView('tv');
                 document.querySelectorAll('.mnav-item').forEach(b => b.classList.remove('active'));
                 mnavBtnSearch.classList.add('active');
                 if (searchInput) {
                     searchInput.focus();
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                 }
-            });
-        }
-
-        // Bouton Ma Liste sur Mobile
-        const mnavBtnFav = document.getElementById('mnav-btn-fav');
-        if (mnavBtnFav) {
-            mnavBtnFav.addEventListener('click', () => {
-                switchView('catalogue');
-                document.querySelectorAll('.mnav-item').forEach(b => b.classList.remove('active'));
-                mnavBtnFav.classList.add('active');
-                setTimeout(() => {
-                    currentCategory = 'favoris';
-                    userManuallySelectedCategory = true;
-                    renderCategories();
-                    renderChannelList(true);
-                }, 50);
             });
         }
 
@@ -2640,95 +2854,7 @@
             });
         }
 
-        const moreActionM3u = document.getElementById('more-action-m3u');
-        if (moreActionM3u) {
-            moreActionM3u.addEventListener('click', () => {
-                if (moreSheetBackdrop) moreSheetBackdrop.style.display = 'none';
-                const m3uModal = document.getElementById('m3u-modal');
-                if (m3uModal) m3uModal.style.display = 'flex';
-            });
-        }
-
-        const moreActionFav = document.getElementById('more-action-fav');
-        if (moreActionFav) {
-            moreActionFav.addEventListener('click', () => {
-                if (moreSheetBackdrop) moreSheetBackdrop.style.display = 'none';
-                switchView('catalogue');
-                setTimeout(() => {
-                    currentCategory = 'favoris';
-                    userManuallySelectedCategory = true;
-                    renderCategories();
-                    renderChannelList(true);
-                }, 50);
-            });
-        }
-
-        // Titres de sections cliquables avec chevrons style Reezn
-        document.querySelectorAll('.home-section-label[data-view]').forEach(lbl => {
-            lbl.addEventListener('click', () => switchView(lbl.dataset.view));
-        });
-
-        // Boutons "Tout voir →"
-        document.querySelectorAll('.see-all-btn[data-view]').forEach(btn => {
-            btn.addEventListener('click', () => switchView(btn.dataset.view));
-        });
-
-        // Logo → accueil
-        const brandHomeLink = document.getElementById('brand-home-link');
-        if (brandHomeLink) {
-            brandHomeLink.addEventListener('click', (e) => {
-                e.preventDefault();
-                switchView('home');
-            });
-        }
-
-        // Bouton Favoris → catalogue filtré
-        const navFavoris = document.getElementById('nav-btn-favoris');
-        if (navFavoris) {
-            navFavoris.addEventListener('click', () => {
-                switchView('catalogue');
-                setTimeout(() => {
-                    currentCategory = 'favoris';
-                    userManuallySelectedCategory = true;
-                    renderCategories();
-                    renderChannelList(true);
-                }, 50);
-            });
-        }
-
-        // Bouton Regarder en direct du hero
-        const heroBtnWatch = document.getElementById('hero-btn-watch');
-        if (heroBtnWatch && !heroBtnWatch._switched) {
-            heroBtnWatch._switched = true;
-            heroBtnWatch.addEventListener('click', () => {
-                revealPlayer();
-            });
-        }
-
-        // Bouton Voir tous les matchs / Ma liste du hero
-        const heroBtnMatches = document.getElementById('hero-btn-matches');
-        if (heroBtnMatches) {
-            heroBtnMatches.addEventListener('click', () => {
-                const matchSec = document.getElementById('section-matchs');
-                if (matchSec) matchSec.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            });
-        }
-
-        // Fermeture du lecteur
-        const playerCloseBtn = document.getElementById('player-close-btn');
-        if (playerCloseBtn) {
-            playerCloseBtn.addEventListener('click', () => {
-                const pw = document.getElementById('player-wrapper');
-                if (pw) {
-                    pw.classList.remove('is-mini-pip');
-                    pw.style.display = 'none';
-                }
-                destroyActivePlayer();
-            });
-        }
-
-        // ── Mini-Lecteur Flottant (In-App Picture-in-Picture) au défilement ──
-        const pw = document.getElementById('player-wrapper');
+        // Détection de défilement pour passer le lecteur en mini-PIP (flottant)
         window.addEventListener('scroll', () => {
             if (!pw || pw.style.display === 'none' || (!hlsInstance && !mpegtsInstance && (!videoEl || videoEl.paused))) return;
             const scrollThreshold = 420;
@@ -2743,7 +2869,6 @@
         if (pw) {
             pw.addEventListener('click', (e) => {
                 if (pw.classList.contains('is-mini-pip')) {
-                    // Ignorer clic sur boutons de contrôle ou bouton fermer
                     if (e.target.closest('#player-float-close') || e.target.closest('#player-close-btn') || e.target.closest('.ctrl-btn') || e.target.closest('button')) return;
                     pw.classList.remove('is-mini-pip');
                     pw.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -2932,6 +3057,82 @@
     // ── Rendu des mini-cartes matchs (scroll row sur la home) ──
     let currentMatchFilter = 'all';
 
+        // ── Création de carte pour match / grand événement ──
+    function createMatchMiniCard(m) {
+        const card = document.createElement('div');
+        card.className = 'match-mini-card';
+
+        const statusHtml = m.isLive
+            ? `<span class="match-status-live"><span class="live-dot"></span> LIVE ${m.liveMinute || ''}</span>`
+            : `<span class="match-status-scheduled">${m.date} • ${m.time}</span>`;
+
+        const channelBtnsHtml = (m.channels || []).slice(0, 3).map(ch =>
+            `<button class="mm-ch-btn" data-chid="${ch.id}" data-chname="${ch.name}">
+                <span class="mm-ch-quality">${ch.badge || 'HD'}</span>
+                ▶ ${ch.name}
+            </button>`
+        ).join('');
+
+        const logoA = (m.teamA && m.teamA.logo) ? m.teamA.logo : 'favicon.png';
+        const nameA = (m.teamA && m.teamA.name) ? m.teamA.name : 'Équipe A';
+        const logoB = (m.teamB && m.teamB.logo) ? m.teamB.logo : 'favicon.png';
+        const nameB = (m.teamB && m.teamB.name) ? m.teamB.name : 'Équipe B';
+
+        card.innerHTML = `
+            <div class="match-mini-poster" style="background-image: url('${m.poster || ''}');">
+                <div class="match-mini-poster-overlay"></div>
+                <div class="match-mini-toprow">
+                    <span class="match-comp-badge">${m.competitionBadge || m.competition || 'Sport'}</span>
+                    ${statusHtml}
+                </div>
+                <div class="match-mini-teams">
+                    <div class="mm-team">
+                        <img src="${logoA}" alt="${nameA}" class="mm-team-crest" onerror="this.style.opacity='0.4'">
+                        <span class="mm-team-name">${nameA}</span>
+                    </div>
+                    <div class="mm-score">
+                        <span class="mm-score-val">${m.score || 'VS'}</span>
+                        ${m.isLive && m.liveMinute ? `<span class="mm-minute">${m.liveMinute}</span>` : ''}
+                    </div>
+                    <div class="mm-team">
+                        <img src="${logoB}" alt="${nameB}" class="mm-team-crest" onerror="this.style.opacity='0.4'">
+                        <span class="mm-team-name">${nameB}</span>
+                    </div>
+                </div>
+            </div>
+            <div class="match-mini-body">
+                <div class="match-mini-title">${m.title || ''}</div>
+                <div class="match-mini-channels">${channelBtnsHtml}</div>
+            </div>
+        `;
+
+        // Clic sur les boutons de chaîne
+        card.querySelectorAll('.mm-ch-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const chId = parseInt(btn.dataset.chid, 10);
+                const chName = btn.dataset.chname;
+                showToast(`▶ ${chName} — ${m.title}`);
+                enableAudioOnFirstGesture();
+                revealPlayer();
+                loadChannelByIdOrQuery(chId, chName);
+            });
+        });
+
+        // Clic global sur la carte → première chaîne
+        card.addEventListener('click', () => {
+            if (m.channels && m.channels.length > 0) {
+                const ch = m.channels[0];
+                showToast(`▶ ${ch.name} — ${m.title}`);
+                enableAudioOnFirstGesture();
+                revealPlayer();
+                loadChannelByIdOrQuery(ch.id, ch.name);
+            }
+        });
+
+        return card;
+    }
+
     function renderMatchesScrollRow(filter = currentMatchFilter) {
         currentMatchFilter = filter;
         const row = document.getElementById('matches-scroll-row');
@@ -2990,73 +3191,7 @@
         }
 
         filtered.forEach(m => {
-            const card = document.createElement('div');
-            card.className = 'match-mini-card';
-
-            const statusHtml = m.isLive
-                ? `<span class="match-status-live"><span class="live-dot"></span> LIVE ${m.liveMinute || ''}</span>`
-                : `<span class="match-status-scheduled">${m.date} • ${m.time}</span>`;
-
-            const channelBtnsHtml = (m.channels || []).slice(0, 3).map(ch =>
-                `<button class="mm-ch-btn" data-chid="${ch.id}" data-chname="${ch.name}">
-                    <span class="mm-ch-quality">${ch.badge || 'HD'}</span>
-                    ▶ ${ch.name}
-                </button>`
-            ).join('');
-
-            card.innerHTML = `
-                <div class="match-mini-poster" style="background-image: url('${m.poster}');">
-                    <div class="match-mini-poster-overlay"></div>
-                    <div class="match-mini-toprow">
-                        <span class="match-comp-badge">${m.competitionBadge || m.competition}</span>
-                        ${statusHtml}
-                    </div>
-                    <div class="match-mini-teams">
-                        <div class="mm-team">
-                            <img src="${m.teamA.logo}" alt="${m.teamA.name}" class="mm-team-crest" onerror="this.style.opacity='0.4'">
-                            <span class="mm-team-name">${m.teamA.name}</span>
-                        </div>
-                        <div class="mm-score">
-                            <span class="mm-score-val">${m.score || 'VS'}</span>
-                            ${m.isLive && m.liveMinute ? `<span class="mm-minute">${m.liveMinute}</span>` : ''}
-                        </div>
-                        <div class="mm-team">
-                            <img src="${m.teamB.logo}" alt="${m.teamB.name}" class="mm-team-crest" onerror="this.style.opacity='0.4'">
-                            <span class="mm-team-name">${m.teamB.name}</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="match-mini-body">
-                    <div class="match-mini-title">${m.title}</div>
-                    <div class="match-mini-channels">${channelBtnsHtml}</div>
-                </div>
-            `;
-
-            // Clic sur les boutons de chaîne
-            card.querySelectorAll('.mm-ch-btn').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    const chId = parseInt(btn.dataset.chid);
-                    const chName = btn.dataset.chname;
-                    showToast(`▶ ${chName} — ${m.title}`);
-                    enableAudioOnFirstGesture();
-                    revealPlayer();
-                    loadChannelByIdOrQuery(chId, chName);
-                });
-            });
-
-            // Clic global sur la carte → première chaîne
-            card.addEventListener('click', () => {
-                if (m.channels && m.channels.length > 0) {
-                    const ch = m.channels[0];
-                    showToast(`▶ ${ch.name} — ${m.title}`);
-                    enableAudioOnFirstGesture();
-                    revealPlayer();
-                    loadChannelByIdOrQuery(ch.id, ch.name);
-                }
-            });
-
-            row.appendChild(card);
+            row.appendChild(createMatchMiniCard(m));
         });
     }
 

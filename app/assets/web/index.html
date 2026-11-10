@@ -15,7 +15,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=9955">
+    <link rel="stylesheet" href="style.css?v=9960">
 </head>
 <body>
 
@@ -34,11 +34,11 @@
             <!-- Onglets de navigation Desktop (au centre) -->
             <nav class="topnav-menu topnav-menu-desktop" id="main-menu-desktop">
                 <button class="tmenu-item active" data-view="home">ACCUEIL</button>
-                <button class="tmenu-item" data-view="films">FILMS</button>
-                <button class="tmenu-item" data-view="live">DIRECT</button>
+                <button class="tmenu-item" data-view="tv">TV DIRECT</button>
+                <button class="tmenu-item" data-view="discover">DÉCOUVRIR</button>
                 <button class="tmenu-item" data-view="sport">SPORTS</button>
+                <button class="tmenu-item" data-view="films">CINÉMA</button>
                 <button class="tmenu-item" data-view="senegal">SÉNÉGAL</button>
-                <button class="tmenu-item" data-view="catalogue">CATALOGUE</button>
             </nav>
 
             <!-- Actions droites -->
@@ -86,11 +86,11 @@
         <!-- Deuxième ligne pour Mobile : Catégories avec soulignement blanc actif -->
         <nav class="topnav-categories-row" id="main-menu-mobile">
             <button class="tmenu-item active" data-view="home">ACCUEIL</button>
-            <button class="tmenu-item" data-view="films">FILMS</button>
-            <button class="tmenu-item" data-view="live">DIRECT</button>
+            <button class="tmenu-item" data-view="tv">TV DIRECT</button>
+            <button class="tmenu-item" data-view="discover">DÉCOUVRIR</button>
             <button class="tmenu-item" data-view="sport">SPORTS</button>
+            <button class="tmenu-item" data-view="films">CINÉMA</button>
             <button class="tmenu-item" data-view="senegal">SÉNÉGAL</button>
-            <button class="tmenu-item" data-view="catalogue">CATALOGUE</button>
         </nav>
     </div>
 </header>
@@ -395,29 +395,131 @@
 </main>
 
 <!-- ══════════════════════════════════════════════════════
-     VUE "CATALOGUE COMPLET" (6 039 chaînes)
+     VUE "TV EN DIRECT" (Page TV Mobile & Desktop)
 ══════════════════════════════════════════════════════ -->
-<main class="page-catalogue" id="page-catalogue" style="display:none;">
+<main class="page-catalogue page-tv-view" id="page-catalogue" style="display:none;">
     <div class="catalogue-topbar">
-        <h2 class="catalogue-title">Catalogue — <span id="channel-count-text">6 039 chaînes</span></h2>
+        <div class="catalogue-header-info">
+            <h2 class="catalogue-title">Chaînes TV en Direct</h2>
+            <span class="catalogue-subtitle" id="channel-count-text">6 039 chaînes disponibles</span>
+        </div>
+        
         <div class="catalogue-controls">
-            <nav class="categories-bar" id="categories-bar"></nav>
-            <div class="bouquet-filter-wrapper">
-                <select id="bouquet-filter" class="bouquet-select">
-                    <option value="all">Tous les bouquets</option>
-                </select>
+            <!-- Barre de recherche rapide intégrée -->
+            <div class="tv-search-box" id="catalogue-search-box">
+                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                <input type="text" id="catalogue-search-input" placeholder="Rechercher une chaîne (TF1, RTS, beIN, Canal+...)" autocomplete="off">
+                <button id="catalogue-search-clear" class="cat-search-clear" style="display:none;" aria-label="Effacer">✕</button>
             </div>
-            <div class="view-toggles">
-                <button id="btn-view-list" class="view-btn" title="Vue Liste">
-                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M4 6h16v2H4zm0 5h16v2H4zm0 5h16v2H4z"/></svg>
-                </button>
-                <button id="btn-view-grid" class="view-btn active" title="Vue Grille">
-                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M4 4h7v7H4zm9 0h7v7h-7zm-9 9h7v7H4zm9 0h7v7h-7z"/></svg>
-                </button>
+
+            <!-- Barre des catégories thématiques -->
+            <nav class="categories-bar" id="categories-bar"></nav>
+
+            <!-- Filtre bouquet et affichage -->
+            <div class="catalogue-subcontrols">
+                <div class="bouquet-filter-wrapper">
+                    <select id="bouquet-filter" class="bouquet-select">
+                        <option value="all">Tous les bouquets (6 039 chaînes)</option>
+                    </select>
+                </div>
+                <div class="view-toggles">
+                    <button id="btn-view-list" class="view-btn" title="Vue Liste">
+                        <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M4 6h16v2H4zm0 5h16v2H4zm0 5h16v2H4z"/></svg>
+                    </button>
+                    <button id="btn-view-grid" class="view-btn active" title="Vue Grille">
+                        <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M4 4h7v7H4zm9 0h7v7h-7zm-9 9h7v7H4zm9 0h7v7h-7z"/></svg>
+                    </button>
+                </div>
             </div>
         </div>
     </div>
     <div class="channel-list-scroll" id="channel-list"></div>
+</main>
+
+<!-- ══════════════════════════════════════════════════════
+     VUE "DÉCOUVRIR" (Page Découvrir Style Reezn / Netflix)
+══════════════════════════════════════════════════════ -->
+<main class="page-discover" id="page-discover" style="display:none;">
+    <div class="discover-hero-banner">
+        <div class="discover-hero-badge">BOKK TV SÉLECTION</div>
+        <h2 class="discover-hero-title">Découvrir</h2>
+        <p class="discover-hero-desc">Explorez les grands chocs sportifs, le cinéma 24/7 et les meilleures chaînes du moment.</p>
+        <div class="discover-quick-actions">
+            <button class="discover-action-btn" id="discover-btn-surprise">
+                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg>
+                <span>Zapping Surprise</span>
+            </button>
+            <button class="discover-action-btn" id="discover-btn-live-tv">
+                <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M21 3H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h5v2h8v-2h5c1.1 0 1.99-.9 1.99-2L23 5c0-1.1-.9-2-2-2zm0 14H3V5h18v12z"/></svg>
+                <span>Toutes les Chaînes</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Section Découvrir 1 : Chocs & Matchs Immanquables -->
+    <section class="home-section discover-section" id="discover-section-matches">
+        <div class="home-section-header">
+            <span class="home-section-label">🔥 GRANDS CHOCS SPORTIFS DU MOMENT</span>
+            <button class="see-all-btn" id="discover-see-all-matches">Tout voir →</button>
+        </div>
+        <div class="discover-matches-container" id="discover-matches-container">
+            <!-- Rempli dynamiquement en JS -->
+        </div>
+    </section>
+
+    <!-- Section Découvrir 2 : Cinéma & Séries Phares -->
+    <section class="home-section discover-section" id="discover-section-cinema">
+        <div class="home-section-header">
+            <span class="home-section-label">🎬 SÉLECTION CINÉMA & SÉRIES</span>
+        </div>
+        <div class="channels-scroll-row" id="discover-cinema-row">
+            <!-- Rempli dynamiquement en JS -->
+        </div>
+    </section>
+
+    <!-- Section Découvrir 3 : Sénégal Direct & Culture -->
+    <section class="home-section discover-section" id="discover-section-senegal">
+        <div class="home-section-header">
+            <span class="home-section-label">🇸🇳 SÉNÉGAL & ACTUALITÉS</span>
+        </div>
+        <div class="channels-scroll-row" id="discover-senegal-row">
+            <!-- Rempli dynamiquement en JS -->
+        </div>
+    </section>
+
+    <!-- Section Découvrir 4 : Sport & beIN Sports -->
+    <section class="home-section discover-section" id="discover-section-sports">
+        <div class="home-section-header">
+            <span class="home-section-label">⚽ PREMIUM SPORTS MONDIAL</span>
+        </div>
+        <div class="channels-scroll-row" id="discover-sports-row">
+            <!-- Rempli dynamiquement en JS -->
+        </div>
+    </section>
+</main>
+
+<!-- ══════════════════════════════════════════════════════
+     VUE "MA LISTE" (Favoris de l'utilisateur)
+══════════════════════════════════════════════════════ -->
+<main class="page-favorites" id="page-favorites" style="display:none;">
+    <div class="favorites-header-bar">
+        <div class="catalogue-header-info">
+            <h2 class="catalogue-title">Ma Liste</h2>
+            <span class="catalogue-subtitle" id="fav-count-subtitle">Vos chaînes enregistrées</span>
+        </div>
+    </div>
+    <div class="channel-list-scroll" id="favorites-channel-list"></div>
+    <div id="favorites-empty-box" class="favorites-empty-box" style="display:none;">
+        <div class="fav-empty-icon">
+            <svg width="46" height="46" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>
+        </div>
+        <h3 class="fav-empty-title">Votre liste est vide</h3>
+        <p class="fav-empty-desc">Touchez l'étoile sur une chaîne pour l'ajouter à vos favoris et la retrouver ici en un clin d'œil.</p>
+        <button class="hero-btn-watch" id="fav-go-tv" style="margin: 18px auto 0; max-width: 220px; height: 42px;">Explorer les chaînes</button>
+    </div>
 </main>
 
 <!-- ══════════════════════════════════════════════════════
@@ -529,15 +631,15 @@
         <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
         <span>Accueil</span>
     </button>
-    <button class="mnav-item" data-view="live">
+    <button class="mnav-item" data-view="tv">
         <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="15" rx="2" ry="2"></rect><polyline points="17 2 12 7 7 2"></polyline></svg>
         <span>TV</span>
     </button>
-    <button class="mnav-item" data-view="sport">
+    <button class="mnav-item" data-view="discover">
         <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon></svg>
         <span>Découvrir</span>
     </button>
-    <button class="mnav-item" id="mnav-btn-fav">
+    <button class="mnav-item" data-view="favorites" id="mnav-btn-fav">
         <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>
         <span>Ma liste</span>
     </button>
@@ -550,10 +652,10 @@
 <!-- Scripts -->
 <script src="mpegts.js"></script>
 <script src="hls.min.js"></script>
-<script src="matches.js?v=9955"></script>
-<script src="epg-data.js?v=9941"></script>
-<script src="epg.js?v=9955"></script>
-<script src="channels.js?v=9941"></script>
-<script src="app.js?v=9955"></script>
+<script src="matches.js?v=9960"></script>
+<script src="epg-data.js?v=9960"></script>
+<script src="epg.js?v=9960"></script>
+<script src="channels.js?v=9960"></script>
+<script src="app.js?v=9960"></script>
 </body>
 </html>
