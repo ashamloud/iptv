@@ -1079,78 +1079,105 @@
         return ch.logo.trim();
     }
 
-    // ── Base de logos de secours pour les chaînes sans logo dans la playlist ──
+    // ── Base de logos officiels (sources: Wikimedia Commons / sites officiels) ──
     const CHANNEL_LOGOS = {
-        // ── Sénégal ──
-        'rts1':         'https://upload.wikimedia.org/wikipedia/fr/0/0c/Logo_RTS1.png',
-        'rts 1':        'https://upload.wikimedia.org/wikipedia/fr/0/0c/Logo_RTS1.png',
-        'rts2':         'https://upload.wikimedia.org/wikipedia/fr/4/4d/RTS2_logo.png',
-        'rts 2':        'https://upload.wikimedia.org/wikipedia/fr/4/4d/RTS2_logo.png',
-        '2stv':         'https://upload.wikimedia.org/wikipedia/fr/9/9d/2stv-senegal.png',
-        'tfm':          'https://upload.wikimedia.org/wikipedia/fr/5/5e/TFM_logo.png',
-        'tfm sénégal':  'https://upload.wikimedia.org/wikipedia/fr/5/5e/TFM_logo.png',
-        'sen tv':       'https://upload.wikimedia.org/wikipedia/fr/e/e1/SEN_TV_Logo.png',
-        'sentv':        'https://upload.wikimedia.org/wikipedia/fr/e/e1/SEN_TV_Logo.png',
-        'walf tv':      'https://upload.wikimedia.org/wikipedia/fr/2/26/Walf_TV_logo.png',
-        'walftv':       'https://upload.wikimedia.org/wikipedia/fr/2/26/Walf_TV_logo.png',
-        '7tv':          'https://7tv.sn/wp-content/uploads/2021/01/logo-7tv.png',
-        'dakar tv':     'https://upload.wikimedia.org/wikipedia/fr/8/85/Dakar_TV_logo.png',
-        'tsen':         'https://upload.wikimedia.org/wikipedia/fr/e/e1/SEN_TV_Logo.png',
-        // ── France ──
-        'tf1':          'https://upload.wikimedia.org/wikipedia/commons/thumb/5/5f/TF1_logo_2013.svg/180px-TF1_logo_2013.svg.png',
-        'france 2':     'https://upload.wikimedia.org/wikipedia/commons/thumb/f/fc/France_2_logo.svg/160px-France_2_logo.svg.png',
-        'france 3':     'https://upload.wikimedia.org/wikipedia/commons/thumb/5/50/France_3_logo.svg/160px-France_3_logo.svg.png',
-        'france 4':     'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e3/France_4_logo.svg/160px-France_4_logo.svg.png',
-        'france 5':     'https://upload.wikimedia.org/wikipedia/commons/thumb/5/5c/France_5_logo.svg/160px-France_5_logo.svg.png',
-        'm6':           'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9c/M6_-_2009.svg/180px-M6_-_2009.svg.png',
-        'w9':           'https://upload.wikimedia.org/wikipedia/commons/thumb/f/f4/W9_2017.svg/160px-W9_2017.svg.png',
-        'tmc':          'https://upload.wikimedia.org/wikipedia/commons/thumb/6/67/TMC_logo_2018.svg/160px-TMC_logo_2018.svg.png',
-        'tf1 séries':   'https://upload.wikimedia.org/wikipedia/commons/thumb/f/fb/TF1_S%C3%A9ries_Films_logo.svg/160px-TF1_S%C3%A9ries_Films_logo.svg.png',
-        'cstar':        'https://upload.wikimedia.org/wikipedia/commons/thumb/9/95/CStar_logo_2016.svg/160px-CStar_logo_2016.svg.png',
-        'gulli':        'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Logo_Gulli_2014.svg/180px-Logo_Gulli_2014.svg.png',
-        'france 24':    'https://upload.wikimedia.org/wikipedia/commons/thumb/6/6e/France_24_logo.svg/200px-France_24_logo.svg.png',
-        'tv5 monde':    'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d2/TV5_Monde_logo.svg/200px-TV5_Monde_logo.svg.png',
-        'tv5monde':     'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d2/TV5_Monde_logo.svg/200px-TV5_Monde_logo.svg.png',
-        // ── Canal+ ──
-        'canal+':       'https://upload.wikimedia.org/wikipedia/commons/thumb/2/22/Canal%2B.svg/200px-Canal%2B.svg.png',
-        'canal+ sport': 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/fb/Canal%2B_Sport_logo_2010.svg/200px-Canal%2B_Sport_logo_2010.svg.png',
-        // ── Sport ──
-        'bein sports':      'https://upload.wikimedia.org/wikipedia/commons/thumb/5/51/Logo_beIN_Sports_2017.svg/200px-Logo_beIN_Sports_2017.svg.png',
-        'bein sports 1':    'https://upload.wikimedia.org/wikipedia/commons/thumb/5/51/Logo_beIN_Sports_2017.svg/200px-Logo_beIN_Sports_2017.svg.png',
-        'bein sports 2':    'https://upload.wikimedia.org/wikipedia/commons/thumb/5/51/Logo_beIN_Sports_2017.svg/200px-Logo_beIN_Sports_2017.svg.png',
-        'bein sports 3':    'https://upload.wikimedia.org/wikipedia/commons/thumb/5/51/Logo_beIN_Sports_2017.svg/200px-Logo_beIN_Sports_2017.svg.png',
-        'eurosport 1':      'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9e/Eurosport_1_logo.svg/200px-Eurosport_1_logo.svg.png',
-        'eurosport 2':      'https://upload.wikimedia.org/wikipedia/commons/thumb/5/5a/Eurosport_2_logo.svg/200px-Eurosport_2_logo.svg.png',
-        // ── International ──
-        'bbc world':        'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9f/BBC_World_News_2019.svg/200px-BBC_World_News_2019.svg.png',
-        'bbc world news':   'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9f/BBC_World_News_2019.svg/200px-BBC_World_News_2019.svg.png',
-        'cnn':              'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b1/CNN.svg/200px-CNN.svg.png',
-        'cnn international':'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b1/CNN.svg/200px-CNN.svg.png',
-        'al jazeera':       'https://upload.wikimedia.org/wikipedia/commons/thumb/f/f5/Al_Jazeera_Media_Network_Logo.svg/200px-Al_Jazeera_Media_Network_Logo.svg.png',
-        'africa 24':        'https://upload.wikimedia.org/wikipedia/fr/e/e4/Africa24_logo.png',
-        'trace africa':     'https://upload.wikimedia.org/wikipedia/fr/9/90/TRACE_AFRICA_LOGO.jpg',
-        'trace mziki':      'https://upload.wikimedia.org/wikipedia/commons/thumb/4/4c/Trace_Mziki.svg/200px-Trace_Mziki.svg.png',
-        'mbc 1':            'https://upload.wikimedia.org/wikipedia/commons/thumb/5/5b/MBC1_Logo.svg/200px-MBC1_Logo.svg.png',
-        'mbc 2':            'https://upload.wikimedia.org/wikipedia/commons/thumb/f/f9/MBC2.svg/200px-MBC2.svg.png',
-        '2m':               'https://upload.wikimedia.org/wikipedia/commons/thumb/5/5b/2M_Maroc_logo.svg/200px-2M_Maroc_logo.svg.png',
-        '2m maroc':         'https://upload.wikimedia.org/wikipedia/commons/thumb/5/5b/2M_Maroc_logo.svg/200px-2M_Maroc_logo.svg.png',
-        'al aoula':         'https://upload.wikimedia.org/wikipedia/fr/0/00/Al_Aoula_logo.png',
-        'rtm':              'https://upload.wikimedia.org/wikipedia/fr/0/00/Al_Aoula_logo.png',
-        // ── Afrique ──
-        'ortm':             'https://upload.wikimedia.org/wikipedia/fr/8/8b/ORTM_Mali_logo.png',
-        'rti':              'https://upload.wikimedia.org/wikipedia/fr/d/de/RTI_1_logo.png',
-        'rti 1':            'https://upload.wikimedia.org/wikipedia/fr/d/de/RTI_1_logo.png',
-        'rtb':              'https://upload.wikimedia.org/wikipedia/fr/4/4b/RTB_Burkina_Faso.png',
+        // Sénégal
+        'rts1':       'https://upload.wikimedia.org/wikipedia/commons/7/73/Logo_RTS_SN_3.png',
+        'rts2':       'https://upload.wikimedia.org/wikipedia/commons/7/73/Logo_RTS_SN_3.png',
+        '2stv':       'https://upload.wikimedia.org/wikipedia/fr/a/ab/2sTV_logo.png',
+        'tfm':        'https://www.gfm.sn/wp-content/uploads/2020/04/logo-gfm2-300x227.png',
+        'sentv':      'https://sentv.sn/images/artwork.png',
+        'walftv':     'https://upload.wikimedia.org/wikipedia/fr/8/84/Walf_FM_logo.jpg',
+        // Sport
+        'bein':       'https://upload.wikimedia.org/wikipedia/commons/d/d4/BeIN_Sports_logo_%28horizontal_version%29.svg',
+        'canalplus':  'https://upload.wikimedia.org/wikipedia/commons/1/12/Canal_plus_france_logo.svg',
+        'eurosport1': 'https://upload.wikimedia.org/wikipedia/commons/1/17/Eurosport_Logo_2015.svg',
+        'eurosport2': 'https://upload.wikimedia.org/wikipedia/commons/1/17/Eurosport_Logo_2015.svg',
+        'skysports':  'https://upload.wikimedia.org/wikipedia/commons/b/b7/Sky_Sports_2025.svg',
+        'tntsports':  'https://upload.wikimedia.org/wikipedia/commons/8/83/TNT_Sports_%282023%29.svg',
+        'dazn':       'https://upload.wikimedia.org/wikipedia/commons/0/06/DAZN_Logo_Master.svg',
+        'mtvbase':    'https://upload.wikimedia.org/wikipedia/commons/3/35/MTV_Base_Africa_%282021%29.svg',
+        'osn':        'https://upload.wikimedia.org/wikipedia/commons/4/47/OSN_2020_logo.svg',
+        // Pan-africain / International
+        'traceafrica':'https://upload.wikimedia.org/wikipedia/fr/c/c6/Traceafrica2022.png',
+        'tracemziki': 'https://upload.wikimedia.org/wikipedia/fr/2/25/Tracemziki2022.png',
+        'africa24':   'https://upload.wikimedia.org/wikipedia/fr/6/6a/Logo_Africa_24.jpg',
+        'tv5monde':   'https://upload.wikimedia.org/wikipedia/commons/3/3d/TV5Monde_Logo.svg',
+        'france24':   'https://upload.wikimedia.org/wikipedia/commons/c/c1/France_24_logo_%282013%29.svg',
+        'aljazeera':  'https://upload.wikimedia.org/wikipedia/commons/f/f2/Aljazeera_eng.svg',
+        'bbcworld':   'https://upload.wikimedia.org/wikipedia/commons/2/2a/BBC_World_News.svg',
+        'cnn':        'https://upload.wikimedia.org/wikipedia/commons/6/66/CNN_International_logo.svg',
+        'rfi':        'https://upload.wikimedia.org/wikipedia/commons/d/dd/RFI_logo_2013.svg',
+        // Afrique
+        'ortm':       'https://upload.wikimedia.org/wikipedia/commons/8/8c/ORTM_1_0.png',
+        'rtb':        'https://upload.wikimedia.org/wikipedia/fr/7/7f/Radio_T%C3%A9l%C3%A9vision_Burkina_logo.jpg',
+        'rti':        'https://upload.wikimedia.org/wikipedia/commons/2/2f/Logo_RTI_2021.svg',
+        // Maghreb / Moyen-Orient
+        'rta':        'https://upload.wikimedia.org/wikipedia/commons/f/f1/%D8%A7%D9%84%D8%AA%D9%84%D9%81%D8%B2%D9%8A%D9%88%D9%86_%D8%A7%D9%84%D8%B9%D9%85%D9%88%D9%85%D9%8A_%D8%A7%D9%84%D8%AC%D8%B2%D8%A7%D8%A6%D8%B1%D9%8A.svg',
+        '2m':         'https://upload.wikimedia.org/wikipedia/commons/2/29/2M_TV_logo.svg',
+        'alaoula':    'https://upload.wikimedia.org/wikipedia/commons/e/e4/%D8%B4%D8%B9%D8%A7%D8%B1_%D9%82%D9%86%D8%A7%D8%A9_%D8%A7%D9%84%D8%A3%D9%88%D9%84%D9%89_Al_Aoula_Tv_Logo.png',
+        'mbc1':       'https://upload.wikimedia.org/wikipedia/commons/c/c0/MBC_1_Logo.svg',
+        'mbc2':       'https://upload.wikimedia.org/wikipedia/commons/1/1f/MBC2_Logo.svg',
+        // France TNT
+        'tf1':        'https://upload.wikimedia.org/wikipedia/commons/thumb/5/5f/TF1_logo_2013.svg/180px-TF1_logo_2013.svg.png',
+        'france2':    'https://upload.wikimedia.org/wikipedia/commons/thumb/f/fc/France_2_logo.svg/160px-France_2_logo.svg.png',
+        'france3':    'https://upload.wikimedia.org/wikipedia/commons/thumb/5/50/France_3_logo.svg/160px-France_3_logo.svg.png',
+        'france4':    'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e3/France_4_logo.svg/160px-France_4_logo.svg.png',
+        'france5':    'https://upload.wikimedia.org/wikipedia/commons/thumb/5/5c/France_5_logo.svg/160px-France_5_logo.svg.png',
+        'm6':         'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9c/M6_-_2009.svg/180px-M6_-_2009.svg.png',
+        'w9':         'https://upload.wikimedia.org/wikipedia/commons/thumb/f/f4/W9_2017.svg/160px-W9_2017.svg.png',
+        'tmc':        'https://upload.wikimedia.org/wikipedia/commons/thumb/6/67/TMC_logo_2018.svg/160px-TMC_logo_2018.svg.png',
+        'gulli':      'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Logo_Gulli_2014.svg/180px-Logo_Gulli_2014.svg.png',
+        'cstar':      'https://upload.wikimedia.org/wikipedia/commons/thumb/9/95/CStar_logo_2016.svg/160px-CStar_logo_2016.svg.png',
     };
 
     function getLogo(ch) {
         if (!ch) return DEFAULT_TV_LOGO;
-        const name = (ch.name || '').toLowerCase().replace(/\s*(hd|fhd|4k|uhd|ar|fr)\s*/gi, '').trim();
-        if (CHANNEL_LOGOS[name]) return CHANNEL_LOGOS[name];
-        // Partial match
-        for (const [key, url] of Object.entries(CHANNEL_LOGOS)) {
-            if (name.includes(key) || key.includes(name)) return url;
-        }
+        const name = ((ch.name || '') + ' ' + (ch.id || '')).toLowerCase();
+
+        if (name.includes('rts') && (name.includes('1') || name.includes('sénégal') || name.includes('senegal'))) return CHANNEL_LOGOS['rts1'];
+        if (name.includes('rts') && name.includes('2')) return CHANNEL_LOGOS['rts2'];
+        if (name.includes('2stv') || name.includes('2s tv')) return CHANNEL_LOGOS['2stv'];
+        if (/\btfm\b/.test(name)) return CHANNEL_LOGOS['tfm'];
+        if (name.includes('sen tv') || name.includes('sentv')) return CHANNEL_LOGOS['sentv'];
+        if (name.includes('walf')) return CHANNEL_LOGOS['walftv'];
+        if (name.includes('bein') || name.includes('be in sport')) return CHANNEL_LOGOS['bein'];
+        if (name.includes('canal+') || name.includes('canal plus') || name.includes('canalplus')) return CHANNEL_LOGOS['canalplus'];
+        if (name.includes('trace africa')) return CHANNEL_LOGOS['traceafrica'];
+        if (name.includes('trace mziki') || name.includes('mziki')) return CHANNEL_LOGOS['tracemziki'];
+        if (name.includes('mtv base')) return CHANNEL_LOGOS['mtvbase'];
+        if (name.includes('africa 24') || name.includes('africa24')) return CHANNEL_LOGOS['africa24'];
+        if (name.includes('tv5')) return CHANNEL_LOGOS['tv5monde'];
+        if (name.includes('france 24') || name.includes('france24')) return CHANNEL_LOGOS['france24'];
+        if (name.includes('al jazeera') || name.includes('aljazeera')) return CHANNEL_LOGOS['aljazeera'];
+        if (name.includes('bbc world')) return CHANNEL_LOGOS['bbcworld'];
+        if (/\bcnn\b/.test(name)) return CHANNEL_LOGOS['cnn'];
+        if (name.includes('eurosport 2') || name.includes('eurosport2')) return CHANNEL_LOGOS['eurosport2'];
+        if (name.includes('eurosport')) return CHANNEL_LOGOS['eurosport1'];
+        if (/\brfi\b/.test(name) || name.includes('radio france internationale')) return CHANNEL_LOGOS['rfi'];
+        if (/\bortm\b/.test(name)) return CHANNEL_LOGOS['ortm'];
+        if (/\brtb\b/.test(name) || name.includes('burkina')) return CHANNEL_LOGOS['rtb'];
+        if (/\brti\b/.test(name) || name.includes('ivoirienne') || name.includes('ivoire')) return CHANNEL_LOGOS['rti'];
+        if (/\brta\b/.test(name) || /\bentv\b/.test(name) || /\baptv\b/.test(name)) return CHANNEL_LOGOS['rta'];
+        if (/\b2m\b/.test(name)) return CHANNEL_LOGOS['2m'];
+        if (name.includes('al aoula') || name.includes('aoula') || name.includes('alaoula')) return CHANNEL_LOGOS['alaoula'];
+        if (name.includes('mbc 1') || name.includes('mbc1')) return CHANNEL_LOGOS['mbc1'];
+        if (name.includes('mbc 2') || name.includes('mbc2')) return CHANNEL_LOGOS['mbc2'];
+        if (/\bosn\b/.test(name)) return CHANNEL_LOGOS['osn'];
+        if (name.includes('sky sport')) return CHANNEL_LOGOS['skysports'];
+        if (name.includes('tnt sport') || name.includes('bt sport')) return CHANNEL_LOGOS['tntsports'];
+        if (/\bdazn\b/.test(name)) return CHANNEL_LOGOS['dazn'];
+        if (/\btf1\b/.test(name)) return CHANNEL_LOGOS['tf1'];
+        if (name.includes('france 2') || name.includes('france2')) return CHANNEL_LOGOS['france2'];
+        if (name.includes('france 3') || name.includes('france3')) return CHANNEL_LOGOS['france3'];
+        if (name.includes('france 4') || name.includes('france4')) return CHANNEL_LOGOS['france4'];
+        if (name.includes('france 5') || name.includes('france5')) return CHANNEL_LOGOS['france5'];
+        if (/\bm6\b/.test(name)) return CHANNEL_LOGOS['m6'];
+        if (/\bw9\b/.test(name)) return CHANNEL_LOGOS['w9'];
+        if (/\btmc\b/.test(name)) return CHANNEL_LOGOS['tmc'];
+        if (/\bgulli\b/.test(name)) return CHANNEL_LOGOS['gulli'];
+        if (/\bcstar\b/.test(name)) return CHANNEL_LOGOS['cstar'];
+
         return DEFAULT_TV_LOGO;
     }
 
