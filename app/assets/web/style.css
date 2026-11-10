@@ -2060,6 +2060,137 @@ h1, h2, h3, .topnav-brand-name, .hero-headline, .home-section-label {
     line-height: 1.45;
 }
 
+
+/* ── Boutons de signalement Firebase ── */
+.btn-report-hs {
+    color: var(--live-red) !important;
+    border-color: rgba(230, 57, 70, 0.35) !important;
+    background: rgba(230, 57, 70, 0.1) !important;
+    transition: 0.18s;
+}
+
+.btn-report-hs:hover {
+    background: rgba(230, 57, 70, 0.22) !important;
+    border-color: var(--live-red) !important;
+    color: #fff !important;
+    box-shadow: 0 0 12px rgba(230, 57, 70, 0.4);
+}
+
+.btn-report-hs.reported {
+    background: var(--live-red) !important;
+    color: #fff !important;
+    border-color: var(--live-red) !important;
+}
+
+/* ── Modal des chaînes signalées ── */
+.modal-reports-box {
+    max-width: 540px !important;
+    width: 95% !important;
+}
+
+.report-item-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: 10px;
+    gap: 10px;
+    transition: 0.15s;
+}
+
+.report-item-row:hover {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.14);
+}
+
+.report-item-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    flex: 1;
+}
+
+.report-id-pill {
+    font-size: 0.68rem;
+    font-weight: 800;
+    color: var(--brand-light);
+    background: var(--brand-dim);
+    padding: 2px 7px;
+    border-radius: 4px;
+    flex-shrink: 0;
+}
+
+.report-item-info {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.report-ch-name {
+    font-size: 0.84rem;
+    font-weight: 700;
+    color: #fff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.report-ch-sub {
+    font-size: 0.68rem;
+    color: var(--text-muted);
+}
+
+.report-item-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.report-badge-count {
+    font-size: 0.7rem;
+    font-weight: 800;
+    color: var(--live-red);
+    background: rgba(230, 57, 70, 0.15);
+    border: 1px solid rgba(230, 57, 70, 0.3);
+    padding: 2px 8px;
+    border-radius: 12px;
+}
+
+.report-btn-test {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    color: #fff;
+    padding: 4px 10px;
+    font-size: 0.72rem;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: 0.15s;
+}
+
+.report-btn-test:hover {
+    background: var(--brand);
+    border-color: var(--brand);
+}
+
+.report-btn-del {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    transition: 0.15s;
+}
+
+.report-btn-del:hover {
+    color: var(--live-red);
+}
+
 /* ══════════════════════════════════════════════════════
    RESPONSIVE
 ══════════════════════════════════════════════════════ */

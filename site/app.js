@@ -3468,7 +3468,225 @@
     }
 
     // ── Initialisation ──
-    function init() {
+        // ── GESTIONNAIRE DE SIGNALEMENT FIREBASE CLOUD FIRESTORE ──
+    function setupFirebaseReporting() {
+        const btnReportBroken = document.getElementById('btn-report-broken');
+        const playerReportBtn = document.getElementById('player-report-btn');
+        const moreActionReports = document.getElementById('more-action-reports');
+        const reportsModal = document.getElementById('reports-modal');
+        const btnCloseReports = document.getElementById('btn-close-reports');
+        const btnRefreshReports = document.getElementById('btn-refresh-reports');
+        const btnCopyReports = document.getElementById('btn-copy-reports');
+        const reportsListContainer = document.getElementById('reports-list-container');
+        const moreReportBadge = document.getElementById('more-report-badge');
+        const moreSheetBackdrop = document.getElementById('more-sheet-backdrop');
+
+        // Mettre à jour le badge du nombre de signalements
+        async function updateReportsBadge(reports) {
+            try {
+                const list = reports || (window.BokkFirebase ? await window.BokkFirebase.getReports() : []);
+                if (moreReportBadge) {
+                    if (list.length > 0) {
+                        moreReportBadge.style.display = 'inline-block';
+                        moreReportBadge.textContent = list.length;
+                    } else {
+                        moreReportBadge.style.display = 'none';
+                    }
+                }
+            } catch (e) {}
+        }
+
+        // Afficher la liste des chaînes signalées dans le modal
+        async function loadReportsModalList() {
+            if (!reportsListContainer) return;
+            reportsListContainer.innerHTML = '<p style="text-align:center; color:var(--text-muted); font-size:0.85rem; padding:20px;">Chargement depuis Firebase...</p>';
+
+            let reports = [];
+            if (window.BokkFirebase) {
+                reports = await window.BokkFirebase.getReports();
+            }
+
+            if (!reports || reports.length === 0) {
+                reportsListContainer.innerHTML = `
+                    <div style="text-align:center; padding:30px 16px; color:var(--text-muted);">
+                        <div style="font-size:2rem; margin-bottom:8px;">🎉</div>
+                        <p style="font-size:0.9rem; font-weight:700; color:#fff;">Aucune chaîne signalée</p>
+                        <p style="font-size:0.75rem; margin-top:4px;">Toutes les chaînes testées fonctionnent ou aucun problème n'a été remonté.</p>
+                    </div>
+                `;
+                updateReportsBadge([]);
+                return;
+            }
+
+            updateReportsBadge(reports);
+            reportsListContainer.innerHTML = '';
+
+            reports.forEach(r => {
+                const row = document.createElement('div');
+                row.className = 'report-item-row';
+                const count = r.reportCount || r.count || 1;
+                const chId = r.channelId || r.id;
+
+                row.innerHTML = `
+                    <div class="report-item-left">
+                        <span class="report-id-pill">#${chId}</span>
+                        <div class="report-item-info">
+                            <span class="report-ch-name">${r.name || 'Chaîne inconnue'}</span>
+                            <span class="report-ch-sub">${r.group || 'Direct'}</span>
+                        </div>
+                    </div>
+                    <div class="report-item-right">
+                        <span class="report-badge-count" title="${count} signalement(s)">${count} ⚠️</span>
+                        <button class="report-btn-test" data-chid="${chId}">Tester</button>
+                        <button class="report-btn-del" data-chid="${chId}" title="Supprimer le signalement">✕</button>
+                    </div>
+                `;
+
+                // Bouton Tester
+                const testBtn = row.querySelector('.report-btn-test');
+                if (testBtn) {
+                    testBtn.onclick = () => {
+                        if (reportsModal) reportsModal.style.display = 'none';
+                        const idx = channels.findIndex(c => String(c.id) === String(chId));
+                        if (idx >= 0) {
+                            revealPlayer();
+                            loadChannel(idx);
+                        } else {
+                            showToast(`Chaîne #${chId} introuvable dans le catalogue.`);
+                        }
+                    };
+                }
+
+                // Bouton Supprimer le signalement
+                const delBtn = row.querySelector('.report-btn-del');
+                if (delBtn) {
+                    delBtn.onclick = async () => {
+                        if (window.BokkFirebase) {
+                            await window.BokkFirebase.deleteReport(chId);
+                        }
+                        row.remove();
+                        showToast(`Signalement #${chId} supprimé`);
+                        loadReportsModalList();
+                    };
+                }
+
+                reportsListContainer.appendChild(row);
+            });
+        }
+
+        // Action bouton "Signaler HS" sur l'écran d'erreur
+        if (btnReportBroken) {
+            btnReportBroken.addEventListener('click', async () => {
+                const cur = channels[currentIndex];
+                if (!cur) return;
+                btnReportBroken.disabled = true;
+                btnReportBroken.innerHTML = '<span>Envoi à Firebase...</span>';
+
+                if (window.BokkFirebase) {
+                    await window.BokkFirebase.reportBroken(cur, 'erreur_lecture');
+                }
+
+                btnReportBroken.innerHTML = '<span>✅ Signalé HS</span>';
+                btnReportBroken.classList.add('reported');
+                showToast(`⚠️ Chaîne #${cur.id} ${cur.name} enregistrée dans Firebase !`);
+                updateReportsBadge();
+            });
+        }
+
+        // Action bouton "Signaler" dans le bandeau du lecteur
+        if (playerReportBtn) {
+            playerReportBtn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const cur = channels[currentIndex];
+                if (!cur) return;
+                playerReportBtn.classList.add('reported');
+
+                if (window.BokkFirebase) {
+                    await window.BokkFirebase.reportBroken(cur, 'signalement_manuel');
+                }
+
+                showToast(`⚠️ Chaîne #${cur.id} ${cur.name} signalée comme HS`);
+                updateReportsBadge();
+            });
+        }
+
+        // Ouvrir le modal depuis le menu Plus
+        if (moreActionReports) {
+            moreActionReports.addEventListener('click', () => {
+                if (moreSheetBackdrop) moreSheetBackdrop.style.display = 'none';
+                if (reportsModal) {
+                    reportsModal.style.display = 'flex';
+                    loadReportsModalList();
+                }
+            });
+        }
+
+        if (btnCloseReports && reportsModal) {
+            btnCloseReports.addEventListener('click', () => {
+                reportsModal.style.display = 'none';
+            });
+            reportsModal.addEventListener('click', (e) => {
+                if (e.target === reportsModal) reportsModal.style.display = 'none';
+            });
+        }
+
+        if (btnRefreshReports) {
+            btnRefreshReports.addEventListener('click', () => {
+                loadReportsModalList();
+            });
+        }
+
+        // Bouton Copier la liste pour l'assistant
+        if (btnCopyReports) {
+            btnCopyReports.addEventListener('click', async () => {
+                let reports = [];
+                if (window.BokkFirebase) {
+                    reports = await window.BokkFirebase.getReports();
+                }
+
+                if (!reports || reports.length === 0) {
+                    showToast('Aucune chaîne signalée pour l\'instant.');
+                    return;
+                }
+
+                const ids = reports.map(r => r.channelId || r.id);
+                const textLines = [
+                    `📋 LISTE DES CHAÎNES SIGNALÉES HS DANS FIREBASE (Total: ${reports.length}) :`,
+                    `IDs: [${ids.join(', ')}]`,
+                    '',
+                    'Détails :',
+                    ...reports.map(r => `- #${r.channelId || r.id} : ${r.name} (${r.group || 'Direct'}) [Signalé ${r.reportCount || 1}x]`)
+                ].join('\n');
+
+                try {
+                    await navigator.clipboard.writeText(textLines);
+                    showToast('📋 Liste copiée ! Tu peux maintenant la coller dans le chat.');
+                } catch (err) {
+                    const ta = document.createElement('textarea');
+                    ta.value = textLines;
+                    document.body.appendChild(ta);
+                    ta.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(ta);
+                    showToast('📋 Liste copiée !');
+                }
+            });
+        }
+
+        // Écouter les mises à jour Firebase en temps réel
+        if (window.BokkFirebase && typeof window.BokkFirebase.listenReports === 'function') {
+            window.BokkFirebase.listenReports((reports) => {
+                updateReportsBadge(reports);
+            });
+        } else {
+            updateReportsBadge();
+        }
+    }
+
+function init() {
+        // ── Initialisation Signalements Firebase Cloud ──
+        setupFirebaseReporting();
+
         // ── Horloge Nav (mise à jour toutes les 10s) ──
         updateNavClock();
         setInterval(updateNavClock, 10000);
