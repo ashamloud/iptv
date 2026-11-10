@@ -5,6 +5,35 @@
 
 const FEATURED_MATCHES = [
     {
+        id: "match-atletico-barcelona",
+        title: "Atlético Madrid vs FC Barcelone",
+        competition: "LaLiga EA Sports",
+        competitionBadge: "LALIGA",
+        category: "football",
+        stage: "Choc au Sommet • LaLiga",
+        date: "Dim. 8 Nov.",
+        time: "20:00",
+        isLive: true,
+        liveMinute: "72'",
+        score: "1 - 2",
+        poster: "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1400&q=80",
+        teamA: {
+            name: "Atlético Madrid",
+            logo: "https://upload.wikimedia.org/wikipedia/fr/9/94/Logo_Atl%C3%A9tico_Madrid_2017.svg"
+        },
+        teamB: {
+            name: "FC Barcelone",
+            logo: "https://upload.wikimedia.org/wikipedia/fr/a/a1/Logo_FC_Barcelona.svg"
+        },
+        description: "LaLiga — Atlético Madrid contre Barcelona. Diffusion en direct en HD & 4K.",
+        channels: [
+            { name: "DAZN LaLiga 4K", id: 5293, badge: "4K UHD", quality: "4K" },
+            { name: "beIN Sports 1 AR", id: 3724, badge: "FHD", quality: "1080p" },
+            { name: "M+ LaLiga 4K", id: 5245, badge: "4K UHD", quality: "4K" },
+            { name: "Canal+ Foot HD", id: 3713, badge: "FHD", quality: "1080p" }
+        ]
+    },
+    {
         id: "match-el-clasico",
         title: "FC Barcelone vs Real Madrid",
         competition: "La Liga EA Sports",

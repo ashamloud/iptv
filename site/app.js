@@ -2032,11 +2032,83 @@
         }
     }
 
-    // ── Configuration du Hero Billboard (Événement Phare style Canal+) ──
+    // ── Moteur du Slider Hero Billboard ──
+    let heroMatches = [];
+    let heroCurrentIndex = 0;
+    let heroAutoTimer = null;
+    let heroIsPaused = false;
+
+    // ── Configuration du Hero Billboard (Slider interactif avec chaînes et défilement) ──
     function setupHeroBillboard() {
-        const matches = (typeof window !== 'undefined' && window.FEATURED_MATCHES) ? window.FEATURED_MATCHES : [];
+        const matches = (typeof window !== 'undefined' && Array.isArray(window.FEATURED_MATCHES))
+            ? window.FEATURED_MATCHES
+            : [];
         if (!matches || matches.length === 0) return;
-        const mainMatch = matches[0];
+
+        heroMatches = matches;
+        heroCurrentIndex = 0;
+
+        const prevBtn = document.getElementById('hero-arrow-prev');
+        const nextBtn = document.getElementById('hero-arrow-next');
+        const billboard = document.getElementById('hero-billboard');
+
+        if (prevBtn) {
+            prevBtn.onclick = (e) => {
+                e.stopPropagation();
+                prevHeroSlide();
+            };
+        }
+        if (nextBtn) {
+            nextBtn.onclick = (e) => {
+                e.stopPropagation();
+                nextHeroSlide();
+            };
+        }
+
+        // Pause de l'auto-rotation au survol
+        if (billboard && !billboard._hoverBound) {
+            billboard._hoverBound = true;
+            billboard.addEventListener('mouseenter', () => { heroIsPaused = true; });
+            billboard.addEventListener('mouseleave', () => { heroIsPaused = false; });
+
+            // Support du swipe tactile
+            let touchStartX = 0;
+            billboard.addEventListener('touchstart', (e) => {
+                touchStartX = e.changedTouches[0].screenX;
+            }, { passive: true });
+            billboard.addEventListener('touchend', (e) => {
+                const touchEndX = e.changedTouches[0].screenX;
+                const diff = touchEndX - touchStartX;
+                if (diff > 50) prevHeroSlide();
+                else if (diff < -50) nextHeroSlide();
+            }, { passive: true });
+        }
+
+        // Rendu de la première slide
+        renderHeroSlide(0);
+
+        // Défilement automatique toutes les 7 secondes
+        if (heroAutoTimer) clearInterval(heroAutoTimer);
+        heroAutoTimer = setInterval(() => {
+            if (!heroIsPaused) nextHeroSlide();
+        }, 7000);
+    }
+
+    function nextHeroSlide() {
+        if (!heroMatches || heroMatches.length === 0) return;
+        renderHeroSlide((heroCurrentIndex + 1) % heroMatches.length);
+    }
+
+    function prevHeroSlide() {
+        if (!heroMatches || heroMatches.length === 0) return;
+        renderHeroSlide((heroCurrentIndex - 1 + heroMatches.length) % heroMatches.length);
+    }
+
+    function renderHeroSlide(index) {
+        if (!heroMatches || heroMatches.length === 0) return;
+        heroCurrentIndex = (index + heroMatches.length) % heroMatches.length;
+        const match = heroMatches[heroCurrentIndex];
+        if (!match) return;
 
         const heroBgImg    = document.getElementById('hero-bg-img');
         const heroHeadline = document.getElementById('hero-headline');
@@ -2044,40 +2116,140 @@
         const heroEyebrow  = document.getElementById('hero-eyebrow');
         const heroBtnWatch = document.getElementById('hero-btn-watch');
         const heroBtnMatches = document.getElementById('hero-btn-matches');
+        const chipsContainer = document.getElementById('hero-channels-chips');
+        const channelsBox  = document.getElementById('hero-channels-box');
+        const tagsRow      = document.getElementById('hero-tags-row');
+        const dotsEl       = document.getElementById('hero-dots');
 
-        if (heroBgImg && mainMatch.poster) {
-            heroBgImg.style.backgroundImage = `url('${mainMatch.poster}')`;
+        // Transition d'affiche d'arrière-plan en fondu
+        if (heroBgImg && match.poster) {
+            heroBgImg.classList.add('is-fading');
+            setTimeout(() => {
+                heroBgImg.style.backgroundImage = `url('${match.poster}')`;
+                heroBgImg.classList.remove('is-fading');
+            }, 180);
         }
-        if (heroHeadline) {
-            heroHeadline.innerHTML = `${mainMatch.teamA.name.toUpperCase()} <span style="color:var(--brand-light)">VS</span> ${mainMatch.teamB.name.toUpperCase()}`;
-        }
-        if (heroSub) {
-            heroSub.textContent = `${mainMatch.competitionBadge || mainMatch.competition} — ${mainMatch.description}`;
-        }
+
+        // En-tête / statut live ou date
         if (heroEyebrow) {
-            const txt = heroEyebrow.querySelector('span:last-child');
-            if (txt) txt.textContent = mainMatch.isLive ? 'EN DIRECT' : (mainMatch.date + ' • ' + mainMatch.time);
+            const dot = heroEyebrow.querySelector('.hero-live-dot');
+            const txt = heroEyebrow.querySelector('#hero-eyebrow-text') || heroEyebrow.querySelector('span:last-child');
+            if (match.isLive) {
+                if (dot) dot.style.display = 'inline-block';
+                if (txt) txt.textContent = `EN DIRECT • ${match.liveMinute || match.score || ''}`;
+            } else {
+                if (dot) dot.style.display = 'none';
+                if (txt) txt.textContent = `${match.competitionBadge || match.competition} • ${match.date} ${match.time}`;
+            }
         }
 
-        // Clic sur "Regarder en direct" → lance la première chaîne du match
+        // Titre du match
+        if (heroHeadline) {
+            const teamAName = match.teamA ? match.teamA.name.toUpperCase() : 'ÉQUIPE A';
+            const teamBName = match.teamB ? match.teamB.name.toUpperCase() : 'ÉQUIPE B';
+            heroHeadline.innerHTML = `${teamAName} <span class="hero-vs">VS</span> ${teamBName}`;
+        }
+
+        // Sous-titre descriptif
+        if (heroSub) {
+            heroSub.textContent = match.isLive
+                ? `${match.competition || ''} — En direct maintenant sur BOKK TV (Score : ${match.score || 'En cours'}).`
+                : (match.description || `${match.competition} — ${match.teamA.name} contre ${match.teamB.name}. Diffusion en direct en HD & 4K.`);
+        }
+
+        // Indication dynamique des chaînes de diffusion directe
+        if (chipsContainer) {
+            if (match.channels && match.channels.length > 0) {
+                chipsContainer.innerHTML = match.channels.map(ch => `
+                    <button class="hero-ch-chip" data-chid="${ch.id}" data-chname="${ch.name}">
+                        <span class="hero-ch-badge">${ch.badge || ch.quality || 'HD'}</span>
+                        <span>${ch.name}</span>
+                    </button>
+                `).join('');
+
+                chipsContainer.querySelectorAll('.hero-ch-chip').forEach(btn => {
+                    btn.onclick = (e) => {
+                        e.stopPropagation();
+                        const chId = btn.dataset.chid;
+                        const chName = btn.dataset.chname;
+                        showToast(`Lancement de ${chName} (${match.title})`);
+                        enableAudioOnFirstGesture();
+                        revealPlayer();
+                        loadChannelByIdOrQuery(chId, chName);
+                    };
+                });
+                if (channelsBox) channelsBox.style.display = 'flex';
+            } else {
+                if (channelsBox) channelsBox.style.display = 'none';
+            }
+        }
+
+        // Bouton Regarder en direct
         if (heroBtnWatch) {
             heroBtnWatch.onclick = () => {
-                if (mainMatch.channels && mainMatch.channels.length > 0) {
-                    const firstCh = mainMatch.channels[0];
-                    showToast(`▶ Lancement du choc ${mainMatch.title} sur ${firstCh.name}`);
+                if (match.channels && match.channels.length > 0) {
+                    const firstCh = match.channels[0];
+                    showToast(`Lancement de ${firstCh.name} (${match.title})`);
                     enableAudioOnFirstGesture();
                     revealPlayer();
                     loadChannelByIdOrQuery(firstCh.id, firstCh.name);
+                } else {
+                    const sec = document.getElementById('section-matchs');
+                    if (sec) sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 }
             };
         }
 
-        // Clic sur "Voir tous les matchs" → scroll vers section matchs
-        if (heroBtnMatches) {
+        // Bouton Voir tous les matchs
+        if (heroBtnMatches && !heroBtnMatches._bound) {
+            heroBtnMatches._bound = true;
             heroBtnMatches.onclick = () => {
                 const sec = document.getElementById('section-matchs');
                 if (sec) sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
             };
+        }
+
+        // Défilement latéral des tags / pills
+        if (tagsRow) {
+            tagsRow.innerHTML = heroMatches.map((m, idx) => {
+                const isAct = idx === heroCurrentIndex;
+                const isLive = m.isLive;
+                const pillLabel = m.competitionBadge || m.stage || (m.teamA ? m.teamA.name.split(' ').slice(-1)[0] + ' - ' + m.teamB.name.split(' ').slice(-1)[0] : m.title);
+                return `
+                    <span class="hero-tag-pill ${isLive ? 'live-tag' : ''} ${isAct ? 'active' : ''}" data-idx="${idx}">
+                        ${isLive ? '<span class="live-dot-sm"></span>' : ''} ${pillLabel}
+                    </span>
+                `;
+            }).join('');
+
+            tagsRow.querySelectorAll('.hero-tag-pill').forEach(pill => {
+                pill.onclick = (e) => {
+                    e.stopPropagation();
+                    const idx = parseInt(pill.dataset.idx, 10);
+                    renderHeroSlide(idx);
+                };
+            });
+
+            // Défilement doux vers la pastille active
+            const activePill = tagsRow.querySelector('.hero-tag-pill.active');
+            if (activePill) {
+                activePill.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+            }
+        }
+
+        // Indicateurs de pagination (Dots)
+        if (dotsEl) {
+            dotsEl.innerHTML = heroMatches.map((_, idx) => `
+                <span class="hero-dot ${idx === heroCurrentIndex ? 'active' : ''}" data-idx="${idx}"></span>
+            `).join('');
+
+            dotsEl.querySelectorAll('.hero-dot').forEach(dot => {
+                dot.onclick = (e) => {
+                    e.stopPropagation();
+                    const idx = parseInt(dot.dataset.idx, 10);
+                    renderHeroSlide(idx);
+                };
+            });
         }
     }
 
@@ -2960,73 +3132,17 @@
         setTimeout(fetchLiveMatchData, 2 * 60 * 1000);
     }
 
-    // Mise à jour du Hero avec un match live réel
+    // Mise à jour du Hero avec un match live réel (depuis API ESPN)
     function updateHeroBillboardFromLiveData(match) {
         if (!match) return;
-
-        const heroHeadline = document.getElementById('hero-headline');
-        const heroBgImg    = document.getElementById('hero-bg-img');
-        const heroEyebrow  = document.getElementById('hero-eyebrow');
-        const heroSub      = document.getElementById('hero-sub');
-        const heroTagsRow  = document.getElementById('hero-tags-row') || document.querySelector('.hero-tags-row');
-
-        if (heroBgImg && match.poster) {
-            heroBgImg.style.backgroundImage = `url('${match.poster}')`;
+        const existsIdx = heroMatches.findIndex(m => m.id === match.id || m.title === match.title);
+        if (existsIdx >= 0) {
+            heroMatches[existsIdx] = match;
+            if (existsIdx === heroCurrentIndex) renderHeroSlide(heroCurrentIndex);
+        } else {
+            heroMatches.unshift(match);
+            renderHeroSlide(0);
         }
-
-        if (heroHeadline) {
-            heroHeadline.innerHTML = `${match.teamA.name.toUpperCase()} <span style="color:var(--brand-light)">VS</span> ${match.teamB.name.toUpperCase()}`;
-        }
-
-        if (heroEyebrow) {
-            const dot = heroEyebrow.querySelector('.hero-live-dot');
-            const txt = heroEyebrow.querySelector('span:last-child');
-            if (match.isLive) {
-                if (dot) dot.style.display = 'block';
-                if (txt) txt.textContent = `EN DIRECT • ${match.liveMinute || ''}`;
-            } else {
-                if (dot) dot.style.display = 'none';
-                if (txt) txt.textContent = `${match.competitionBadge || match.competition} • ${match.date} ${match.time}`;
-            }
-        }
-
-        if (heroSub) {
-            heroSub.textContent = match.isLive 
-                ? `En direct maintenant sur BOKK TV — Score : ${match.score}`
-                : `${match.competition} — ${match.teamA.name} contre ${match.teamB.name}. Diffusion en HD & 4K.`;
-        }
-
-        const heroBtnWatch = document.getElementById('hero-btn-watch');
-        if (heroBtnWatch && match.channels && match.channels.length > 0) {
-            heroBtnWatch.onclick = () => {
-                const firstCh = match.channels[0];
-                showToast(`▶ Lancement de ${firstCh.name} (${match.title})`);
-                enableAudioOnFirstGesture();
-                revealPlayer();
-                loadChannelByIdOrQuery(firstCh.id, firstCh.name);
-            };
-        }
-
-        // Mettre à jour les pills en haut
-        if (heroTagsRow) {
-            const liveMatches = (window.FEATURED_MATCHES || []).filter(m => m.isLive);
-            if (liveMatches.length > 0) {
-                heroTagsRow.innerHTML = liveMatches.slice(0, 4).map(m =>
-                    `<span class="hero-tag-pill live-tag" style="cursor:pointer;" 
-                        onclick="window._bokkLaunchMatch && window._bokkLaunchMatch(${JSON.stringify(m.channels && m.channels[0] ? m.channels[0].id : 0)}, '${(m.title || '').replace(/'/g, '')}')">
-                        <span class="live-dot-sm"></span> ${m.teamA.name.split(' ').slice(-1)[0]} - ${m.teamB.name.split(' ').slice(-1)[0]}
-                    </span>`
-                ).join('');
-            }
-        }
-
-        // Exposer helper global pour les onclick inline
-        window._bokkLaunchMatch = (chId, matchTitle) => {
-            showToast(`▶ Lancement de ${matchTitle}`);
-            enableAudioOnFirstGesture();
-            revealPlayer();
-            loadChannelByIdOrQuery(chId, matchTitle);
-        };
     }
 
     // ── Initialisation ──

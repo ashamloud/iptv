@@ -15,7 +15,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=9943">
+    <link rel="stylesheet" href="style.css?v=9944">
 </head>
 <body>
 
@@ -229,19 +229,35 @@
 ══════════════════════════════════════════════════════ -->
 <main class="page-home" id="page-home">
 
-    <!-- HERO BILLBOARD ── Large visuel + texte gauche comme myCANAL -->
+    <!-- HERO BILLBOARD ── Slider interactif avec chaînes de diffusion & défilement latéral -->
     <section class="hero-section" id="hero-billboard">
-        <div class="hero-bg-img" id="hero-bg-img" style="background-image: url('https://images.unsplash.com/photo-1568430462989-44163eb1752f?auto=format&fit=crop&w=1600&q=80');"></div>
+        <div class="hero-bg-img" id="hero-bg-img"></div>
         <div class="hero-gradient-left"></div>
         <div class="hero-gradient-bottom"></div>
+
+        <!-- Flèches de défilement latéral (Next / Prev) -->
+        <button class="hero-arrow hero-arrow-prev" id="hero-arrow-prev" title="Événement précédent" aria-label="Précédent">
+            <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"></polyline></svg>
+        </button>
+        <button class="hero-arrow hero-arrow-next" id="hero-arrow-next" title="Événement suivant" aria-label="Suivant">
+            <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"></polyline></svg>
+        </button>
 
         <div class="hero-left">
             <div class="hero-eyebrow" id="hero-eyebrow">
                 <span class="hero-live-dot"></span>
-                <span>EN DIRECT</span>
+                <span id="hero-eyebrow-text">EN DIRECT</span>
             </div>
-            <h1 class="hero-headline" id="hero-headline">VIVEZ LE MEILLEUR<br>DU DIVERTISSEMENT</h1>
-            <p class="hero-sub" id="hero-sub">Football, sport, cinéma, séries et les grandes chaînes nationales — tout en direct, tout en HD.</p>
+            <h1 class="hero-headline" id="hero-headline">ATLÉTICO MADRID <span class="hero-vs">VS</span> BARCELONA</h1>
+            <p class="hero-sub" id="hero-sub">LaLiga — Atlético Madrid contre Barcelona. Diffusion en HD & 4K.</p>
+
+            <!-- Indication des chaînes de diffusion directe -->
+            <div class="hero-channels-box" id="hero-channels-box">
+                <span class="hero-channels-label">Chaînes de diffusion directe :</span>
+                <div class="hero-channels-chips" id="hero-channels-chips">
+                    <!-- Rempli dynamiquement (ex: beIN Sports 1, Canal+ Foot, DAZN...) -->
+                </div>
+            </div>
 
             <div class="hero-cta-row">
                 <button class="hero-btn-watch" id="hero-btn-watch">
@@ -254,13 +270,15 @@
                 </button>
             </div>
 
-            <!-- Badges compétitions du moment -->
-            <div class="hero-tags-row">
-                <span class="hero-tag-pill live-tag"><span class="live-dot-sm"></span> EL CLÁSICO</span>
-                <span class="hero-tag-pill">CHAMPIONS LEAGUE</span>
-                <span class="hero-tag-pill">SÉNÉGAL</span>
-                <span class="hero-tag-pill">FORMULA 1</span>
+            <!-- Défilement latéral des événements / pills cliquables -->
+            <div class="hero-tags-wrapper">
+                <div class="hero-tags-row" id="hero-tags-row">
+                    <!-- Rempli dynamiquement -->
+                </div>
             </div>
+
+            <!-- Indicateurs de position (Dots) -->
+            <div class="hero-dots" id="hero-dots"></div>
         </div>
     </section>
 
@@ -470,10 +488,10 @@
 <!-- Scripts -->
 <script src="mpegts.js"></script>
 <script src="hls.min.js"></script>
-<script src="matches.js?v=9941"></script>
+<script src="matches.js?v=9944"></script>
 <script src="epg-data.js?v=9941"></script>
-<script src="epg.js?v=9943"></script>
+<script src="epg.js?v=9944"></script>
 <script src="channels.js?v=9941"></script>
-<script src="app.js?v=9943"></script>
+<script src="app.js?v=9944"></script>
 </body>
 </html>
