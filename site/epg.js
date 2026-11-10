@@ -70,7 +70,7 @@
       { start: '15:30', end: '18:00', title: 'Grands Prix Moto & F1', desc: 'Immersion au cœur des paddocks et courses rétro.' },
       { start: '18:00', end: '19:30', title: 'Canal Champions Club', desc: 'Plateau d\'avant-match avec les consultants vedettes.' },
       { start: '19:30', end: '20:50', title: 'Canal Football Club', desc: 'Hervé Mathoux décrypte tous les buts du week-end.' },
-      { start: '20:50', end: '23:00', title: '⚽ UEFA Champions League / Choc Football en Direct', desc: 'Le grand match européen en direct exclusif 1080p.' },
+      { start: '20:50', end: '23:00', title: 'UEFA Champions League — En Direct', desc: 'Le grand match européen en direct exclusif 1080p.' },
       { start: '23:00', end: '00:30', title: 'Le Debrief Champions League', desc: 'Analyses tactiques, interviews à chaud et résumés.' },
       { start: '00:30', end: '06:00', title: 'Création Originale Canal+', desc: 'Les séries prestigieuses de la chaîne cryptée.' }
     ],
@@ -83,7 +83,7 @@
       { start: '15:00', end: '18:00', title: 'Grand Tour Multisports', desc: 'Tennis ATP, NBA Extra et Handball.' },
       { start: '18:00', end: '19:00', title: 'NBA Extra', desc: 'L\'émission quotidienne dédiée au basket américain.' },
       { start: '19:00', end: '20:30', title: 'Club beIN Europe', desc: 'L\'avant-match des soirées européennes.' },
-      { start: '20:30', end: '22:45', title: '⚽ Match en Direct : LaLiga / Serie A', desc: 'Le choc au sommet commenté par les experts beIN.' },
+      { start: '20:30', end: '22:45', title: 'Match en Direct : LaLiga / Serie A', desc: 'Le choc au sommet commenté par les experts beIN.' },
       { start: '22:45', end: '00:00', title: 'L\'After Sport beIN', desc: 'Débats enflammés et réactions en zone mixte.' },
       { start: '00:00', end: '06:00', title: 'Nuit Live NBA', desc: 'Matchs en direct des parquets américains.' }
     ],

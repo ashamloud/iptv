@@ -2949,7 +2949,7 @@
                     updateHeroBillboardFromLiveData(heroMatch);
                 }
 
-                console.log(`[BOKK TV] ✅ ${allMatches.length} vrais matchs ESPN chargés en direct !`);
+                console.log(`[BOKK TV] ${allMatches.length} vrais matchs ESPN chargés en direct !`);
                 showToast(`${allMatches.length} matchs synchronisés en direct`);
             }
         } catch (e) {
