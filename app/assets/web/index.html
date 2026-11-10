@@ -5,10 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BOKK TV — Streaming Direct, Sport & Cinéma</title>
     <meta name="description" content="Plateforme streaming premium — TV en direct, matchs, films et séries en HD & 4K.">
-    <link rel="icon" type="image/svg+xml" href="favicon.svg">
-    <link rel="alternate icon" type="image/png" href="favicon.png">
+    <link rel="icon" type="image/png" href="favicon.png">
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#07090e">
+    <meta name="theme-color" content="#0070f3">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="BOKK TV">
@@ -16,7 +15,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=9956">
+    <link rel="stylesheet" href="style.css?v=9955">
 </head>
 <body>
 
@@ -29,7 +28,6 @@
         <div class="topnav-primary-row">
             <!-- Logo avec rouge éclatant style Reezn -->
             <a href="#" class="topnav-brand" id="brand-home-link" title="BOKK TV">
-                <img src="favicon.svg" alt="BOKK TV" class="topnav-logo-icon">
                 <span class="topnav-brand-name"><span class="brand-red">BOKK</span> <span class="brand-white">TV</span></span>
             </a>
 
@@ -101,10 +99,17 @@
      LECTEUR VIDÉO (MASQUÉ PAR DÉFAUT, RÉVÉLÉ AU CLIC)
 ══════════════════════════════════════════════════════ -->
 <section class="player-wrapper" id="player-wrapper" style="display:none;">
+    <!-- Bouton fermer le lecteur — toujours visible -->
+    <button class="player-float-close" id="player-float-close" title="Fermer le lecteur" aria-label="Fermer">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+    </button>
     <div class="player-container" id="player-container">
         <div id="player-placeholder" class="player-placeholder">
             <div class="placeholder-icon">
-                <img src="favicon.svg" alt="BOKK TV" class="placeholder-logo-img">
+                <img src="favicon.png" alt="BOKK TV" class="placeholder-logo-img">
             </div>
             <h2 class="placeholder-title">Bienvenue sur BOKK TV</h2>
             <p class="placeholder-desc">Sélectionnez une chaîne ou un match pour démarrer la diffusion.</p>
@@ -249,10 +254,7 @@
 
                 <!-- Indication des chaînes de diffusion directe -->
                 <div class="hero-channels-box" id="hero-channels-box">
-                    <span class="hero-channels-label">
-                        <span class="lbl-desktop">Chaînes de diffusion directe :</span>
-                        <span class="lbl-mobile">DIRECT :</span>
-                    </span>
+                    <span class="hero-channels-label">Chaînes de diffusion directe :</span>
                     <div class="hero-channels-chips" id="hero-channels-chips">
                         <button class="hero-ch-chip" data-chid="3713" data-chname="Canal+ Foot HD">
                             <span class="hero-ch-badge">FHD</span>
@@ -316,11 +318,7 @@
     <section class="home-section" id="section-matchs">
         <div class="home-section-header">
             <div class="home-section-header-left">
-                <span class="home-section-label" data-view="sport">
-                    <span class="lbl-desktop">GRANDS RENDEZ-VOUS SPORTIFS</span>
-                    <span class="lbl-mobile">MATCHS</span>
-                    <svg class="chevron-svg" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"></polyline></svg>
-                </span>
+                <span class="home-section-label" data-view="sport">GRANDS RENDEZ-VOUS SPORTIFS <svg class="chevron-svg" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"></polyline></svg></span>
                 <span class="home-section-count" id="matches-count-badge">50+ affiches</span>
             </div>
             <!-- Filtres rapides pour connaître les événements -->
@@ -342,11 +340,7 @@
     <!-- SECTION "SÉNÉGAL" ── chaînes nationales -->
     <section class="home-section" id="section-senegal">
         <div class="home-section-header">
-            <span class="home-section-label" data-view="senegal">
-                <span class="lbl-desktop">SÉNÉGAL — DIRECT NATIONAL</span>
-                <span class="lbl-mobile">SÉNÉGAL</span>
-                <svg class="chevron-svg" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"></polyline></svg>
-            </span>
+            <span class="home-section-label" data-view="senegal">SÉNÉGAL — DIRECT NATIONAL <svg class="chevron-svg" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"></polyline></svg></span>
             <button class="see-all-btn" data-view="senegal">Tout voir →</button>
         </div>
         <div class="channels-scroll-row" id="carousel-senegal">
@@ -357,11 +351,7 @@
     <!-- SECTION "SPORT VIP" ── beIN, Canal+, Sky -->
     <section class="home-section" id="section-sports">
         <div class="home-section-header">
-            <span class="home-section-label" data-view="sport">
-                <span class="lbl-desktop">SPORT & beIN SPORTS</span>
-                <span class="lbl-mobile">SPORTS</span>
-                <svg class="chevron-svg" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"></polyline></svg>
-            </span>
+            <span class="home-section-label" data-view="sport">SPORT & beIN SPORTS <svg class="chevron-svg" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"></polyline></svg></span>
             <button class="see-all-btn" data-view="sport">Tout voir →</button>
         </div>
         <div class="channels-scroll-row" id="carousel-sports">
@@ -372,11 +362,7 @@
     <!-- SECTION "CINÉMA & SÉRIES" -->
     <section class="home-section" id="section-cinema">
         <div class="home-section-header">
-            <span class="home-section-label" data-view="films">
-                <span class="lbl-desktop">CINÉMA & SÉRIES</span>
-                <span class="lbl-mobile">CINÉMA</span>
-                <svg class="chevron-svg" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"></polyline></svg>
-            </span>
+            <span class="home-section-label" data-view="films">CINÉMA & SÉRIES <svg class="chevron-svg" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"></polyline></svg></span>
             <button class="see-all-btn" data-view="films">Tout voir →</button>
         </div>
         <div class="channels-scroll-row" id="carousel-cinema">
@@ -387,11 +373,7 @@
     <!-- SECTION "FRANCE TNT" -->
     <section class="home-section" id="section-france">
         <div class="home-section-header">
-            <span class="home-section-label" data-view="live">
-                <span class="lbl-desktop">FRANCE TNT & NATIONALES</span>
-                <span class="lbl-mobile">FRANCE TNT</span>
-                <svg class="chevron-svg" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"></polyline></svg>
-            </span>
+            <span class="home-section-label" data-view="live">FRANCE TNT & NATIONALES <svg class="chevron-svg" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"></polyline></svg></span>
             <button class="see-all-btn" data-view="live">Tout voir →</button>
         </div>
         <div class="channels-scroll-row" id="carousel-france">
@@ -402,11 +384,7 @@
     <!-- SECTION "ESPAGNE / LALIGA" -->
     <section class="home-section" id="section-espagne">
         <div class="home-section-header">
-            <span class="home-section-label" data-view="catalogue">
-                <span class="lbl-desktop">ESPAGNE — LA LIGA & MOVISTAR+</span>
-                <span class="lbl-mobile">ESPAGNE</span>
-                <svg class="chevron-svg" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"></polyline></svg>
-            </span>
+            <span class="home-section-label" data-view="catalogue">ESPAGNE — LA LIGA & MOVISTAR+ <svg class="chevron-svg" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"></polyline></svg></span>
             <button class="see-all-btn" data-view="catalogue">Tout voir →</button>
         </div>
         <div class="channels-scroll-row" id="carousel-espagne">
@@ -572,10 +550,10 @@
 <!-- Scripts -->
 <script src="mpegts.js"></script>
 <script src="hls.min.js"></script>
-<script src="matches.js?v=9956"></script>
-<script src="epg-data.js?v=9956"></script>
-<script src="epg.js?v=9956"></script>
-<script src="channels.js?v=9956"></script>
-<script src="app.js?v=9956"></script>
+<script src="matches.js?v=9955"></script>
+<script src="epg-data.js?v=9941"></script>
+<script src="epg.js?v=9955"></script>
+<script src="channels.js?v=9941"></script>
+<script src="app.js?v=9955"></script>
 </body>
 </html>

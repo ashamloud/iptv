@@ -480,7 +480,11 @@
             if (stage === 1) {
                 return `/api/proxy?url=${encodeURIComponent(rawUrl)}${extraParams}`;
             }
-            // Stage 2+ : Retour Cloudflare Worker
+            // Stage 2 : URL directe (certains flux supportent CORS nativement)
+            if (stage === 2) {
+                return rawUrl;
+            }
+            // Stage 3+ : Retour Cloudflare Worker avec délai
             if (CF_WORKER_BASE) {
                 return `${CF_WORKER_BASE}/proxy?url=${encodeURIComponent(rawUrl)}${extraParams}`;
             }
@@ -690,14 +694,18 @@
                     maxBufferHole: 1.0,                // Tolère les micro-trous sans bloquer
                     highBufferWatchdogPeriod: 2,
                     // ── Timeouts et tolérance aux débits variables ──
-                    manifestLoadingTimeOut: 10000,
+                    manifestLoadingTimeOut: 8000,
                     manifestLoadingMaxRetry: 4,
                     manifestLoadingRetryDelay: 500,
-                    levelLoadingTimeOut: 10000,
+                    levelLoadingTimeOut: 8000,
                     levelLoadingMaxRetry: 4,
-                    fragLoadingTimeOut: 12000,
+                    fragLoadingTimeOut: 10000,
                     fragLoadingMaxRetry: 5,
                     fragLoadingRetryDelay: 500,
+                    // ── Headers requis pour certains serveurs IPTV ──
+                    xhrSetup: function(xhr) {
+                        xhr.setRequestHeader('Accept', '*/*');
+                    },
                     // ── ABR fluide ──
                     abrEwmaDefaultEstimate: 1200000,
                     abrBandWidthFactor: 0.75,
@@ -784,7 +792,7 @@
                                 destroyActivePlayer();
                                 if (channel.fallbackUrl && !useFallback && channel.fallbackUrl !== channel.url) {
                                     loadChannel(index, true, 0);
-                                } else if (retryStage < 3) {
+                                } else if (retryStage < 4) {
                                     loadChannel(index, useFallback, retryStage + 1);
                                 } else {
                                     showPlayerError('Ce flux est temporairement indisponible.', channel, index);
@@ -808,7 +816,7 @@
                                 destroyActivePlayer();
                                 if (channel.fallbackUrl && !useFallback && channel.fallbackUrl !== channel.url) {
                                     loadChannel(index, true, 0);
-                                } else if (retryStage < 3) {
+                                } else if (retryStage < 4) {
                                     loadChannel(index, useFallback, retryStage + 1);
                                 } else {
                                     showPlayerError('Ce flux est temporairement indisponible.', channel, index);
@@ -2031,85 +2039,6 @@
     let heroCurrentIndex = 0;
     let heroAutoTimer = null;
     let heroIsPaused = false;
-    let heroCleanTimer = null;
-
-    // Détection stricte d'un événement passé ou expiré (selon l'heure exacte et le jour)
-    function isMatchPassed(m, now = new Date()) {
-        if (!m) return true;
-        if (m.isFinished) return true;
-        if (m.isLive) return false;
-
-        const nowTs = now.getTime();
-
-        // 1. Timestamp brut en secondes ou millisecondes
-        if (m.rawDate) {
-            const matchTs = m.rawDate < 10000000000 ? m.rawDate * 1000 : m.rawDate;
-            // Un match de foot dure ~1h45 à 2h15. Au-delà de 2h15 (8100s), le match est considéré terminé
-            if (matchTs + (2.25 * 3600 * 1000) < nowTs) {
-                return true;
-            }
-            // Si le jour du match est déjà passé (antérieur au jour calendaire actuel)
-            const matchDateObj = new Date(matchTs);
-            const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-            const startOfMatchDay = new Date(matchDateObj.getFullYear(), matchDateObj.getMonth(), matchDateObj.getDate()).getTime();
-            if (startOfMatchDay < startOfToday) {
-                return true;
-            }
-            return false;
-        }
-
-        // 2. Vérification textuelle de date (ex. "Dim. 8 Nov.", "2 nov", "Hier")
-        if (m.date) {
-            const dStr = m.date.toLowerCase();
-            if (dStr.includes('hier') || dStr.includes('terminé')) return true;
-
-            const numMatch = dStr.match(/(\d{1,2})\s*(nov|déc|dec|jan|fév|fev|mar|avr|mai|juin|juil|août|aout|sep|oct)/i);
-            if (numMatch) {
-                const dayNum = parseInt(numMatch[1], 10);
-                const monthStr = numMatch[2].toLowerCase();
-                const curMonth = now.getMonth(); // 10 = Nov
-                const curDay = now.getDate();
-                if (monthStr.startsWith('nov') && curMonth === 10) {
-                    if (dayNum < curDay) return true;
-                }
-            }
-        }
-        return false;
-    }
-
-    // Purge automatique en temps réel des affiches du header dès qu'un match expire
-    function cleanAndRefreshHeroMatches() {
-        const all = (typeof window !== 'undefined' && Array.isArray(window.FEATURED_MATCHES))
-            ? window.FEATURED_MATCHES
-            : [];
-        if (!all || all.length === 0) return;
-
-        const now = new Date();
-        const valid = all.filter(m => !isMatchPassed(m, now));
-
-        const countChanged = valid.length !== (heroMatches ? heroMatches.length : 0);
-        window.FEATURED_MATCHES = valid;
-        heroMatches = valid;
-
-        const billboard = document.getElementById('hero-billboard');
-        if (heroMatches.length === 0) {
-            if (billboard) billboard.style.display = 'none';
-            return;
-        } else {
-            if (billboard) billboard.style.display = '';
-        }
-
-        if (heroCurrentIndex >= heroMatches.length) {
-            heroCurrentIndex = 0;
-        }
-
-        if (countChanged) {
-            renderHeroSlide(heroCurrentIndex);
-            if (typeof renderMatchesScrollRow === 'function') {
-                renderMatchesScrollRow(currentMatchFilter);
-            }
-        }
-    }
 
     // ── Configuration du Hero Billboard (Slider interactif avec chaînes et défilement) ──
     function setupHeroBillboard() {
@@ -2118,9 +2047,7 @@
             : [];
         if (!matches || matches.length === 0) return;
 
-        // Filtrer strictement les matchs à venir dès l'initialisation
-        const now = new Date();
-        heroMatches = matches.filter(m => !isMatchPassed(m, now));
+        heroMatches = matches;
         heroCurrentIndex = 0;
 
         const prevBtn = document.getElementById('hero-arrow-prev');
@@ -2177,10 +2104,6 @@
         heroAutoTimer = setInterval(() => {
             if (!heroIsPaused) nextHeroSlide();
         }, 7000);
-
-        // Nettoyage automatique en temps réel toutes les 30 secondes pour purger les affiches expirées
-        if (heroCleanTimer) clearInterval(heroCleanTimer);
-        heroCleanTimer = setInterval(cleanAndRefreshHeroMatches, 30000);
     }
 
     function nextHeroSlide() {
@@ -2198,12 +2121,6 @@
         heroCurrentIndex = (index + heroMatches.length) % heroMatches.length;
         const match = heroMatches[heroCurrentIndex];
         if (!match) return;
-
-        // Si le match affiché vient d'expirer, rafraîchir immédiatement la sélection
-        if (isMatchPassed(match)) {
-            cleanAndRefreshHeroMatches();
-            return;
-        }
 
         const heroBgImg    = document.getElementById('hero-bg-img');
         const heroHeadline = document.getElementById('hero-headline');
@@ -2234,11 +2151,7 @@
                 if (txt) txt.textContent = `EN DIRECT • ${match.liveMinute || match.score || ''}`;
             } else {
                 if (dot) dot.style.display = 'none';
-                if (txt) {
-                    const badge = match.competitionBadge || match.competition || 'SPORT';
-                    const shortDate = match.time ? `${(match.date || '').split(' ')[0]} ${match.time}` : (match.date || '');
-                    txt.innerHTML = `<span class="lbl-desktop">${badge} • ${match.date} ${match.time}</span><span class="lbl-mobile">${shortDate}</span>`;
-                }
+                if (txt) txt.textContent = `${match.competitionBadge || match.competition} • ${match.date} ${match.time}`;
             }
         }
 
@@ -2249,20 +2162,17 @@
             heroHeadline.innerHTML = `${teamAName} <span class="hero-vs">VS</span> ${teamBName}`;
         }
 
-        // Sous-titre descriptif épuré (style Reezn : court et sans surcharge sur mobile)
+        // Sous-titre descriptif style Reezn (Horreur • Action • Guerre / LaLiga • Dim. 20:00 • 4K)
         if (heroSub) {
-            const comp = match.competition || match.competitionBadge || 'Football';
+            const comp = match.competition || match.competitionBadge || 'Sport';
             const timeInfo = match.isLive ? 'En direct' : `${match.date} ${match.time}`;
-            const shortComp = (comp.split('•')[0] || comp).trim();
-            const shortSub = `${shortComp} • ${match.time || ''} • HD`;
-            const fullSub = `${comp} • ${timeInfo} • Diffusion HD & 4K`;
-            heroSub.innerHTML = `<span class="lbl-desktop">${fullSub}</span><span class="lbl-mobile">${shortSub}</span>`;
+            heroSub.textContent = `${comp} • ${timeInfo} • Diffusion HD & 4K`;
         }
 
         // Indication dynamique des chaînes de diffusion directe
         if (chipsContainer) {
             if (match.channels && match.channels.length > 0) {
-                chipsContainer.innerHTML = match.channels.slice(0, 3).map(ch => `
+                chipsContainer.innerHTML = match.channels.map(ch => `
                     <button class="hero-ch-chip" data-chid="${ch.id}" data-chname="${ch.name}">
                         <span class="hero-ch-badge">${ch.badge || ch.quality || 'HD'}</span>
                         <span>${ch.name}</span>
@@ -2611,7 +2521,12 @@
         if (pw) {
             pw.classList.remove('is-mini-pip');
             pw.style.display = 'block';
-            pw.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            // scrollIntoView supprimé — cause des sauts brusques sur mobile
+            // On scroll seulement si le lecteur est hors champ
+            const rect = pw.getBoundingClientRect();
+            if (rect.bottom < 0 || rect.top > window.innerHeight) {
+                pw.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
         }
     }
 
@@ -2829,10 +2744,25 @@
         if (pw) {
             pw.addEventListener('click', (e) => {
                 if (pw.classList.contains('is-mini-pip')) {
-                    if (e.target.closest('#player-close-btn') || e.target.closest('.ctrl-btn') || e.target.closest('button')) return;
+                    // Ignorer clic sur boutons de contrôle ou bouton fermer
+                    if (e.target.closest('#player-float-close') || e.target.closest('#player-close-btn') || e.target.closest('.ctrl-btn') || e.target.closest('button')) return;
                     pw.classList.remove('is-mini-pip');
                     pw.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 }
+            });
+        }
+
+        // Bouton fermer le lecteur flottant
+        const playerFloatClose = document.getElementById('player-float-close');
+        if (playerFloatClose) {
+            playerFloatClose.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const pw2 = document.getElementById('player-wrapper');
+                if (pw2) {
+                    pw2.classList.remove('is-mini-pip');
+                    pw2.style.display = 'none';
+                }
+                destroyActivePlayer();
             });
         }
 
@@ -3307,7 +3237,8 @@
                         const isEvTomorrow = (evDate.getDate() === tomorrow.getDate() && evDate.getMonth() === tomorrow.getMonth() && evDate.getFullYear() === tomorrow.getFullYear());
 
                         // RÈGLE ABSOLUE : EXCLURE STRICTEMENT TOUT MATCH PASSÉ OU TERMINÉ
-                        if (isFinished || isMatchPassed({ isFinished, rawDate: evDate.getTime(), isLive })) {
+                        const nowTs = Date.now();
+                        if (isFinished || (evDate.getTime() < nowTs - 7200000 && !isLive)) {
                             return;
                         }
 
@@ -3364,7 +3295,7 @@
 
                 // Filtrer pour ne garder STRICTEMENT que les événements en direct ou à venir
                 const nowTs = Date.now();
-                const upcomingOnly = combined.filter(m => !isMatchPassed(m));
+                const upcomingOnly = combined.filter(m => m.isLive || (m.rawDate >= nowTs - 7200000 && !m.isFinished));
 
                 upcomingOnly.sort((a, b) => {
                     if (a.isLive && !b.isLive) return -1;
