@@ -3696,9 +3696,218 @@
         }
     }
 
+
+    function setupSubscriberAccount() {
+        const btnOpenAccount = document.getElementById('btn-open-account');
+        const moreActionAccount = document.getElementById('more-action-account');
+        const accountModal = document.getElementById('account-modal');
+        const btnCloseAccount = document.getElementById('btn-close-account');
+
+        const viewAuth = document.getElementById('account-view-auth');
+        const viewProfile = document.getElementById('account-view-profile');
+        const tabRegister = document.getElementById('auth-tab-register');
+        const tabLogin = document.getElementById('auth-tab-login');
+
+        const btnSwitchToLogin = document.getElementById('btn-switch-to-login');
+        const btnSwitchToReg = document.getElementById('btn-switch-to-reg');
+
+        const inputPrenom = document.getElementById('input-sub-prenom');
+        const inputPhone = document.getElementById('input-sub-phone');
+        const btnRegister = document.getElementById('btn-sub-register');
+
+        const inputId = document.getElementById('input-sub-id');
+        const btnLogin = document.getElementById('btn-sub-login');
+
+        const profilePrenom = document.getElementById('sub-profile-prenom');
+        const profileId = document.getElementById('sub-profile-id');
+        const profileExpiry = document.getElementById('sub-profile-expiry');
+        const badgeStatus = document.getElementById('sub-badge-status');
+        const btnCopySubId = document.getElementById('btn-copy-sub-id');
+        const btnSubLogout = document.getElementById('btn-sub-logout');
+        const btnWhatsapp = document.getElementById('btn-whatsapp-support');
+
+        const navAccountText = document.getElementById('nav-account-text');
+        const userSubBadge = document.getElementById('user-sub-badge');
+        const userSubDesc = document.getElementById('user-sub-desc');
+
+        function updateAccountUI(sub) {
+            if (sub && sub.id) {
+                if (navAccountText) navAccountText.textContent = sub.prenom || sub.id;
+                if (userSubBadge) userSubBadge.textContent = sub.id;
+                if (userSubDesc) userSubDesc.textContent = 'Abonne : ' + sub.prenom + ' (' + sub.id + ')';
+
+                if (viewAuth) viewAuth.style.display = 'none';
+                if (viewProfile) viewProfile.style.display = 'block';
+
+                if (profilePrenom) profilePrenom.textContent = sub.prenom || 'Abonne';
+                if (profileId) profileId.textContent = sub.id;
+
+                let daysText = '30 jours restants';
+                if (sub.expiresAt) {
+                    const exp = new Date(sub.expiresAt);
+                    const diffDays = Math.ceil((exp.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+                    if (diffDays > 0) {
+                        daysText = diffDays + ' jours restants (jusqu au ' + exp.toLocaleDateString('fr-FR') + ')';
+                        if (badgeStatus) {
+                            badgeStatus.textContent = '● ACTIF';
+                            badgeStatus.style.color = '#10b981';
+                            badgeStatus.style.background = 'rgba(16,185,129,0.2)';
+                        }
+                    } else {
+                        daysText = 'Expire le ' + exp.toLocaleDateString('fr-FR');
+                        if (badgeStatus) {
+                            badgeStatus.textContent = '● EXPIRE';
+                            badgeStatus.style.color = '#e63946';
+                            badgeStatus.style.background = 'rgba(230,57,70,0.2)';
+                        }
+                    }
+                }
+                if (profileExpiry) profileExpiry.textContent = daysText;
+
+                if (btnWhatsapp) {
+                    btnWhatsapp.href = 'https://wa.me/?text=' + encodeURIComponent('Bonjour, mon ID BOKK TV est ' + sub.id + ' (' + (sub.prenom || '') + ').');
+                }
+            } else {
+                if (navAccountText) navAccountText.textContent = 'Mon ID';
+                if (userSubBadge) userSubBadge.textContent = 'Gratuit';
+                if (userSubDesc) userSubDesc.textContent = 'Creer ou consulter votre ID BOKK';
+
+                if (viewAuth) viewAuth.style.display = 'block';
+                if (viewProfile) viewProfile.style.display = 'none';
+                if (tabRegister) tabRegister.style.display = 'block';
+                if (tabLogin) tabLogin.style.display = 'none';
+            }
+        }
+
+        if (window.BokkFirebase && typeof window.BokkFirebase.getCurrentSubscriber === 'function') {
+            const current = window.BokkFirebase.getCurrentSubscriber();
+            updateAccountUI(current);
+        }
+
+        function openModal() {
+            if (accountModal) accountModal.style.display = 'flex';
+            const moreSheetBackdrop = document.getElementById('more-sheet-backdrop');
+            if (moreSheetBackdrop) moreSheetBackdrop.style.display = 'none';
+        }
+
+        function closeModal() {
+            if (accountModal) accountModal.style.display = 'none';
+        }
+
+        if (btnOpenAccount) btnOpenAccount.onclick = openModal;
+        if (moreActionAccount) moreActionAccount.onclick = openModal;
+        if (btnCloseAccount) btnCloseAccount.onclick = closeModal;
+        if (accountModal) {
+            accountModal.onclick = (e) => {
+                if (e.target === accountModal) closeModal();
+            };
+        }
+
+        if (btnSwitchToLogin) {
+            btnSwitchToLogin.onclick = () => {
+                if (tabRegister) tabRegister.style.display = 'none';
+                if (tabLogin) tabLogin.style.display = 'block';
+            };
+        }
+
+        if (btnSwitchToReg) {
+            btnSwitchToReg.onclick = () => {
+                if (tabLogin) tabLogin.style.display = 'none';
+                if (tabRegister) tabRegister.style.display = 'block';
+            };
+        }
+
+        if (btnRegister) {
+            btnRegister.onclick = async () => {
+                const prenom = (inputPrenom ? inputPrenom.value : '').trim();
+                const phone = (inputPhone ? inputPhone.value : '').trim();
+                if (!prenom) {
+                    showToast('Veuillez entrer votre prenom');
+                    if (inputPrenom) inputPrenom.focus();
+                    return;
+                }
+
+                btnRegister.disabled = true;
+                btnRegister.textContent = 'Creation en cours...';
+
+                if (window.BokkFirebase && typeof window.BokkFirebase.registerSubscriber === 'function') {
+                    const res = await window.BokkFirebase.registerSubscriber(prenom, phone);
+                    btnRegister.disabled = false;
+                    btnRegister.textContent = 'Obtenir mon ID BOKK';
+
+                    if (res.success && res.subscriber) {
+                        updateAccountUI(res.subscriber);
+                        showToast('Felicitations ' + prenom + ' ! Votre ID est ' + res.subscriber.id);
+                    } else {
+                        showToast('Erreur lors de la creation de l ID');
+                    }
+                } else {
+                    btnRegister.disabled = false;
+                    btnRegister.textContent = 'Obtenir mon ID BOKK';
+                    showToast('Service non disponible pour le moment');
+                }
+            };
+        }
+
+        if (btnLogin) {
+            btnLogin.onclick = async () => {
+                const id = (inputId ? inputId.value : '').trim();
+                if (!id) {
+                    showToast('Entrez votre ID (ex: BK-4821)');
+                    if (inputId) inputId.focus();
+                    return;
+                }
+
+                btnLogin.disabled = true;
+                btnLogin.textContent = 'Verification...';
+
+                if (window.BokkFirebase && typeof window.BokkFirebase.loginSubscriber === 'function') {
+                    const res = await window.BokkFirebase.loginSubscriber(id);
+                    btnLogin.disabled = false;
+                    btnLogin.textContent = 'Valider mon ID';
+
+                    if (res.success && res.subscriber) {
+                        updateAccountUI(res.subscriber);
+                        showToast('Bon retour ' + (res.subscriber.prenom || '') + ' !');
+                    } else {
+                        showToast('ID introuvable. Verifiez la saisie.');
+                    }
+                } else {
+                    btnLogin.disabled = false;
+                    btnLogin.textContent = 'Valider mon ID';
+                }
+            };
+        }
+
+        if (btnCopySubId) {
+            btnCopySubId.onclick = async () => {
+                const id = profileId ? profileId.textContent : '';
+                if (!id) return;
+                try {
+                    await navigator.clipboard.writeText(id);
+                    showToast('ID ' + id + ' copie !');
+                } catch(e) {
+                    showToast('Votre ID : ' + id);
+                }
+            };
+        }
+
+        if (btnSubLogout) {
+            btnSubLogout.onclick = () => {
+                if (window.BokkFirebase && typeof window.BokkFirebase.logoutSubscriber === 'function') {
+                    window.BokkFirebase.logoutSubscriber();
+                }
+                updateAccountUI(null);
+                showToast('Deconnecte.');
+            };
+        }
+    }
+
+
 function init() {
-        // ── Initialisation Signalements Firebase Cloud ──
+        // ── Initialisation Signalements & Abonnés Firebase Cloud ──
         setupFirebaseReporting();
+        setupSubscriberAccount();
 
         // ── Horloge Nav (mise à jour toutes les 10s) ──
         updateNavClock();

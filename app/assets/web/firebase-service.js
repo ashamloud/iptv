@@ -194,6 +194,214 @@
         }
     }
 
+
+    // ── GESTION DES ABONNÉS / IDENTIFIANTS UNIQUE (ID) ──
+
+    function generateSubscriberId() {
+        const num = Math.floor(1000 + Math.random() * 9000);
+        return 'BK-' + num;
+    }
+
+    async function registerSubscriber(prenom, phone = '') {
+        const cleanPrenom = (prenom || '').trim();
+        if (!cleanPrenom) return { success: false, error: 'prenom_required' };
+
+        const id = generateSubscriberId();
+        const now = new Date();
+        const expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+        const subData = {
+            id: id,
+            prenom: cleanPrenom,
+            phone: (phone || '').trim(),
+            createdAt: firebase ? firebase.firestore.FieldValue.serverTimestamp() : new Date(),
+            expiresAt: firebase ? firebase.firestore.Timestamp.fromDate(expiresAt) : expiresAt,
+            status: 'active'
+        };
+
+        if (isInitialized && db) {
+            try {
+                await db.collection('subscribers').doc(id).set(subData);
+            } catch (e) {
+                console.warn('[BOKK TV] Erreur Firestore register:', e);
+            }
+        }
+
+        const localData = {
+            id,
+            prenom: cleanPrenom,
+            phone: (phone || '').trim(),
+            createdAt: now.toISOString(),
+            expiresAt: expiresAt.toISOString(),
+            status: 'active'
+        };
+        try {
+            localStorage.setItem('bokk_subscriber', JSON.stringify(localData));
+            localStorage.setItem('bokk_sub_id', id);
+        } catch (e) {}
+
+        return { success: true, subscriber: localData };
+    }
+
+    async function loginSubscriber(id) {
+        const cleanId = (id || '').trim().toUpperCase();
+        if (!cleanId) return { success: false, error: 'id_required' };
+
+        if (!isInitialized || !db) {
+            try {
+                const local = JSON.parse(localStorage.getItem('bokk_subscriber') || 'null');
+                if (local && local.id.toUpperCase() === cleanId) {
+                    return { success: true, subscriber: local };
+                }
+            } catch(e) {}
+            return { success: false, error: 'not_found' };
+        }
+
+        try {
+            const doc = await db.collection('subscribers').doc(cleanId).get();
+            if (!doc.exists) {
+                return { success: false, error: 'not_found' };
+            }
+            const data = doc.data();
+            const expDate = data.expiresAt ? data.expiresAt.toDate() : new Date();
+            const isExpired = expDate.getTime() < Date.now();
+
+            const sub = {
+                id: doc.id,
+                prenom: data.prenom || 'Abonné',
+                phone: data.phone || '',
+                createdAt: data.createdAt ? data.createdAt.toDate().toISOString() : new Date().toISOString(),
+                expiresAt: expDate.toISOString(),
+                status: isExpired ? 'expired' : (data.status || 'active')
+            };
+
+            try {
+                localStorage.setItem('bokk_subscriber', JSON.stringify(sub));
+                localStorage.setItem('bokk_sub_id', sub.id);
+            } catch(e) {}
+
+            return { success: true, subscriber: sub };
+        } catch (e) {
+            return { success: false, error: e.message };
+        }
+    }
+
+    function getCurrentSubscriber() {
+        try {
+            return JSON.parse(localStorage.getItem('bokk_subscriber') || 'null');
+        } catch (e) {
+            return null;
+        }
+    }
+
+    function logoutSubscriber() {
+        try {
+            localStorage.removeItem('bokk_subscriber');
+            localStorage.removeItem('bokk_sub_id');
+        } catch (e) {}
+    }
+
+    async function renewSubscriber(id, days = 30) {
+        if (!id || !isInitialized || !db) return { success: false };
+        try {
+            const docRef = db.collection('subscribers').doc(String(id));
+            const doc = await docRef.get();
+            if (!doc.exists) return { success: false, error: 'not_found' };
+
+            const data = doc.data();
+            let baseDate = new Date();
+            if (data.expiresAt) {
+                const curExp = data.expiresAt.toDate();
+                if (curExp.getTime() > Date.now()) {
+                    baseDate = curExp;
+                }
+            }
+            const newExpiry = new Date(baseDate.getTime() + days * 24 * 60 * 60 * 1000);
+
+            await docRef.update({
+                expiresAt: firebase.firestore.Timestamp.fromDate(newExpiry),
+                status: 'active',
+                lastRenewedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+
+            return { success: true, newExpiry: newExpiry.toISOString() };
+        } catch (e) {
+            return { success: false, error: e.message };
+        }
+    }
+
+    async function updateSubscriberStatus(id, newStatus) {
+        if (!id || !isInitialized || !db) return { success: false };
+        try {
+            await db.collection('subscribers').doc(String(id)).update({
+                status: newStatus
+            });
+            return { success: true };
+        } catch (e) {
+            return { success: false, error: e.message };
+        }
+    }
+
+    async function deleteSubscriber(id) {
+        if (!id || !isInitialized || !db) return { success: false };
+        try {
+            await db.collection('subscribers').doc(String(id)).delete();
+            return { success: true };
+        } catch (e) {
+            return { success: false, error: e.message };
+        }
+    }
+
+    function listenSubscribers(callback) {
+        if (!isInitialized || !db) return () => {};
+        try {
+            return db.collection('subscribers')
+                .orderBy('createdAt', 'desc')
+                .limit(500)
+                .onSnapshot(snapshot => {
+                    const list = [];
+                    snapshot.forEach(doc => {
+                        const d = doc.data();
+                        list.push({
+                            id: doc.id,
+                            prenom: d.prenom || '',
+                            phone: d.phone || '',
+                            createdAt: d.createdAt ? d.createdAt.toDate().toISOString() : '',
+                            expiresAt: d.expiresAt ? d.expiresAt.toDate().toISOString() : '',
+                            status: d.status || 'active'
+                        });
+                    });
+                    if (typeof callback === 'function') callback(list);
+                }, err => console.warn(err));
+        } catch (e) {
+            return () => {};
+        }
+    }
+
+    async function getPaywallConfig() {
+        if (!isInitialized || !db) return { paywallEnabled: false };
+        try {
+            const doc = await db.collection('app_config').doc('paywall').get();
+            if (doc.exists) return doc.data();
+            return { paywallEnabled: false };
+        } catch (e) {
+            return { paywallEnabled: false };
+        }
+    }
+
+    async function setPaywallConfig(enabled) {
+        if (!isInitialized || !db) return { success: false };
+        try {
+            await db.collection('app_config').doc('paywall').set({
+                paywallEnabled: !!enabled,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            }, { merge: true });
+            return { success: true };
+        } catch (e) {
+            return { success: false, error: e.message };
+        }
+    }
+
     window.BokkFirebase = {
         isReady: () => isInitialized,
         reportBroken: reportBrokenChannel,
@@ -205,7 +413,19 @@
         getDisabledChannels: getDisabledChannels,
         listenDisabledChannels: listenDisabledChannels,
         isDisabled: (id) => disabledChannelsCache.has(String(id)),
-        isReported: (id) => reportedChannelsCache.has(String(id))
+        isReported: (id) => reportedChannelsCache.has(String(id)),
+
+        // Gestion des abonnés & ID
+        registerSubscriber: registerSubscriber,
+        loginSubscriber: loginSubscriber,
+        getCurrentSubscriber: getCurrentSubscriber,
+        logoutSubscriber: logoutSubscriber,
+        renewSubscriber: renewSubscriber,
+        updateSubscriberStatus: updateSubscriberStatus,
+        deleteSubscriber: deleteSubscriber,
+        listenSubscribers: listenSubscribers,
+        getPaywallConfig: getPaywallConfig,
+        setPaywallConfig: setPaywallConfig
     };
 
 })();

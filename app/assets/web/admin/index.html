@@ -280,6 +280,10 @@
             <span>⛔ Chaînes Masquées</span>
             <span class="tab-badge" id="badge-disabled-count" style="background:var(--text-muted);">0</span>
         </button>
+        <button class="admin-tab-btn" data-tab="subscribers">
+            <span>👥 Abonnés & IDs</span>
+            <span class="tab-badge" id="badge-subscribers-count" style="background:var(--brand);">0</span>
+        </button>
     </nav>
 
     <!-- ── Contenu ── -->
@@ -301,6 +305,10 @@
             <div class="stat-card">
                 <span class="stat-lbl">Signalements HS</span>
                 <span class="stat-val" id="stat-reports" style="color:var(--gold);">0</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-lbl">Abonnés Inscrits</span>
+                <span class="stat-val" id="stat-subscribers" style="color:var(--brand);">0</span>
             </div>
         </div>
 
@@ -354,6 +362,30 @@
             </div>
             <div id="disabled-channels-list">
                 <p style="text-align:center; color:var(--text-muted); padding:30px;">Aucune chaîne masquée pour le moment.</p>
+            </div>
+        </section>
+
+        <!-- ONGLET 4 : ABONNÉS & GESTION DES IDS -->
+        <section class="admin-card tab-content" id="tab-subscribers" style="display:none;">
+            <div class="admin-card-header" style="flex-wrap:wrap; gap:12px;">
+                <div>
+                    <h3 class="admin-card-title">👥 Gestion des Abonnés & Identifiants (IDs)</h3>
+                    <p style="font-size:0.78rem; color:var(--text-muted); margin-top:2px;">Attribution des IDs, suivi des dates et prolongation immédiate (+30 jours)</p>
+                </div>
+                <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                    <button class="btn-action" id="btn-toggle-paywall" style="background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.3); color:#10b981;">
+                        🔒 Contrôle d'accès : <strong id="lbl-paywall-status">GRATUIT (Ouvert)</strong>
+                    </button>
+                </div>
+            </div>
+            <div class="toolbar-row">
+                <div class="search-box">
+                    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <input type="text" id="search-subscribers-input" placeholder="Rechercher par ID (ex: BK-4821), prénom ou téléphone...">
+                </div>
+            </div>
+            <div id="subscribers-list" style="max-height:600px; overflow-y:auto;">
+                <p style="text-align:center; color:var(--text-muted); padding:30px;">Chargement des abonnés...</p>
             </div>
         </section>
     </main>
@@ -452,6 +484,148 @@
 
             renderAllChannels();
             renderDisabledChannels();
+
+            // Écouter les abonnés en temps réel
+            if (window.BokkFirebase && typeof window.BokkFirebase.listenSubscribers === 'function') {
+                window.BokkFirebase.listenSubscribers(list => {
+                    subscribersList = list;
+                    renderSubscribers();
+                    updateStats();
+                });
+            }
+
+            // Récupérer config paywall
+            if (window.BokkFirebase && typeof window.BokkFirebase.getPaywallConfig === 'function') {
+                const conf = await window.BokkFirebase.getPaywallConfig();
+                isPaywallActive = !!conf.paywallEnabled;
+                updatePaywallButtonUI();
+            }
+
+            const btnTogglePaywall = document.getElementById('btn-toggle-paywall');
+            if (btnTogglePaywall) {
+                btnTogglePaywall.onclick = async () => {
+                    const nextState = !isPaywallActive;
+                    const msg = nextState 
+                        ? 'Voulez-vous ACTIVER le mode payant ? Les utilisateurs non abonnés ou expirés seront bloqués.'
+                        : 'Voulez-vous repasser en mode GRATUIT ? Tout le monde aura un accès complet.';
+                    if (confirm(msg)) {
+                        isPaywallActive = nextState;
+                        await window.BokkFirebase.setPaywallConfig(isPaywallActive);
+                        updatePaywallButtonUI();
+                        showToast(isPaywallActive ? '🔒 Mode Paywall Activé' : '🔓 Mode 100% Gratuit Réactivé');
+                    }
+                };
+            }
+
+            const searchSubInput = document.getElementById('search-subscribers-input');
+            if (searchSubInput) {
+                searchSubInput.oninput = (e) => renderSubscribers(e.target.value);
+            }
+        }
+
+
+        let subscribersList = [];
+        let isPaywallActive = false;
+
+        function renderSubscribers(query = '') {
+            const container = document.getElementById('subscribers-list');
+            if (!container) return;
+
+            const q = query.toLowerCase().trim();
+            const filtered = subscribersList.filter(s => {
+                if (!q) return true;
+                return (s.id || '').toLowerCase().includes(q) ||
+                       (s.prenom || '').toLowerCase().includes(q) ||
+                       (s.phone || '').toLowerCase().includes(q);
+            });
+
+            if (filtered.length === 0) {
+                container.innerHTML = '<p style="text-align:center; color:var(--text-muted); padding:30px;">Aucun abonné trouvé.</p>';
+                return;
+            }
+
+            container.innerHTML = '';
+            filtered.forEach(sub => {
+                const idStr = sub.id;
+                let isExpired = false;
+                let daysLeft = 0;
+                let expiryDateStr = 'Non définie';
+
+                if (sub.expiresAt) {
+                    const exp = new Date(sub.expiresAt);
+                    daysLeft = Math.ceil((exp.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+                    isExpired = daysLeft <= 0;
+                    expiryDateStr = exp.toLocaleDateString('fr-FR');
+                }
+
+                const isSuspended = sub.status === 'suspended';
+
+                const row = document.createElement('div');
+                row.className = 'channel-row' + (isExpired || isSuspended ? ' is-disabled' : '');
+                row.innerHTML = `
+                    <div class="ch-info">
+                        <span class="ch-id" style="background:rgba(0,112,243,0.15); color:var(--brand); font-weight:800;">${idStr}</span>
+                        <div>
+                            <div class="ch-name" style="display:flex; align-items:center; gap:8px;">
+                                <span>${sub.prenom || 'Sans nom'}</span>
+                                ${isSuspended ? '<span style="font-size:0.65rem; background:rgba(230,57,70,0.2); color:#e63946; padding:2px 6px; border-radius:10px;">Suspendu</span>' :
+                                  isExpired ? '<span style="font-size:0.65rem; background:rgba(230,57,70,0.2); color:#e63946; padding:2px 6px; border-radius:10px;">Expiré</span>' :
+                                  '<span style="font-size:0.65rem; background:rgba(16,185,129,0.2); color:#10b981; padding:2px 6px; border-radius:10px;">Actif (' + daysLeft + 'j)</span>'}
+                            </div>
+                            <div class="ch-group">
+                                ${sub.phone ? '📱 ' + sub.phone + ' • ' : ''}Expire le : <strong>${expiryDateStr}</strong>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="ch-actions">
+                        <button class="btn-icon btn-icon-enable btn-renew-sub" data-subid="${idStr}" title="Prolonger de 30 jours">➕ +30 Jours</button>
+                        <button class="btn-icon btn-icon-disable btn-toggle-sub" data-subid="${idStr}">${isSuspended ? '✅ Débloquer' : '🚫 Suspendre'}</button>
+                        <button class="btn-icon btn-del-sub" data-subid="${idStr}" style="background:transparent; color:var(--text-muted);" title="Supprimer">✕</button>
+                    </div>
+                `;
+
+                row.querySelector('.btn-renew-sub')?.addEventListener('click', async () => {
+                    const res = await window.BokkFirebase.renewSubscriber(idStr, 30);
+                    if (res && res.success) {
+                        showToast(`✅ Abonnement de ${sub.prenom} (${idStr}) prolongé de 30 jours !`);
+                    } else {
+                        showToast('Erreur lors du renouvellement');
+                    }
+                });
+
+                row.querySelector('.btn-toggle-sub')?.addEventListener('click', async () => {
+                    const newStatus = isSuspended ? 'active' : 'suspended';
+                    await window.BokkFirebase.updateSubscriberStatus(idStr, newStatus);
+                    showToast(`Statut mis à jour pour ${idStr}`);
+                });
+
+                row.querySelector('.btn-del-sub')?.addEventListener('click', async () => {
+                    if (confirm(`Supprimer définitivement l\'abonné ${sub.prenom} (${idStr}) ?`)) {
+                        await window.BokkFirebase.deleteSubscriber(idStr);
+                        showToast(`Abonné ${idStr} supprimé.`);
+                    }
+                });
+
+                container.appendChild(row);
+            });
+        }
+
+        function updatePaywallButtonUI() {
+            const btn = document.getElementById('btn-toggle-paywall');
+            const lbl = document.getElementById('lbl-paywall-status');
+            if (!btn || !lbl) return;
+
+            if (isPaywallActive) {
+                lbl.textContent = 'PAYWALL ACTIF (Expirés bloqués)';
+                lbl.style.color = 'var(--red)';
+                btn.style.background = 'rgba(230,57,70,0.15)';
+                btn.style.borderColor = 'rgba(230,57,70,0.4)';
+            } else {
+                lbl.textContent = 'GRATUIT (Ouvert à tous)';
+                lbl.style.color = 'var(--green)';
+                btn.style.background = 'rgba(16,185,129,0.15)';
+                btn.style.borderColor = 'rgba(16,185,129,0.4)';
+            }
         }
 
         function updateStats() {
@@ -462,6 +636,10 @@
             document.getElementById('stat-reports').textContent = reportedList.length;
             document.getElementById('badge-reports-count').textContent = reportedList.length;
             document.getElementById('badge-disabled-count').textContent = disCount;
+            const subCountEl = document.getElementById('stat-subscribers');
+            if (subCountEl) subCountEl.textContent = subscribersList.length;
+            const badgeSubEl = document.getElementById('badge-subscribers-count');
+            if (badgeSubEl) badgeSubEl.textContent = subscribersList.length;
         }
 
         // ── Rendu Signalements ──
