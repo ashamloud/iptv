@@ -409,9 +409,9 @@
     <!-- Scripts -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
-    <script src="../firebase-service.js?v=9965"></script>
+    <script src="../firebase-service.js?v=9966"></script>
     <script src="../hls.min.js"></script>
-    <script src="../channels.js?v=9965"></script>
+    <script src="../channels.js?v=9966"></script>
 
     <script>
     (function () {
@@ -465,8 +465,19 @@
 
         // ── Init Admin ──
         async function initAdmin() {
+            // Attendre que Firebase soit prêt
+            let fbWait = 0;
+            while (!window.BokkFirebase || !window.BokkFirebase.isReady()) {
+                await new Promise(r => setTimeout(r, 300));
+                fbWait += 300;
+                if (fbWait > 5000) break;
+            }
+
             const allChannels = window.channels || [];
             document.getElementById('stat-total').textContent = allChannels.length.toLocaleString('fr-FR');
+
+            const fbStatus = window.BokkFirebase && window.BokkFirebase.isReady();
+            console.log('[BOKK ADMIN] Firebase ready:', fbStatus);
 
             // Récupérer les chaînes masquées
             if (window.BokkFirebase) {

@@ -214,10 +214,11 @@
             id: id,
             prenom: cleanPrenom,
             phone: (phone || '').trim(),
-            createdAt: firebase ? firebase.firestore.FieldValue.serverTimestamp() : new Date(),
-            expiresAt: firebase ? firebase.firestore.Timestamp.fromDate(expiresAt) : expiresAt,
+            createdAt: (isInitialized && db) ? firebase.firestore.FieldValue.serverTimestamp() : now.toISOString(),
+            expiresAt: (isInitialized && db) ? firebase.firestore.Timestamp.fromDate(expiresAt) : expiresAt.toISOString(),
             status: 'active'
         };
+        console.log('[BOKK TV] Inscription abonne:', id, cleanPrenom, 'Firebase ready:', isInitialized);
 
         if (isInitialized && db) {
             try {
