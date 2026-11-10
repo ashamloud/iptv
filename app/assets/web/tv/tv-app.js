@@ -321,14 +321,14 @@
             }, {
                 enableWorker: false,
                 lazyLoad: false,
-                liveBufferLatencyChasing: false,
-                liveBufferLatencyMaxLatency: 10.0,
-                liveBufferLatencyMinRemain: 2.5,
+                liveBufferLatencyChasing: true,
+                liveBufferLatencyMaxLatency: 3.0,
+                liveBufferLatencyMinRemain: 0.6,
                 enableStashBuffer: true,
-                stashInitialSize: 256,
+                stashInitialSize: 64,
                 autoCleanupSourceBuffer: true,
-                autoCleanupMaxBackwardDuration: 60,
-                autoCleanupMinBackwardDuration: 30
+                autoCleanupMaxBackwardDuration: 30,
+                autoCleanupMinBackwardDuration: 15
             });
             mpegtsInstance.attachMediaElement(videoEl);
             mpegtsInstance.load();
@@ -354,15 +354,15 @@
             hlsInstance = new Hls({
                 enableWorker: true,
                 lowLatencyMode: false,
-                startLevel: -1,
-                liveSyncDurationCount: 3,
-                liveMaxLatencyDurationCount: 8,
+                startLevel: 0,
+                liveSyncDurationCount: 2,
+                liveMaxLatencyDurationCount: 5,
                 startFragPrefetch: true,
-                maxBufferLength: 30,
-                maxMaxBufferLength: 60,
-                manifestLoadingTimeOut: 10000,
-                levelLoadingTimeOut: 10000,
-                fragLoadingTimeOut: 12000
+                maxBufferLength: 15,
+                maxMaxBufferLength: 30,
+                manifestLoadingTimeOut: 6000,
+                levelLoadingTimeOut: 6000,
+                fragLoadingTimeOut: 8000
             });
             hlsInstance.loadSource(targetUrl);
             hlsInstance.attachMedia(videoEl);

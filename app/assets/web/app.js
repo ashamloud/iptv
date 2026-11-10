@@ -612,15 +612,15 @@
                 }, {
                     enableWorker: false,
                     lazyLoad: false,
-                    // ── Moteur MPEG-TS Anti-Coupure (fluidité maximale sans saccade) ──
-                    liveBufferLatencyChasing: false,     // JAMAIS chasser la latence : évite les sauts et vidages de tampon
-                    liveBufferLatencyMaxLatency: 10.0,   // Coussin généreux absorbant 100% des instabilités
-                    liveBufferLatencyMinRemain: 2.5,     // Maintient toujours un minimum de sécurité
+                    // ── Moteur MPEG-TS Anti-Coupure (fluidité maximale & rattrapage auto) ──
+                    liveBufferLatencyChasing: true,      // Rattrape en douceur le direct sans caler ni geler
+                    liveBufferLatencyMaxLatency: 3.0,    // Tolérance max 3s avant rattrapage doux
+                    liveBufferLatencyMinRemain: 0.6,     // 0.6s de flux continu garanti sans caler
                     enableStashBuffer: true,
-                    stashInitialSize: 256,               // 256 Ko de tampon initial pour un démarrage instantané et solide
+                    stashInitialSize: 64,                // 64 Ko de cache initial pour démarrage ultra-rapide (<0.5s)
                     autoCleanupSourceBuffer: true,
-                    autoCleanupMaxBackwardDuration: 60,  // Ne nettoie que les données très anciennes (> 1min)
-                    autoCleanupMinBackwardDuration: 30
+                    autoCleanupMaxBackwardDuration: 30,  // Nettoyage régulier pour éviter la surcharge mémoire
+                    autoCleanupMinBackwardDuration: 15
                 });
 
                 mpegtsInstance.attachMediaElement(videoEl);
@@ -671,35 +671,34 @@
                 hlsInstance = new Hls({
                     enableWorker: true,
                     lowLatencyMode: false,
-                    startLevel: -1,
+                    startLevel: 0,                     // Démarre sur le profil le plus fluide pour affichage immédiat
                     capLevelToPlayerSize: true,
-                    // ── Coussin de sécurité anti-calage (flux 100% continu & fluide) ──
-                    liveSyncDurationCount: 3,          // 3 segments de marge de sécurité
-                    liveMaxLatencyDurationCount: 8,    // Tolérance large pour absorber les variations de débit
-                    backBufferLength: 15,
-                    maxBufferLength: 30,               // 30s de tampon en avant pour ne jamais caler
-                    maxMaxBufferLength: 60,            // Jusqu'à 60s si le réseau le permet
-                    maxBufferSize: 40 * 1000 * 1000,   // 40 Mo de cache mémoire
-                    maxBufferHole: 0.5,                // Saut transparent des micro-trous de paquets
-                    highBufferWatchdogPeriod: 3,
-                    // ── Timeouts robustes contre les baisses de débit ──
-                    manifestLoadingTimeOut: 10000,
-                    manifestLoadingMaxRetry: 4,
-                    manifestLoadingRetryDelay: 500,
-                    levelLoadingTimeOut: 10000,
-                    levelLoadingMaxRetry: 4,
-                    fragLoadingTimeOut: 12000,         // 12s pour laisser charger sans interruption
-                    fragLoadingMaxRetry: 5,
-                    fragLoadingRetryDelay: 500,
+                    // ── Coussin de sécurité anti-calage (flux continu et fluide) ──
+                    liveSyncDurationCount: 2,          // 2 segments d'avance : absorbe les ralentissements 4G/ADSL
+                    liveMaxLatencyDurationCount: 5,    // Tolère les légères variations sans caler
+                    backBufferLength: 8,
+                    maxBufferLength: 15,               // 15s de buffer optimal
+                    maxMaxBufferLength: 30,
+                    maxBufferSize: 30 * 1000 * 1000,
+                    maxBufferHole: 0.6,                // Tolère les micro-trous sans bloquer
+                    highBufferWatchdogPeriod: 2,
+                    // ── Timeouts et tolérance aux débits variables ──
+                    manifestLoadingTimeOut: 6000,
+                    manifestLoadingMaxRetry: 3,
+                    manifestLoadingRetryDelay: 300,
+                    levelLoadingTimeOut: 6000,
+                    levelLoadingMaxRetry: 3,
+                    fragLoadingTimeOut: 8000,
+                    fragLoadingMaxRetry: 4,
+                    fragLoadingRetryDelay: 400,
                     // ── ABR fluide ──
                     abrEwmaDefaultEstimate: 1200000,
-                    abrBandWidthFactor: 0.80,
-                    abrBandWidthUpFactor: 0.70,
-                    startFragPrefetch: true,           // Télécharge le segment suivant en avance
+                    abrBandWidthFactor: 0.75,
+                    startFragPrefetch: true,
                     progressive: true,
                     nudgeMaxRetry: 5,
                     nudgeOffset: 0.1,
-                    maxStarvationDelay: 5
+                    maxStarvationDelay: 4
                 });
 
                 videoEl.addEventListener('loadeddata', () => clearPlayerOverlays(), { once: true });

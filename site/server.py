@@ -560,17 +560,12 @@ class BOKKStreamProxyHandler(SimpleHTTPRequestHandler):
                 self.end_headers()
 
                 cache_chunks = [] if (is_segment and no_range and cl_int and cl_int <= 10 * 1024 * 1024) else None
-                read_func = getattr(resp, 'read1', resp.read)
                 try:
                     while True:
-                        chunk = read_func(65536)
+                        chunk = resp.read(65536)
                         if not chunk:
                             break
                         self.wfile.write(chunk)
-                        try:
-                            self.wfile.flush()
-                        except Exception:
-                            pass
                         if cache_chunks is not None:
                             cache_chunks.append(chunk)
                     if cache_chunks is not None and status_code == 200:
