@@ -2824,15 +2824,66 @@
     }
 
     // ── Rendu des mini-cartes matchs (scroll row sur la home) ──
-    function renderMatchesScrollRow() {
+    let currentMatchFilter = 'all';
+
+    function renderMatchesScrollRow(filter = currentMatchFilter) {
+        currentMatchFilter = filter;
         const row = document.getElementById('matches-scroll-row');
+        const countBadge = document.getElementById('matches-count-badge');
+        const filterContainer = document.getElementById('match-time-filters');
         if (!row) return;
+
+        const allMatches = (typeof window !== 'undefined' && Array.isArray(window.FEATURED_MATCHES))
+            ? window.FEATURED_MATCHES
+            : [];
+        if (!allMatches || allMatches.length === 0) return;
+
+        // Filtrage dynamique des événements pour connaître la programmation
+        const filtered = allMatches.filter(m => {
+            if (filter === 'all') return true;
+            if (filter === 'live') return m.isLive;
+            if (filter === 'today') {
+                const d = (m.date || '').toLowerCase();
+                return d.includes("aujourd'hui") || d.includes("ce soir");
+            }
+            if (filter === 'tomorrow') {
+                return (m.date || '').toLowerCase().includes("demain");
+            }
+            if (filter === 'ucl') {
+                const c = (m.competition || '').toLowerCase();
+                return c.includes('champions') || c.includes('ucl');
+            }
+            if (filter === 'laliga') {
+                return (m.competition || '').toLowerCase().includes('laliga');
+            }
+            return true;
+        });
+
+        // Mise à jour du compteur
+        if (countBadge) {
+            countBadge.textContent = `${filtered.length} affiche${filtered.length > 1 ? 's' : ''}`;
+        }
+
+        // Configuration des boutons de filtre par date / compétition
+        if (filterContainer && !filterContainer._bound) {
+            filterContainer._bound = true;
+            filterContainer.querySelectorAll('.match-filter-pill').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    filterContainer.querySelectorAll('.match-filter-pill').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    renderMatchesScrollRow(btn.dataset.filter);
+                });
+            });
+        }
+
         row.innerHTML = '';
+        if (filtered.length === 0) {
+            row.innerHTML = `<div style="padding: 24px 16px; color: rgba(255,255,255,0.4); font-size: 0.85rem;">Aucun événement en direct ou programmé pour ce filtre.</div>`;
+            return;
+        }
 
-        const matches = (typeof window !== 'undefined' && window.FEATURED_MATCHES) ? window.FEATURED_MATCHES : [];
-        if (!matches || matches.length === 0) return;
-
-        matches.forEach(m => {
+        filtered.forEach(m => {
             const card = document.createElement('div');
             card.className = 'match-mini-card';
 
@@ -3011,19 +3062,36 @@
         return posters[competition] || 'https://images.unsplash.com/photo-1568430462989-44163eb1752f?auto=format&fit=crop&w=1200&q=80';
     }
 
-    // Fetch des VRAIS matchs en direct et prochains chocs via API ESPN
+    // Fetch des VRAIS matchs en direct et prochains chocs via API ESPN & serveur local
     async function fetchLiveMatchData() {
         try {
+            // 1. Tenter d'abord de charger la base locale /api/matches (générée par update_matches.py)
+            try {
+                const localRes = await fetch('/api/matches', { signal: AbortSignal.timeout(3000) });
+                if (localRes.ok) {
+                    const localData = await localRes.json();
+                    if (Array.isArray(localData) && localData.length > 0) {
+                        window.FEATURED_MATCHES = localData;
+                        heroMatches = localData;
+                        renderHeroSlide(heroCurrentIndex);
+                        renderMatchesScrollRow(currentMatchFilter);
+                    }
+                }
+            } catch (_) {}
+
+            // 2. Récupérer les données fraîches en temps réel via l'API ESPN
             const leagues = [
-                { slug: 'uefa.champions', name: 'UEFA Champions League', badge: 'UCL' },
-                { slug: 'fra.1',          name: 'Ligue 1',               badge: 'L1' },
-                { slug: 'esp.1',          name: 'LaLiga',                badge: 'LaLiga' },
-                { slug: 'eng.1',          name: 'Premier League',        badge: 'PL' },
-                { slug: 'ita.1',          name: 'Serie A',               badge: 'Serie A' },
-                { slug: 'ger.1',          name: 'Bundesliga',            badge: 'Bundesliga' }
+                { slug: 'uefa.champions', name: 'UEFA Champions League', badge: 'CHAMPIONS LEAGUE' },
+                { slug: 'fra.1',          name: 'Ligue 1',               badge: 'LIGUE 1' },
+                { slug: 'esp.1',          name: 'LaLiga',                badge: 'LALIGA' },
+                { slug: 'eng.1',          name: 'Premier League',        badge: 'PREMIER LEAGUE' },
+                { slug: 'ita.1',          name: 'Serie A',               badge: 'SERIE A' },
+                { slug: 'ger.1',          name: 'Bundesliga',            badge: 'BUNDESLIGA' }
             ];
 
-            const allMatches = [];
+            const espnMatches = [];
+            const now = new Date();
+            const tomorrow = new Date(now.getTime() + 24 * 3600 * 1000);
 
             await Promise.allSettled(leagues.map(async (league) => {
                 try {
@@ -3045,13 +3113,11 @@
                         const isLive = (state === 'in');
                         const isFinished = (state === 'post');
 
-                        // Minute ou heure
                         let liveMinute = null;
                         if (isLive) {
                             liveMinute = comp.status.type.detail || 'LIVE';
                         }
 
-                        // Score réel
                         let scoreText = 'VS';
                         if (home.score !== undefined && away.score !== undefined && (isLive || isFinished)) {
                             scoreText = `${home.score} - ${away.score}`;
@@ -3059,11 +3125,17 @@
 
                         const channels = COMPETITION_CHANNELS[league.name] || COMPETITION_CHANNELS['default'];
 
-                        // Date formatée française
-                        const dateStr = evDate.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' });
+                        // Calcul précis Aujourd'hui / Demain / Date
+                        const isEvToday = (evDate.getDate() === now.getDate() && evDate.getMonth() === now.getMonth() && evDate.getFullYear() === now.getFullYear());
+                        const isEvTomorrow = (evDate.getDate() === tomorrow.getDate() && evDate.getMonth() === tomorrow.getMonth() && evDate.getFullYear() === tomorrow.getFullYear());
+
+                        let dateStr = evDate.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' });
+                        if (isEvToday) dateStr = "Aujourd'hui";
+                        else if (isEvTomorrow) dateStr = "Demain";
+
                         const timeStr = evDate.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
 
-                        allMatches.push({
+                        espnMatches.push({
                             id: `espn-${ev.id}`,
                             title: `${home.team.displayName} vs ${away.team.displayName}`,
                             competition: league.name,
@@ -3085,51 +3157,61 @@
                             isFinished: isFinished,
                             liveMinute: liveMinute,
                             stage: comp.notes && comp.notes[0] ? comp.notes[0].headline : league.name,
-                            description: `${home.team.displayName} contre ${away.team.displayName} en direct sur BOKK TV`,
+                            description: `${home.team.displayName} contre ${away.team.displayName} en direct sur BOKK TV.`,
                             channels: channels,
                             rawDate: evDate.getTime()
                         });
                     });
-                } catch (e) {
-                    // Silencieux pour une ligue
-                }
+                } catch (_) {}
             }));
 
-            if (allMatches.length > 0) {
-                // Trier avec précision :
-                // 1. Matchs en direct (isLive = true)
-                // 2. Matchs à venir (prochains chocs)
-                // 3. Matchs récents terminés
-                allMatches.sort((a, b) => {
+            if (espnMatches.length > 0) {
+                // Conserver les événements personnalisés (Atlético, Sénégal, F1)
+                const existing = (typeof window !== 'undefined' && Array.isArray(window.FEATURED_MATCHES))
+                    ? window.FEATURED_MATCHES.filter(m => !m.id.startsWith('espn-'))
+                    : [];
+
+                const combined = [...existing];
+                const seenTitles = new Set(combined.map(m => m.title.toLowerCase()));
+
+                for (const em of espnMatches) {
+                    if (!seenTitles.has(em.title.toLowerCase())) {
+                        combined.push(em);
+                        seenTitles.add(em.title.toLowerCase());
+                    }
+                }
+
+                // Tri chronologique rigoureux :
+                // 1. En Direct
+                // 2. À venir (du plus proche au plus lointain)
+                // 3. Terminés
+                const nowTs = Date.now();
+                combined.sort((a, b) => {
                     if (a.isLive && !b.isLive) return -1;
                     if (!a.isLive && b.isLive) return 1;
                     if (!a.isFinished && b.isFinished) return -1;
                     if (a.isFinished && !b.isFinished) return 1;
-                    return b.rawDate - a.rawDate;
+                    if (!a.isFinished && !b.isFinished) {
+                        return (a.rawDate || nowTs) - (b.rawDate || nowTs);
+                    }
+                    return (b.rawDate || 0) - (a.rawDate || 0);
                 });
 
-                // Remplacer les données globales par les VRAIES données ESPN
-                window.FEATURED_MATCHES = allMatches;
+                window.FEATURED_MATCHES = combined;
+                heroMatches = combined;
 
-                // Mettre à jour l'interface immédiatement
-                renderMatchesScrollRow();
-                renderMatchCenter('all');
+                // Rafraîchir l'interface
+                renderHeroSlide(heroCurrentIndex);
+                renderMatchesScrollRow(currentMatchFilter);
 
-                // Mettre à jour le Hero avec le match le plus important (en direct ou prochain)
-                const heroMatch = allMatches.find(m => m.isLive) || allMatches.find(m => !m.isFinished) || allMatches[0];
-                if (heroMatch) {
-                    updateHeroBillboardFromLiveData(heroMatch);
-                }
-
-                console.log(`[BOKK TV] ${allMatches.length} vrais matchs ESPN chargés en direct !`);
-                showToast(`${allMatches.length} matchs synchronisés en direct`);
+                console.log(`[BOKK TV] ${combined.length} événements sportifs synchronisés en direct.`);
             }
         } catch (e) {
             console.warn('[BOKK TV] Erreur API Live :', e.message);
         }
 
-        // Rafraîchissement automatique toutes les 2 minutes (pour les scores live)
-        setTimeout(fetchLiveMatchData, 2 * 60 * 1000);
+        // Rafraîchissement automatique toutes les 60 secondes (scores, minutes live & nouveaux chocs)
+        setTimeout(fetchLiveMatchData, 60 * 1000);
     }
 
     // Mise à jour du Hero avec un match live réel (depuis API ESPN)

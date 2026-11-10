@@ -15,7 +15,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=9944">
+    <link rel="stylesheet" href="style.css?v=9945">
 </head>
 <body>
 
@@ -304,10 +304,22 @@
         </div>
     </section>
 
-    <!-- SECTION "MATCH CENTER" ── Affiches grands matchs -->
+    <!-- SECTION "MATCH CENTER" ── Affiches grands matchs & programmation en direct -->
     <section class="home-section" id="section-matchs">
         <div class="home-section-header">
-            <span class="home-section-label">MATCHS EN DIRECT</span>
+            <div class="home-section-header-left">
+                <span class="home-section-label">GRANDS RENDEZ-VOUS SPORTIFS</span>
+                <span class="home-section-count" id="matches-count-badge">50+ affiches</span>
+            </div>
+            <!-- Filtres rapides pour connaître les événements -->
+            <div class="match-time-filters" id="match-time-filters">
+                <button class="match-filter-pill active" data-filter="all">Tous</button>
+                <button class="match-filter-pill" data-filter="live">En Direct</button>
+                <button class="match-filter-pill" data-filter="today">Aujourd'hui</button>
+                <button class="match-filter-pill" data-filter="tomorrow">Demain</button>
+                <button class="match-filter-pill" data-filter="ucl">Champions League</button>
+                <button class="match-filter-pill" data-filter="laliga">LaLiga</button>
+            </div>
             <button class="see-all-btn" data-view="sport">Tout voir →</button>
         </div>
         <div class="matches-scroll-row" id="matches-scroll-row">
@@ -488,10 +500,10 @@
 <!-- Scripts -->
 <script src="mpegts.js"></script>
 <script src="hls.min.js"></script>
-<script src="matches.js?v=9944"></script>
+<script src="matches.js?v=9945"></script>
 <script src="epg-data.js?v=9941"></script>
 <script src="epg.js?v=9944"></script>
 <script src="channels.js?v=9941"></script>
-<script src="app.js?v=9944"></script>
+<script src="app.js?v=9945"></script>
 </body>
 </html>

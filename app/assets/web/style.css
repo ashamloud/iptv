@@ -928,6 +928,60 @@ h1, h2, h3, .topnav-brand-name, .hero-headline, .home-section-label {
     margin-bottom: 16px;
 }
 
+.home-section-header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.home-section-count {
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: var(--brand-light);
+    background: rgba(0, 112, 243, 0.12);
+    border: 1px solid rgba(0, 112, 243, 0.25);
+    padding: 2px 8px;
+    border-radius: var(--radius-full);
+    letter-spacing: 0.04em;
+}
+
+.match-time-filters {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+}
+
+.match-time-filters::-webkit-scrollbar { display: none; }
+
+.match-filter-pill {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 4px 11px;
+    border-radius: var(--radius-full);
+    cursor: pointer;
+    transition: all 0.18s;
+    white-space: nowrap;
+    font-family: inherit;
+}
+
+.match-filter-pill:hover {
+    background: rgba(255, 255, 255, 0.12);
+    color: #fff;
+}
+
+.match-filter-pill.active {
+    background: var(--brand);
+    border-color: var(--brand);
+    color: #fff;
+    box-shadow: 0 0 10px rgba(0, 112, 243, 0.45);
+}
+
 .home-section-label {
     font-size: 0.78rem;
     font-weight: 800;

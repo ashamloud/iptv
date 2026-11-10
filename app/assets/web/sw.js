@@ -3,7 +3,7 @@
  * v4 — Correction définitive chargement chaînes & Network-First
  */
 
-const CACHE_NAME = 'bokk-tv-shell-v6';
+const CACHE_NAME = 'bokk-tv-shell-v7';
 const STATIC_ASSETS = [
   '/',
   '/index.html',

@@ -190,6 +190,26 @@ class BOKKStreamProxyHandler(SimpleHTTPRequestHandler):
             self.handle_proxy(parsed, is_head=False)
         elif parsed.path == '/api/epg':
             self.handle_static_with_gzip('/epg_data.json')
+        elif parsed.path == '/api/matches':
+            self.handle_static_with_gzip('/matches_data.json')
+        elif parsed.path == '/api/matches/update':
+            def _bg_matches_update():
+                try:
+                    root_dir = os.path.dirname(SITE_DIR)
+                    script_path = os.path.join(root_dir, 'update_matches.py')
+                    if os.path.exists(script_path):
+                        import importlib.util
+                        spec = importlib.util.spec_from_file_location("update_matches", script_path)
+                        mod = importlib.util.module_from_spec(spec)
+                        spec.loader.exec_module(mod)
+                        mod.generate_matches_files()
+                except Exception as e:
+                    print(f"[BOKK MATCHS API] Erreur update : {e}")
+            threading.Thread(target=_bg_matches_update, daemon=True).start()
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json; charset=utf-8')
+            self.end_headers()
+            self.wfile.write(b'{"status":"updating","message":"Mise a jour Matchs lancee en arriere-plan"}')
         elif parsed.path == '/api/epg/update':
             def _bg_update():
                 try:
@@ -656,23 +676,41 @@ if __name__ == '__main__':
     print("=" * 60)
     sys.stdout.flush()
 
-    # Démarrage de la vérification EPG en arrière-plan (sans bloquer le serveur)
-    def _bg_epg_check():
+    # Tâche d'arrière-plan quotidienne : mise à jour automatique EPG et Matchs chaque 12 heures
+    def _bg_daily_updater():
         time.sleep(3)
-        try:
+        while True:
             root_dir = os.path.dirname(SITE_DIR)
-            script_path = os.path.join(root_dir, 'update_epg.py')
-            if os.path.exists(script_path):
-                import importlib.util
-                spec = importlib.util.spec_from_file_location("update_epg", script_path)
-                mod = importlib.util.module_from_spec(spec)
-                spec.loader.exec_module(mod)
-                mod.download_xmltv(force=False)
-                mod.parse_and_generate()
-        except Exception as e:
-            sys.stderr.write(f"[BOKK EPG] Mise a jour automatique ignoree : {e}\n")
 
-    threading.Thread(target=_bg_epg_check, daemon=True).start()
+            # 1. Mise à jour EPG XMLTV
+            try:
+                epg_script = os.path.join(root_dir, 'update_epg.py')
+                if os.path.exists(epg_script):
+                    import importlib.util
+                    spec = importlib.util.spec_from_file_location("update_epg", epg_script)
+                    mod = importlib.util.module_from_spec(spec)
+                    spec.loader.exec_module(mod)
+                    mod.download_xmltv(force=False)
+                    mod.parse_and_generate()
+            except Exception as e:
+                sys.stderr.write(f"[BOKK EPG] Mise a jour automatique ignoree : {e}\n")
+
+            # 2. Mise à jour Matchs & Événements sportifs
+            try:
+                matches_script = os.path.join(root_dir, 'update_matches.py')
+                if os.path.exists(matches_script):
+                    import importlib.util
+                    spec = importlib.util.spec_from_file_location("update_matches", matches_script)
+                    mod = importlib.util.module_from_spec(spec)
+                    spec.loader.exec_module(mod)
+                    mod.generate_matches_files()
+            except Exception as e:
+                sys.stderr.write(f"[BOKK MATCHS] Mise a jour automatique ignoree : {e}\n")
+
+            # Répéter toutes les 12 heures
+            time.sleep(12 * 3600)
+
+    threading.Thread(target=_bg_daily_updater, daemon=True).start()
 
     try:
         server.serve_forever()
