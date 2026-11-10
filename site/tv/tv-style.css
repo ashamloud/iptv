@@ -5,17 +5,18 @@
    ═══════════════════════════════════════════════════════════════ */
 
 :root {
-    --bg-tv: #05080e;
-    --bg-card: #0e1524;
-    --bg-card-focused: #1a233a;
-    --brand: #6366f1;
-    --brand-glow: rgba(99, 102, 241, 0.65);
+    --bg-tv: #07090e;
+    --bg-card: #111726;
+    --bg-card-focused: #1b243b;
+    --brand: #0070f3;
+    --brand-glow: rgba(0, 112, 243, 0.65);
     --gold: #f59e0b;
     --emerald: #10b981;
     --live-red: #ef4444;
+    --cyan: #06b6d4;
     --text-primary: #ffffff;
     --text-muted: #94a3b8;
-    --border: rgba(255, 255, 255, 0.1);
+    --border: rgba(255, 255, 255, 0.08);
 }
 
 * {

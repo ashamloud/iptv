@@ -823,6 +823,12 @@
         return channels
             .map((ch, index) => ({ ...ch, index }))
             .filter(ch => {
+                // En mode recherche textuelle : recherche globale instantanée sur les 6 039 chaînes
+                if (query) {
+                    const text = `${ch.name} ${ch.group || ''} ${ch.desc || ''} ${ch.category || ''} ${ch.country || ''}`.toLowerCase();
+                    return text.includes(query);
+                }
+
                 // Filtre Bouquet / Catégorie IPTV
                 if (currentBouquet !== 'all' && ch.group !== currentBouquet) {
                     return false;
@@ -831,12 +837,6 @@
                 // Filtre Catégorie Principale
                 if (!isChannelInCategory(ch, currentCategory, favs)) {
                     return false;
-                }
-
-                // Filtre Recherche
-                if (query) {
-                    const text = `${ch.name} ${ch.group || ''} ${ch.desc || ''} ${ch.category} ${ch.country || ''}`.toLowerCase();
-                    return text.includes(query);
                 }
 
                 return true;
@@ -1363,7 +1363,26 @@
         searchInput.oninput = (e) => {
             currentQuery = e.target.value;
             if (searchClearBtn) searchClearBtn.classList.toggle('visible', !!currentQuery);
-            renderChannelList();
+            // Dès que l'utilisateur tape, basculer automatiquement sur la vue catalogue pour afficher les résultats
+            if (currentQuery.trim() !== '') {
+                if (window._bokkSwitchView) window._bokkSwitchView('catalogue');
+            }
+            renderChannelList(true);
+        };
+
+        searchInput.onfocus = () => {
+            if (searchInput.value.trim() !== '' && window._bokkSwitchView) {
+                window._bokkSwitchView('catalogue');
+            }
+        };
+
+        searchInput.onkeydown = (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                if (window._bokkSwitchView) window._bokkSwitchView('catalogue');
+                renderChannelList(true);
+                searchInput.blur();
+            }
         };
     }
 
@@ -1375,7 +1394,7 @@
                 searchInput.focus();
             }
             searchClearBtn.classList.remove('visible');
-            renderChannelList();
+            renderChannelList(true);
         };
     }
 
@@ -2166,8 +2185,11 @@
         const pageCatalogue = document.getElementById('page-catalogue');
 
         function switchView(view) {
-            // Mettre à jour les onglets actifs
+            // Mettre à jour les onglets actifs desktop et mobile
             document.querySelectorAll('.tmenu-item').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.view === view);
+            });
+            document.querySelectorAll('.mnav-item[data-view]').forEach(btn => {
                 btn.classList.toggle('active', btn.dataset.view === view);
             });
 
@@ -2197,10 +2219,29 @@
             }
         }
 
-        // Boutons du menu principal
+        // Boutons du menu principal desktop
         document.querySelectorAll('.tmenu-item[data-view]').forEach(btn => {
             btn.addEventListener('click', () => switchView(btn.dataset.view));
         });
+
+        // Boutons de la barre de navigation mobile
+        document.querySelectorAll('.mnav-item[data-view]').forEach(btn => {
+            btn.addEventListener('click', () => switchView(btn.dataset.view));
+        });
+
+        // Bouton recherche sur mobile
+        const mnavBtnSearch = document.getElementById('mnav-btn-search');
+        if (mnavBtnSearch) {
+            mnavBtnSearch.addEventListener('click', () => {
+                switchView('catalogue');
+                document.querySelectorAll('.mnav-item').forEach(b => b.classList.remove('active'));
+                mnavBtnSearch.classList.add('active');
+                if (searchInput) {
+                    searchInput.focus();
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+            });
+        }
 
         // Boutons "Tout voir →"
         document.querySelectorAll('.see-all-btn[data-view]').forEach(btn => {

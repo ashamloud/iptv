@@ -157,14 +157,29 @@
     }
 
     // ── Filtrage des chaînes ──
+    function isTvChannelInCat(ch, catKey) {
+        if (catKey === 'tous') return true;
+        if (catKey === 'favoris') return favorites.has(ch.id);
+        const chCat = (ch.category || '').toLowerCase();
+        if (chCat === catKey.toLowerCase()) return true;
+        if (ch.country && ch.country.toLowerCase() === catKey.toLowerCase()) return true;
+        if (ch.group && ch.group.toLowerCase().includes(catKey.toLowerCase())) return true;
+        if (catKey === 'senegal') return (chCat === 'senegal' || ch.country === 'SN' || (ch.group && ch.group.toLowerCase().includes('sénégal')));
+        if (catKey === 'francophone') return (chCat === 'francophone' || ch.country === 'FR' || (ch.group && (ch.group.includes('FR |') || ch.group.includes('EU | FR') || ch.group.toLowerCase().includes('france'))));
+        if (catKey === 'sport') return (chCat === 'sport' || (ch.group && (ch.group.toLowerCase().includes('sport') || ch.group.includes('DAZN') || ch.group.includes('FOOT'))));
+        if (catKey === 'cinema') return (chCat === 'cinema' || (ch.group && (ch.group.toLowerCase().includes('ciné') || ch.group.toLowerCase().includes('film') || ch.group.toLowerCase().includes('movie') || ch.group.toLowerCase().includes('serie'))));
+        if (catKey === 'uk') return (ch.country === 'UK' || ch.country === 'US' || chCat === 'uk' || (ch.group && (ch.group.includes('UK |') || ch.group.includes('USA'))));
+        if (catKey === 'espagne') return (ch.country === 'ES' || chCat === 'espagne' || (ch.group && ch.group.includes('ES |')));
+        if (catKey === 'allemagne') return (ch.country === 'DE' || chCat === 'allemagne' || (ch.group && (ch.group.includes('DE |') || ch.group.includes('GERMANY'))));
+        if (catKey === 'italie') return (ch.country === 'IT' || chCat === 'italie' || (ch.group && ch.group.includes('IT |')));
+        return false;
+    }
+
     function updateFilteredChannels() {
         filteredChannels = channels.filter(ch => {
             if (ch.name.startsWith('###')) return false;
 
-            if (currentCat === 'favoris') {
-                return favorites.has(ch.id);
-            }
-            if (currentCat !== 'tous' && ch.category !== currentCat) {
+            if (!isTvChannelInCat(ch, currentCat)) {
                 return false;
             }
             if (currentBouquet !== 'all' && ch.group !== currentBouquet) {
