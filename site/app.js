@@ -527,10 +527,7 @@
         }
 
         // Activer et révéler le lecteur s'il était minimisé
-        const playerStageSec = document.getElementById('player-stage-section');
-        if (playerStageSec && !playerStageSec.classList.contains('active')) {
-            playerStageSec.classList.add('active');
-        }
+        revealPlayer();
         const nowPlayingPill = document.getElementById('now-playing-pill');
         if (nowPlayingPill) nowPlayingPill.style.display = 'flex';
         if (typeof updateQuickZappingBar === 'function') {
@@ -1861,85 +1858,51 @@
         }
     }
 
-    // ── Configuration du Hero Billboard (Événement Phare) ──
+    // ── Configuration du Hero Billboard (Événement Phare style Canal+) ──
     function setupHeroBillboard() {
         const matches = (typeof window !== 'undefined' && window.FEATURED_MATCHES) ? window.FEATURED_MATCHES : [];
         if (!matches || matches.length === 0) return;
-        const mainMatch = matches[0]; // El Clásico par défaut
+        const mainMatch = matches[0];
 
-        const heroBackdrop      = document.getElementById('hero-backdrop');
-        const heroTitle         = document.getElementById('hero-title');
-        const heroCompBadge     = document.getElementById('hero-comp-badge');
-        const heroTeamALogo     = document.getElementById('hero-team-a-logo');
-        const heroTeamBLogo     = document.getElementById('hero-team-b-logo');
-        const heroTeamAName     = document.getElementById('hero-team-a-name');
-        const heroTeamBName     = document.getElementById('hero-team-b-name');
-        const heroScore         = document.getElementById('hero-score');
-        const heroMinute        = document.getElementById('hero-minute');
-        const heroDesc          = document.getElementById('hero-desc');
-        const heroChannelsPills = document.getElementById('hero-channels-pills');
-        const heroBtnWatch      = document.getElementById('hero-btn-watch');
-        const heroBtnMore       = document.getElementById('hero-btn-more');
-        const btnHeroLaunchPlc  = document.getElementById('btn-hero-launch-placeholder');
+        const heroBgImg    = document.getElementById('hero-bg-img');
+        const heroHeadline = document.getElementById('hero-headline');
+        const heroSub      = document.getElementById('hero-sub');
+        const heroEyebrow  = document.getElementById('hero-eyebrow');
+        const heroBtnWatch = document.getElementById('hero-btn-watch');
+        const heroBtnMatches = document.getElementById('hero-btn-matches');
 
-        if (heroBackdrop) {
-            heroBackdrop.style.backgroundImage = `url('${mainMatch.poster}')`;
+        if (heroBgImg && mainMatch.poster) {
+            heroBgImg.style.backgroundImage = `url('${mainMatch.poster}')`;
         }
-        if (heroTitle) heroTitle.textContent = mainMatch.title;
-        if (heroCompBadge) heroCompBadge.textContent = mainMatch.competitionBadge || mainMatch.competition;
-        if (heroDesc) heroDesc.textContent = mainMatch.description;
-
-        if (heroTeamALogo) heroTeamALogo.src = mainMatch.teamA.logo;
-        if (heroTeamBLogo) heroTeamBLogo.src = mainMatch.teamB.logo;
-        if (heroTeamAName) heroTeamAName.textContent = mainMatch.teamA.name;
-        if (heroTeamBName) heroTeamBName.textContent = mainMatch.teamB.name;
-
-        if (heroScore) heroScore.textContent = mainMatch.score || 'VS';
-        if (heroMinute) {
-            if (mainMatch.liveMinute) {
-                heroMinute.textContent = mainMatch.liveMinute;
-                heroMinute.style.display = 'block';
-            } else {
-                heroMinute.style.display = 'none';
-            }
+        if (heroHeadline) {
+            heroHeadline.innerHTML = `${mainMatch.teamA.name.toUpperCase()} <span style="color:var(--brand-light)">VS</span> ${mainMatch.teamB.name.toUpperCase()}`;
+        }
+        if (heroSub) {
+            heroSub.textContent = `${mainMatch.competitionBadge || mainMatch.competition} — ${mainMatch.description}`;
+        }
+        if (heroEyebrow) {
+            const txt = heroEyebrow.querySelector('span:last-child');
+            if (txt) txt.textContent = mainMatch.isLive ? 'EN DIRECT' : (mainMatch.date + ' • ' + mainMatch.time);
         }
 
-        // Remplissage des chaînes de diffusion du match
-        if (heroChannelsPills) {
-            heroChannelsPills.innerHTML = '';
-            (mainMatch.channels || []).forEach(ch => {
-                const btn = document.createElement('button');
-                btn.className = 'channel-pill-btn';
-                btn.innerHTML = `<span class="channel-pill-quality">${ch.badge || 'HD'}</span> <span>▶ ${ch.name}</span>`;
-                btn.addEventListener('click', () => {
-                    showToast(`▶ Lancement de ${ch.name} pour ${mainMatch.title}`);
-                    loadChannelByIdOrQuery(ch.id, ch.name);
-                });
-                heroChannelsPills.appendChild(btn);
-            });
-        }
-
-        // Bouton Regarder le Match en Direct
+        // Clic sur "Regarder en direct" → lance la première chaîne du match
         if (heroBtnWatch) {
             heroBtnWatch.onclick = () => {
                 if (mainMatch.channels && mainMatch.channels.length > 0) {
                     const firstCh = mainMatch.channels[0];
                     showToast(`▶ Lancement du choc ${mainMatch.title} sur ${firstCh.name}`);
+                    enableAudioOnFirstGesture();
+                    revealPlayer();
                     loadChannelByIdOrQuery(firstCh.id, firstCh.name);
                 }
             };
         }
 
-        if (btnHeroLaunchPlc) {
-            btnHeroLaunchPlc.onclick = () => {
-                if (heroBtnWatch) heroBtnWatch.click();
-            };
-        }
-
-        if (heroBtnMore) {
-            heroBtnMore.onclick = () => {
-                const sec = document.getElementById('match-center-section');
-                if (sec) sec.scrollIntoView({ behavior: 'smooth' });
+        // Clic sur "Voir tous les matchs" → scroll vers section matchs
+        if (heroBtnMatches) {
+            heroBtnMatches.onclick = () => {
+                const sec = document.getElementById('section-matchs');
+                if (sec) sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
             };
         }
     }
@@ -2596,180 +2559,177 @@
     }
 
     // ═══════════════════════════════════════════════════════════════
-    // DONNÉES LIVE — Matchs en temps réel (TheSportsDB API gratuite)
-    // Mise à jour automatique toutes les 5 minutes
+    // DONNÉES LIVE RÉELLES — Scores, Affiches & Matchs en Direct
+    // Source : API Officielle ESPN Sports (Mondial, Fiable, Temps Réel)
     // ═══════════════════════════════════════════════════════════════
 
     // Mapping chaînes BOKK TV pour les grandes compétitions
     const COMPETITION_CHANNELS = {
         'UEFA Champions League': [
-            { id: 3724, name: 'beIN Sports 1', badge: '4K' },
-            { id: 3725, name: 'beIN Sports 2', badge: 'HD' },
-            { id: 149,  name: 'Canal+ Sport',  badge: 'HD' }
+            { id: 3713, name: 'Canal+ Foot HD', badge: 'FHD' },
+            { id: 3724, name: 'beIN Sports 1',  badge: '4K' },
+            { id: 3704, name: 'M+ Liga Campeones', badge: 'HD' }
         ],
         'LaLiga': [
-            { id: 5245, name: 'M+ LaLiga 4K',  badge: '4K' },
-            { id: 5293, name: 'DAZN LaLiga',   badge: 'HD' },
-            { id: 3724, name: 'beIN Sports 1', badge: 'HD' }
+            { id: 5245, name: 'M+ LaLiga 4K',   badge: '4K' },
+            { id: 5293, name: 'DAZN LaLiga',    badge: 'HD' },
+            { id: 3724, name: 'beIN Sports 1',  badge: 'HD' }
         ],
         'Ligue 1': [
-            { id: 149,  name: 'Canal+ Sport',   badge: 'HD' },
             { id: 3713, name: 'Canal+ Foot HD', badge: 'FHD' },
+            { id: 149,  name: 'Canal+ Sport',   badge: 'HD' },
             { id: 3724, name: 'beIN Sports 1',  badge: 'HD' }
         ],
         'Premier League': [
-            { id: 2774, name: 'Canal+ Premier League', badge: 'HD' },
+            { id: 2774, name: 'Canal+ Premier League', badge: 'FHD' },
             { id: 3724, name: 'beIN Sports 1',         badge: 'HD' }
         ],
         'Serie A': [
-            { id: 3724, name: 'beIN Sports 1', badge: 'HD' },
-            { id: 149,  name: 'Canal+ Sport',  badge: 'HD' }
+            { id: 3724, name: 'beIN Sports 1',  badge: 'HD' },
+            { id: 149,  name: 'Canal+ Sport',   badge: 'HD' }
         ],
         'Bundesliga': [
-            { id: 3724, name: 'beIN Sports 1', badge: 'HD' },
-            { id: 149,  name: 'Canal+ Sport',  badge: 'HD' }
+            { id: 3724, name: 'beIN Sports 1',  badge: 'HD' },
+            { id: 149,  name: 'Canal+ Sport',   badge: 'HD' }
         ],
         'default': [
-            { id: 3724, name: 'beIN Sports 1', badge: 'HD' },
-            { id: 149,  name: 'Canal+ Sport',  badge: 'HD' }
+            { id: 3713, name: 'Canal+ Foot HD', badge: 'FHD' },
+            { id: 3724, name: 'beIN Sports 1',  badge: 'HD' }
         ]
     };
 
-    // Logos équipes via TheSportsDB ou Wikipedia
-    function getTeamLogo(teamName) {
-        const known = {
-            'Real Madrid':     'https://upload.wikimedia.org/wikipedia/en/5/56/Real_Madrid_CF.svg',
-            'Barcelona':       'https://upload.wikimedia.org/wikipedia/en/4/47/FC_Barcelona_%28crest%29.svg',
-            'FC Barcelona':    'https://upload.wikimedia.org/wikipedia/en/4/47/FC_Barcelona_%28crest%29.svg',
-            'Manchester City': 'https://upload.wikimedia.org/wikipedia/en/e/eb/Manchester_City_FC_badge.svg',
-            'Manchester United':'https://upload.wikimedia.org/wikipedia/en/7/7a/Manchester_United_FC_crest.svg',
-            'Arsenal':         'https://upload.wikimedia.org/wikipedia/en/5/53/Arsenal_FC.svg',
-            'Liverpool':       'https://upload.wikimedia.org/wikipedia/en/0/0c/Liverpool_FC.svg',
-            'Chelsea':         'https://upload.wikimedia.org/wikipedia/en/c/cc/Chelsea_FC.svg',
-            'PSG':             'https://upload.wikimedia.org/wikipedia/en/a/a7/Paris_Saint-Germain_F.C..svg',
-            'Paris Saint-Germain': 'https://upload.wikimedia.org/wikipedia/en/a/a7/Paris_Saint-Germain_F.C..svg',
-            'Bayern Munich':   'https://upload.wikimedia.org/wikipedia/commons/1/1b/FC_Bayern_M%C3%BCnchen_logo_%282002%E2%80%932017%29.svg',
-            'FC Bayern München': 'https://upload.wikimedia.org/wikipedia/commons/1/1b/FC_Bayern_M%C3%BCnchen_logo_%282002%E2%80%932017%29.svg',
-            'Borussia Dortmund': 'https://upload.wikimedia.org/wikipedia/commons/6/67/Borussia_Dortmund_logo.svg',
-            'Juventus':        'https://upload.wikimedia.org/wikipedia/commons/1/15/Juventus_FC_2017_logo.svg',
-            'AC Milan':        'https://upload.wikimedia.org/wikipedia/commons/d/d0/Logo_of_AC_Milan.svg',
-            'Inter Milan':     'https://upload.wikimedia.org/wikipedia/commons/0/05/FC_Internazionale_Milano_2021.svg',
-            'Atletico Madrid': 'https://upload.wikimedia.org/wikipedia/en/f/f4/Atletico_Madrid_2017_logo.svg',
-            'Atlético de Madrid': 'https://upload.wikimedia.org/wikipedia/en/f/f4/Atletico_Madrid_2017_logo.svg',
-            'Marseille':       'https://upload.wikimedia.org/wikipedia/commons/d/d8/Olympique_Marseille_logo.svg',
-            'Olympique de Marseille': 'https://upload.wikimedia.org/wikipedia/commons/d/d8/Olympique_Marseille_logo.svg',
-            'Lyon':            'https://upload.wikimedia.org/wikipedia/en/e/e9/Olympique_Lyonnais.svg',
-            'Monaco':          'https://upload.wikimedia.org/wikipedia/en/e/ea/AS_Monaco_FC.svg',
-            'Sénégal':         'https://upload.wikimedia.org/wikipedia/commons/f/fd/Flag_of_Senegal.svg',
-            'Morocco':         'https://upload.wikimedia.org/wikipedia/commons/2/2c/Flag_of_Morocco.svg',
-            'Nigeria':         'https://upload.wikimedia.org/wikipedia/commons/7/79/Flag_of_Nigeria.svg',
-        };
-        for (const [key, url] of Object.entries(known)) {
-            if (teamName && teamName.toLowerCase().includes(key.toLowerCase())) return url;
-        }
-        // Fallback: TheSportsDB search
-        return `https://www.thesportsdb.com/images/media/team/badge/${encodeURIComponent(teamName)}_200x200.webp`;
-    }
-
-    // Poster de match par compétition
-    function getMatchPoster(competition, teamA, teamB) {
+    // Poster de match cinématique par compétition
+    function getMatchPoster(competition) {
         const posters = {
             'UEFA Champions League': 'https://images.unsplash.com/photo-1522778119026-d647f0596c20?auto=format&fit=crop&w=1200&q=80',
-            'LaLiga': 'https://images.unsplash.com/photo-1543326727-cf6c39e8f84c?auto=format&fit=crop&w=1200&q=80',
-            'Ligue 1': 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1200&q=80',
-            'Premier League': 'https://images.unsplash.com/photo-1529900748604-07564a03e7a6?auto=format&fit=crop&w=1200&q=80',
-            'Serie A': 'https://images.unsplash.com/photo-1517466787929-bc90951d0974?auto=format&fit=crop&w=1200&q=80',
-            'Bundesliga': 'https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?auto=format&fit=crop&w=1200&q=80',
+            'LaLiga':                'https://images.unsplash.com/photo-1543326727-cf6c39e8f84c?auto=format&fit=crop&w=1200&q=80',
+            'Ligue 1':               'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1200&q=80',
+            'Premier League':        'https://images.unsplash.com/photo-1529900748604-07564a03e7a6?auto=format&fit=crop&w=1200&q=80',
+            'Serie A':               'https://images.unsplash.com/photo-1517466787929-bc90951d0974?auto=format&fit=crop&w=1200&q=80',
+            'Bundesliga':            'https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?auto=format&fit=crop&w=1200&q=80',
         };
         return posters[competition] || 'https://images.unsplash.com/photo-1568430462989-44163eb1752f?auto=format&fit=crop&w=1200&q=80';
     }
 
-    // Fetch matchs live & prochains depuis TheSportsDB
+    // Fetch des VRAIS matchs en direct et prochains chocs via API ESPN
     async function fetchLiveMatchData() {
         try {
-            // Leagues à surveiller (IDs TheSportsDB)
             const leagues = [
-                { id: 4480, name: 'UEFA Champions League', badge: '🏆 UCL' },
-                { id: 4335, name: 'LaLiga',                badge: '🇪🇸 LaLiga' },
-                { id: 4334, name: 'Ligue 1',               badge: '🇫🇷 Ligue 1' },
-                { id: 4328, name: 'Premier League',        badge: '🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier League' },
-                { id: 4332, name: 'Serie A',               badge: '🇮🇹 Serie A' },
-                { id: 4331, name: 'Bundesliga',            badge: '🇩🇪 Bundesliga' },
+                { slug: 'uefa.champions', name: 'UEFA Champions League', badge: '🏆 UCL' },
+                { slug: 'fra.1',          name: 'Ligue 1',               badge: '🇫🇷 Ligue 1' },
+                { slug: 'esp.1',          name: 'LaLiga',                badge: '🇪🇸 LaLiga' },
+                { slug: 'eng.1',          name: 'Premier League',        badge: '🇬🇧 Premier League' },
+                { slug: 'ita.1',          name: 'Serie A',               badge: '🇮🇹 Serie A' },
+                { slug: 'ger.1',          name: 'Bundesliga',            badge: '🇩🇪 Bundesliga' }
             ];
-
-            // Season courante
-            const year = new Date().getFullYear();
-            const season = new Date().getMonth() >= 7 ? year : year - 1;
 
             const allMatches = [];
 
-            // Fetch les prochains matchs pour chaque ligue (en parallèle)
             await Promise.allSettled(leagues.map(async (league) => {
                 try {
-                    const url = `https://www.thesportsdb.com/api/v1/json/3/eventsnextleague.php?id=${league.id}`;
-                    const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
+                    const url = `https://site.api.espn.com/apis/site/v2/sports/soccer/${league.slug}/scoreboard`;
+                    const res = await fetch(url, { signal: AbortSignal.timeout(6000) });
                     if (!res.ok) return;
                     const data = await res.json();
                     const events = data.events || [];
 
-                    events.slice(0, 3).forEach(ev => {
-                        // Date formatée
-                        const evDate = new Date(ev.dateEvent + 'T' + (ev.strTime || '20:00:00') + 'Z');
-                        const isLive = Math.abs(Date.now() - evDate.getTime()) < 2 * 60 * 60 * 1000; // ±2h
+                    events.forEach(ev => {
+                        const comp = (ev.competitions && ev.competitions[0]) ? ev.competitions[0] : null;
+                        if (!comp || !comp.competitors || comp.competitors.length < 2) return;
+
+                        const home = comp.competitors.find(c => c.homeAway === 'home') || comp.competitors[0];
+                        const away = comp.competitors.find(c => c.homeAway === 'away') || comp.competitors[1];
+
+                        const evDate = new Date(ev.date);
+                        const state = comp.status && comp.status.type ? comp.status.type.state : 'pre';
+                        const isLive = (state === 'in');
+                        const isFinished = (state === 'post');
+
+                        // Minute ou heure
+                        let liveMinute = null;
+                        if (isLive) {
+                            liveMinute = comp.status.type.detail || 'LIVE';
+                        }
+
+                        // Score réel
+                        let scoreText = 'VS';
+                        if (home.score !== undefined && away.score !== undefined && (isLive || isFinished)) {
+                            scoreText = `${home.score} - ${away.score}`;
+                        }
 
                         const channels = COMPETITION_CHANNELS[league.name] || COMPETITION_CHANNELS['default'];
 
+                        // Date formatée française
+                        const dateStr = evDate.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' });
+                        const timeStr = evDate.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+
                         allMatches.push({
-                            id: ev.idEvent,
-                            title: `${ev.strHomeTeam} vs ${ev.strAwayTeam}`,
+                            id: `espn-${ev.id}`,
+                            title: `${home.team.displayName} vs ${away.team.displayName}`,
                             competition: league.name,
                             competitionBadge: league.badge,
                             category: 'football',
-                            teamA: { name: ev.strHomeTeam, logo: ev.strHomeTeamBadge || getTeamLogo(ev.strHomeTeam) },
-                            teamB: { name: ev.strAwayTeam, logo: ev.strAwayTeamBadge || getTeamLogo(ev.strAwayTeam) },
-                            poster: ev.strThumb || getMatchPoster(league.name, ev.strHomeTeam, ev.strAwayTeam),
-                            score: ev.intHomeScore !== null && ev.intAwayScore !== null
-                                ? `${ev.intHomeScore}-${ev.intAwayScore}` : 'VS',
-                            date: evDate.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' }),
-                            time: evDate.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
-                            isLive: isLive && (ev.strStatus === 'Match Finished' ? false : isLive),
-                            liveMinute: isLive ? '🔴 LIVE' : null,
-                            stage: ev.strRound ? `Journée ${ev.strRound}` : league.name,
-                            description: `${ev.strHomeTeam} affronte ${ev.strAwayTeam} en ${league.name}`,
-                            channels: channels
+                            teamA: {
+                                name: home.team.displayName,
+                                logo: home.team.logo || DEFAULT_TV_LOGO
+                            },
+                            teamB: {
+                                name: away.team.displayName,
+                                logo: away.team.logo || DEFAULT_TV_LOGO
+                            },
+                            poster: getMatchPoster(league.name),
+                            score: scoreText,
+                            date: dateStr,
+                            time: timeStr,
+                            isLive: isLive,
+                            isFinished: isFinished,
+                            liveMinute: liveMinute,
+                            stage: comp.notes && comp.notes[0] ? comp.notes[0].headline : league.name,
+                            description: `${home.team.displayName} contre ${away.team.displayName} en direct sur BOKK TV`,
+                            channels: channels,
+                            rawDate: evDate.getTime()
                         });
                     });
                 } catch (e) {
-                    // Silencieux — garde les données statiques de matches.js
+                    // Silencieux pour une ligue
                 }
             }));
 
             if (allMatches.length > 0) {
-                // Trier : live d'abord, puis par date
+                // Trier avec précision :
+                // 1. Matchs en direct (isLive = true)
+                // 2. Matchs à venir (prochains chocs)
+                // 3. Matchs récents terminés
                 allMatches.sort((a, b) => {
                     if (a.isLive && !b.isLive) return -1;
                     if (!a.isLive && b.isLive) return 1;
-                    return 0;
+                    if (!a.isFinished && b.isFinished) return -1;
+                    if (a.isFinished && !b.isFinished) return 1;
+                    return b.rawDate - a.rawDate;
                 });
 
-                // Fusionner avec les matchs statiques de matches.js (statiques en dernier)
-                const staticMatches = window.FEATURED_MATCHES || [];
-                window.FEATURED_MATCHES = [...allMatches, ...staticMatches].slice(0, 12);
+                // Remplacer les données globales par les VRAIES données ESPN
+                window.FEATURED_MATCHES = allMatches;
 
-                // Rafraîchir l'interface
+                // Mettre à jour l'interface immédiatement
                 renderMatchesScrollRow();
                 renderMatchCenter('all');
-                updateHeroBillboardFromLiveData(allMatches[0]);
 
-                console.log(`[BOKK TV] ✅ ${allMatches.length} matchs chargés en temps réel`);
-                showToast(`⚽ ${allMatches.length} matchs à venir chargés`);
+                // Mettre à jour le Hero avec le match le plus important (en direct ou prochain)
+                const heroMatch = allMatches.find(m => m.isLive) || allMatches.find(m => !m.isFinished) || allMatches[0];
+                if (heroMatch) {
+                    updateHeroBillboardFromLiveData(heroMatch);
+                }
+
+                console.log(`[BOKK TV] ✅ ${allMatches.length} vrais matchs ESPN chargés en direct !`);
+                showToast(`⚽ ${allMatches.length} matchs réels synchronisés en direct`);
             }
         } catch (e) {
-            console.warn('[BOKK TV] Données live indisponibles, utilisation des données statiques :', e.message);
+            console.warn('[BOKK TV] Erreur API Live :', e.message);
         }
 
-        // Re-fetch automatique toutes les 5 minutes
-        setTimeout(fetchLiveMatchData, 5 * 60 * 1000);
+        // Rafraîchissement automatique toutes les 2 minutes (pour les scores live)
+        setTimeout(fetchLiveMatchData, 2 * 60 * 1000);
     }
 
     // Mise à jour du Hero avec un match live réel
@@ -2787,9 +2747,7 @@
         }
 
         if (heroHeadline) {
-            heroHeadline.textContent = match.isLive
-                ? match.title.toUpperCase()
-                : `PROCHAINS GRANDS MATCHS`;
+            heroHeadline.innerHTML = `${match.teamA.name.toUpperCase()} <span style="color:var(--brand-light)">VS</span> ${match.teamB.name.toUpperCase()}`;
         }
 
         if (heroEyebrow) {
@@ -2797,15 +2755,28 @@
             const txt = heroEyebrow.querySelector('span:last-child');
             if (match.isLive) {
                 if (dot) dot.style.display = 'block';
-                if (txt) txt.textContent = 'EN DIRECT';
+                if (txt) txt.textContent = `EN DIRECT • ${match.liveMinute || ''}`;
             } else {
                 if (dot) dot.style.display = 'none';
-                if (txt) txt.textContent = match.competitionBadge || match.competition;
+                if (txt) txt.textContent = `${match.competitionBadge || match.competition} • ${match.date} ${match.time}`;
             }
         }
 
-        if (heroSub && !match.isLive) {
-            heroSub.textContent = `${match.teamA.name} · ${match.teamB.name} — ${match.date} à ${match.time}`;
+        if (heroSub) {
+            heroSub.textContent = match.isLive 
+                ? `En direct maintenant sur BOKK TV — Score : ${match.score}`
+                : `${match.competition} — ${match.teamA.name} contre ${match.teamB.name}. Diffusion en HD & 4K.`;
+        }
+
+        const heroBtnWatch = document.getElementById('hero-btn-watch');
+        if (heroBtnWatch && match.channels && match.channels.length > 0) {
+            heroBtnWatch.onclick = () => {
+                const firstCh = match.channels[0];
+                showToast(`▶ Lancement de ${firstCh.name} (${match.title})`);
+                enableAudioOnFirstGesture();
+                revealPlayer();
+                loadChannelByIdOrQuery(firstCh.id, firstCh.name);
+            };
         }
 
         // Mettre à jour les pills en haut
