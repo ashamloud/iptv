@@ -15,7 +15,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=9950">
+    <link rel="stylesheet" href="style.css?v=9955">
 </head>
 <body>
 
@@ -239,17 +239,24 @@
 
             <div class="hero-card-content">
                 <div class="hero-eyebrow" id="hero-eyebrow">
-                    <span class="hero-live-dot"></span>
-                    <span id="hero-eyebrow-text">EN DIRECT</span>
+                    <span class="hero-live-dot" style="display:none;"></span>
+                    <span id="hero-eyebrow-text">À VENIR • MER. 11 NOV. 20:30</span>
                 </div>
-                <h1 class="hero-headline" id="hero-headline">ATLÉTICO MADRID <span class="hero-vs">VS</span> BARCELONA</h1>
-                <p class="hero-sub" id="hero-sub">LaLiga • Direct • Dimanche 20:00 • Diffusion en HD & 4K</p>
+                <h1 class="hero-headline" id="hero-headline">MAROC <span class="hero-vs">VS</span> CÔTE D'IVOIRE</h1>
+                <p class="hero-sub" id="hero-sub">Choc Africain • Mer. 11 Nov. 20:30 • Diffusion en HD & 4K</p>
 
                 <!-- Indication des chaînes de diffusion directe -->
                 <div class="hero-channels-box" id="hero-channels-box">
                     <span class="hero-channels-label">Chaînes de diffusion directe :</span>
                     <div class="hero-channels-chips" id="hero-channels-chips">
-                        <!-- Rempli dynamiquement (ex: beIN Sports 1, Canal+ Foot, DAZN...) -->
+                        <button class="hero-ch-chip" data-chid="3713" data-chname="Canal+ Foot HD">
+                            <span class="hero-ch-badge">FHD</span>
+                            <span>Canal+ Foot HD</span>
+                        </button>
+                        <button class="hero-ch-chip" data-chid="3724" data-chname="beIN Sports 1 AR">
+                            <span class="hero-ch-badge">FHD</span>
+                            <span>beIN Sports 1 AR</span>
+                        </button>
                     </div>
                 </div>
 
@@ -536,10 +543,10 @@
 <!-- Scripts -->
 <script src="mpegts.js"></script>
 <script src="hls.min.js"></script>
-<script src="matches.js?v=9950"></script>
+<script src="matches.js?v=9955"></script>
 <script src="epg-data.js?v=9941"></script>
-<script src="epg.js?v=9950"></script>
+<script src="epg.js?v=9955"></script>
 <script src="channels.js?v=9941"></script>
-<script src="app.js?v=9950"></script>
+<script src="app.js?v=9955"></script>
 </body>
 </html>

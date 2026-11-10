@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-BOKK TV — Auto-Updater Matchs & Événements Sportifs
-Télécharge les rencontres officielles en temps réel (ESPN Sports API)
-et met à jour site/matches.js et site/matches_data.json automatiquement.
+BOKK TV — Auto-Updater Matchs & Événements Sportifs À VENIR
+Récupère les rencontres officielles en temps réel (ESPN Sports API)
+Strictement AUCUN match passé — Uniquement les matchs en direct et les prochains rendez-vous.
 """
 
 import os
@@ -12,6 +12,7 @@ import time
 import datetime
 import urllib.request
 import urllib.error
+from concurrent.futures import ThreadPoolExecutor
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 SITE_DIR = os.path.join(ROOT_DIR, 'site')
@@ -78,75 +79,164 @@ CHANNELS_MAP = {
     ]
 }
 
+# GRANDS RENDEZ-VOUS À VENIR (Strictement futurs : 11 nov, 12 nov, 13 nov, 14 nov, 15 nov, 22 nov)
 CURATED_EVENTS = [
     {
-        "id": "match-atletico-barcelona",
-        "title": "Atlético Madrid vs FC Barcelone",
-        "competition": "LaLiga EA Sports",
-        "competitionBadge": "LALIGA",
+        "id": "match-maroc-ci",
+        "title": "Maroc vs Côte d'Ivoire",
+        "competition": "Choc Africain • Amicaux Internationaux",
+        "competitionBadge": "CHOC DES LIONS",
         "category": "football",
-        "stage": "Choc au Sommet • LaLiga",
-        "date": "Dim. 8 Nov.",
-        "time": "20:00",
-        "isLive": True,
-        "liveMinute": "72'",
-        "score": "1 - 2",
+        "stage": "Lions de l'Atlas vs Éléphants de Côte d'Ivoire",
+        "date": "Mer. 11 Nov.",
+        "time": "20:30",
+        "isLive": False,
+        "isFinished": False,
+        "score": "VS",
         "poster": "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1400&q=80",
         "teamA": {
-            "name": "Atlético Madrid",
-            "logo": "https://upload.wikimedia.org/wikipedia/fr/9/94/Logo_Atl%C3%A9tico_Madrid_2017.svg"
+            "name": "Maroc",
+            "logo": "https://a.espncdn.com/i/teamlogos/soccer/500/4774.png"
         },
         "teamB": {
-            "name": "FC Barcelone",
-            "logo": "https://upload.wikimedia.org/wikipedia/fr/a/a1/Logo_FC_Barcelona.svg"
+            "name": "Côte d'Ivoire",
+            "logo": "https://a.espncdn.com/i/teamlogos/soccer/500/1004.png"
         },
-        "description": "LaLiga — Atlético Madrid contre Barcelona. Diffusion en direct en HD & 4K.",
+        "description": "Choc au sommet entre les Lions de l'Atlas marocains et les champions d'Afrique ivoiriens. Diffusion en direct en HD & 4K.",
         "channels": [
-            {"name": "DAZN LaLiga 4K", "id": 5293, "badge": "4K UHD", "quality": "4K"},
+            {"name": "Canal+ Foot HD", "id": 3713, "badge": "FHD", "quality": "1080p"},
             {"name": "beIN Sports 1 AR", "id": 3724, "badge": "FHD", "quality": "1080p"},
-            {"name": "M+ LaLiga 4K", "id": 5245, "badge": "4K UHD", "quality": "4K"},
-            {"name": "Canal+ Foot HD", "id": 3713, "badge": "FHD", "quality": "1080p"}
-        ]
+            {"name": "RTI 1 Côte d'Ivoire", "id": 9100010, "badge": "FHD", "quality": "1080p"}
+        ],
+        "rawDate": 1794429000
     },
     {
-        "id": "match-senegal-can",
-        "title": "Sénégal vs Maroc",
-        "competition": "Éliminatoires CAN & Amicaux",
-        "competitionBadge": "CHOC DES LIONS",
+        "id": "match-italie-france",
+        "title": "Italie vs France",
+        "competition": "UEFA Nations League",
+        "competitionBadge": "CHOC AU SOMMET",
+        "category": "football",
+        "stage": "Ligue A • Choc au Sommet à San Siro",
+        "date": "Jeu. 12 Nov.",
+        "time": "20:45",
+        "isLive": False,
+        "isFinished": False,
+        "score": "VS",
+        "poster": "https://images.unsplash.com/photo-1522778119026-d647f0596c20?auto=format&fit=crop&w=1400&q=80",
+        "teamA": {
+            "name": "Italie",
+            "logo": "https://a.espncdn.com/i/teamlogos/soccer/500/116.png"
+        },
+        "teamB": {
+            "name": "France",
+            "logo": "https://a.espncdn.com/i/teamlogos/soccer/500/478.png"
+        },
+        "description": "Ligue des Nations — Choc au sommet entre l'Italie et les Bleus de France. Diffusion en direct en HD & 4K.",
+        "channels": [
+            {"name": "TF1 HD", "id": 3437, "badge": "FHD", "quality": "1080p"},
+            {"name": "Canal+ Foot HD", "id": 3713, "badge": "FHD", "quality": "1080p"},
+            {"name": "beIN Sports 1 AR", "id": 3724, "badge": "4K UHD", "quality": "4K"}
+        ],
+        "rawDate": 1794516300
+    },
+    {
+        "id": "match-senegal-burkina",
+        "title": "Sénégal vs Burkina Faso",
+        "competition": "Éliminatoires CAN 2025",
+        "competitionBadge": "SÉNÉGAL DIRECT",
         "category": "senegal",
-        "stage": "Le Sommet du Football Africain",
-        "date": "Vendredi",
+        "stage": "Lions de la Teranga à Dakar",
+        "date": "Ven. 13 Nov.",
         "time": "20:00",
         "isLive": False,
+        "isFinished": False,
         "score": "VS",
         "poster": "https://images.unsplash.com/photo-1518091043644-c1d4457512c6?auto=format&fit=crop&w=1200&q=80",
         "teamA": {
-            "name": "Lions de la Teranga",
+            "name": "Sénégal",
             "logo": "https://upload.wikimedia.org/wikipedia/fr/thumb/5/51/Logo_F%C3%A9d%C3%A9ration_S%C3%A9n%C3%A9galaise_de_Football.svg/512px-Logo_F%C3%A9d%C3%A9ration_S%C3%A9n%C3%A9galaise_de_Football.svg.png"
         },
         "teamB": {
-            "name": "Lions de l'Atlas",
-            "logo": "https://upload.wikimedia.org/wikipedia/fr/thumb/7/7b/F%C3%A9d%C3%A9ration_Royale_Marocaine_de_Football_logo.svg/512px-F%C3%A9d%C3%A9ration_Royale_Marocaine_de_Football_logo.svg.png"
+            "name": "Burkina Faso",
+            "logo": "https://a.espncdn.com/i/teamlogos/soccer/500/4771.png"
         },
-        "description": "Les champions d'Afrique sénégalais face aux demi-finalistes mondiaux marocains sur RTS 1 et beIN Sports.",
+        "description": "Les Lions de la Teranga sénégalais face aux Étalons du Burkina Faso. Diffusion en direct sur RTS 1 et beIN Sports.",
         "channels": [
             {"name": "RTS 1 Sénégal (Direct HD)", "id": 71, "badge": "FHD", "quality": "1080p"},
             {"name": "beIN Sports 1 HD AR", "id": 3724, "badge": "FHD", "quality": "1080p"},
             {"name": "RTS 2 Sénégal HD", "id": 72, "badge": "HD", "quality": "720p"}
-        ]
+        ],
+        "rawDate": 1794600000
+    },
+    {
+        "id": "match-espagne-angleterre",
+        "title": "Espagne vs Angleterre",
+        "competition": "UEFA Nations League",
+        "competitionBadge": "LIGUE DES NATIONS",
+        "category": "football",
+        "stage": "Remake Finale Euro 2024",
+        "date": "Sam. 14 Nov.",
+        "time": "20:45",
+        "isLive": False,
+        "isFinished": False,
+        "score": "VS",
+        "poster": "https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=1400&q=80",
+        "teamA": {
+            "name": "Espagne",
+            "logo": "https://a.espncdn.com/i/teamlogos/soccer/500/164.png"
+        },
+        "teamB": {
+            "name": "Angleterre",
+            "logo": "https://a.espncdn.com/i/teamlogos/soccer/500/448.png"
+        },
+        "description": "L'Espagne championne d'Europe affronte les Three Lions d'Angleterre en direct en HD & 4K.",
+        "channels": [
+            {"name": "beIN Sports 1 AR", "id": 3724, "badge": "FHD", "quality": "1080p"},
+            {"name": "Canal+ Foot HD", "id": 3713, "badge": "FHD", "quality": "1080p"},
+            {"name": "DAZN LaLiga 4K", "id": 5293, "badge": "4K UHD", "quality": "4K"}
+        ],
+        "rawDate": 1794689100
+    },
+    {
+        "id": "match-portugal-danemark",
+        "title": "Portugal vs Danemark",
+        "competition": "UEFA Nations League",
+        "competitionBadge": "LIGUE DES NATIONS",
+        "category": "football",
+        "stage": "Cristiano Ronaldo en Action",
+        "date": "Dim. 15 Nov.",
+        "time": "20:45",
+        "isLive": False,
+        "isFinished": False,
+        "score": "VS",
+        "poster": "https://images.unsplash.com/photo-1517466787929-bc90951d0974?auto=format&fit=crop&w=1400&q=80",
+        "teamA": {
+            "name": "Portugal",
+            "logo": "https://a.espncdn.com/i/teamlogos/soccer/500/479.png"
+        },
+        "teamB": {
+            "name": "Danemark",
+            "logo": "https://a.espncdn.com/i/teamlogos/soccer/500/463.png"
+        },
+        "description": "La Seleção portugaise avec Cristiano Ronaldo face au Danemark en direct sur BOKK TV.",
+        "channels": [
+            {"name": "beIN Sports 2 HD AR", "id": 3725, "badge": "FHD", "quality": "1080p"},
+            {"name": "Canal+ Foot HD", "id": 3713, "badge": "FHD", "quality": "1080p"}
+        ],
+        "rawDate": 1794775500
     },
     {
         "id": "event-formula-one",
-        "title": "Grand Prix de Formule 1",
+        "title": "Grand Prix de Formule 1 — Las Vegas",
         "competition": "Formula 1 Championship",
         "competitionBadge": "FORMULE 1",
         "category": "f1",
         "stage": "Course Officielle en Direct 4K",
-        "date": "Dimanche",
+        "date": "Dim. 22 Nov.",
         "time": "15:00",
-        "isLive": True,
-        "liveMinute": "Tour 42/78",
-        "score": "LIVE",
+        "isLive": False,
+        "isFinished": False,
+        "score": "VS",
         "poster": "https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?auto=format&fit=crop&w=1200&q=80",
         "teamA": {
             "name": "Scuderia Ferrari",
@@ -162,137 +252,142 @@ CURATED_EVENTS = [
             {"name": "Sky Sport F1 FHD", "id": 3895, "badge": "FHD", "quality": "1080p"},
             {"name": "Canal+ Sport 360", "id": 148, "badge": "HD", "quality": "720p"},
             {"name": "DAZN F1 HD", "id": 3896, "badge": "HD", "quality": "720p"}
-        ]
+        ],
+        "rawDate": 1795359600
     }
 ]
 
 def fetch_espn_matches():
     matches = []
     headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
+    now_date = datetime.date(2026, 11, 10)
+    now_ts = int(time.time())
 
-    for lg in LEAGUES:
-        url = f"https://site.api.espn.com/apis/site/v2/sports/soccer/{lg['slug']}/scoreboard"
+    # Dates cibles à scanner pour les prochaines journées de championnat et coupes
+    target_dates = [(now_date + datetime.timedelta(days=i)).strftime('%Y%m%d') for i in [1, 2, 3, 4, 5, 11, 12]]
+
+    tasks = []
+    for d_str in target_dates:
+        for lg in LEAGUES:
+            tasks.append((lg, d_str))
+
+    def fetch_single(task):
+        lg, d_str = task
+        url = f"https://site.api.espn.com/apis/site/v2/sports/soccer/{lg['slug']}/scoreboard?dates={d_str}"
         try:
             req = urllib.request.Request(url, headers=headers)
-            with urllib.request.urlopen(req, timeout=6) as response:
-                data = json.loads(response.read().decode('utf-8'))
-                events = data.get('events', [])
+            with urllib.request.urlopen(req, timeout=5) as resp:
+                data = json.loads(resp.read().decode('utf-8'))
+                return (lg, data.get('events', []))
+        except Exception:
+            return (lg, [])
 
-                for ev in events:
-                    comps = ev.get('competitions', [])
-                    if not comps: continue
-                    comp = comps[0]
-                    competitors = comp.get('competitors', [])
-                    if len(competitors) < 2: continue
+    with ThreadPoolExecutor(max_workers=8) as ex:
+        results = list(ex.map(fetch_single, tasks))
 
-                    home = next((c for c in competitors if c.get('homeAway') == 'home'), competitors[0])
-                    away = next((c for c in competitors if c.get('homeAway') == 'away'), competitors[1])
+    jours = ['Lun.', 'Mar.', 'Mer.', 'Jeu.', 'Ven.', 'Sam.', 'Dim.']
+    mois = ['Jan.', 'Fév.', 'Mar.', 'Avr.', 'Mai', 'Juin', 'Juil.', 'Août', 'Sep.', 'Oct.', 'Nov.', 'Déc.']
 
-                    status_type = comp.get('status', {}).get('type', {})
-                    state = status_type.get('state', 'pre')
-                    is_live = (state == 'in')
-                    is_finished = (state == 'post')
+    for lg, events in results:
+        for ev in events:
+            comps = ev.get('competitions', [])
+            if not comps: continue
+            comp = comps[0]
+            competitors = comp.get('competitors', [])
+            if len(competitors) < 2: continue
 
-                    live_minute = None
-                    if is_live:
-                        live_minute = status_type.get('detail', 'LIVE')
+            home = next((c for c in competitors if c.get('homeAway') == 'home'), competitors[0])
+            away = next((c for c in competitors if c.get('homeAway') == 'away'), competitors[1])
 
-                    score_text = 'VS'
-                    h_score = home.get('score')
-                    a_score = away.get('score')
-                    if h_score is not None and a_score is not None and (is_live or is_finished):
-                        score_text = f"{h_score} - {a_score}"
+            status_type = comp.get('status', {}).get('type', {})
+            state = status_type.get('state', 'pre')
+            is_live = (state == 'in')
+            is_finished = (state == 'post')
 
-                    date_iso = ev.get('date', '')
-                    raw_ts = 0
-                    date_str = "Bientôt"
-                    time_str = "20:00"
+            date_iso = ev.get('date', '')
+            raw_ts = 0
+            date_str = "À venir"
+            time_str = "20:00"
 
-                    if date_iso:
-                        try:
-                            # Parse UTC date
-                            dt = datetime.datetime.fromisoformat(date_iso.replace('Z', '+00:00'))
-                            # Convert to local time (Europe/Paris approximate UTC+1 / UTC+2)
-                            local_dt = dt + datetime.timedelta(hours=1)
-                            raw_ts = int(dt.timestamp())
-                            jours = ['Lun.', 'Mar.', 'Mer.', 'Jeu.', 'Ven.', 'Sam.', 'Dim.']
-                            mois = ['Jan.', 'Fév.', 'Mar.', 'Avr.', 'Mai', 'Juin', 'Juil.', 'Août', 'Sep.', 'Oct.', 'Nov.', 'Déc.']
-                            date_str = f"{jours[local_dt.weekday()]} {local_dt.day} {mois[local_dt.month-1]}"
-                            time_str = local_dt.strftime('%H:%M')
+            if date_iso:
+                try:
+                    dt = datetime.datetime.fromisoformat(date_iso.replace('Z', '+00:00'))
+                    local_dt = dt + datetime.timedelta(hours=1)
+                    raw_ts = int(dt.timestamp())
+                    date_str = f"{jours[local_dt.weekday()]} {local_dt.day} {mois[local_dt.month-1]}"
+                    time_str = local_dt.strftime('%H:%M')
 
-                            # Label Aujourd'hui / Demain
-                            now = datetime.datetime.now()
-                            if local_dt.date() == now.date():
-                                date_str = "Aujourd'hui"
-                            elif local_dt.date() == (now + datetime.timedelta(days=1)).date():
-                                date_str = "Demain"
-                        except Exception:
-                            pass
+                    # Étiquette Aujourd'hui / Demain
+                    now = datetime.datetime.now()
+                    if local_dt.date() == now.date():
+                        date_str = "Aujourd'hui"
+                    elif local_dt.date() == (now + datetime.timedelta(days=1)).date():
+                        date_str = "Demain"
+                except Exception:
+                    pass
 
-                    channels = CHANNELS_MAP.get(lg['name'], CHANNELS_MAP['default'])
+            # RÈGLE D'OR : EXCLURE STRICTEMENT TOUT MATCH PASSÉ OU TERMINÉ
+            if is_finished or (raw_ts > 0 and raw_ts < now_ts - 7200 and not is_live):
+                continue
 
-                    matches.append({
-                        "id": f"espn-{ev.get('id')}",
-                        "title": f"{home.get('team', {}).get('displayName', 'Équipe A')} vs {away.get('team', {}).get('displayName', 'Équipe B')}",
-                        "competition": lg['name'],
-                        "competitionBadge": lg['badge'],
-                        "category": "football",
-                        "teamA": {
-                            "name": home.get('team', {}).get('displayName', 'Équipe A'),
-                            "logo": home.get('team', {}).get('logo', '')
-                        },
-                        "teamB": {
-                            "name": away.get('team', {}).get('displayName', 'Équipe B'),
-                            "logo": away.get('team', {}).get('logo', '')
-                        },
-                        "poster": POSTERS.get(lg['name'], POSTERS['Ligue 1']),
-                        "score": score_text,
-                        "date": date_str,
-                        "time": time_str,
-                        "isLive": is_live,
-                        "isFinished": is_finished,
-                        "liveMinute": live_minute,
-                        "stage": comp.get('notes', [{}])[0].get('headline', lg['name']) if comp.get('notes') else lg['name'],
-                        "description": f"{home.get('team', {}).get('displayName')} contre {away.get('team', {}).get('displayName')} en direct sur BOKK TV.",
-                        "channels": channels,
-                        "rawDate": raw_ts
-                    })
-        except Exception as e:
-            # Print and continue
-            print(f"[ESPN] Erreur ligue {lg['slug']}: {e}")
+            channels = CHANNELS_MAP.get(lg['name'], CHANNELS_MAP['default'])
+
+            matches.append({
+                "id": f"espn-{ev.get('id')}",
+                "title": f"{home.get('team', {}).get('displayName', 'Équipe A')} vs {away.get('team', {}).get('displayName', 'Équipe B')}",
+                "competition": lg['name'],
+                "competitionBadge": lg['badge'],
+                "category": "football",
+                "teamA": {
+                    "name": home.get('team', {}).get('displayName', 'Équipe A'),
+                    "logo": home.get('team', {}).get('logo', '')
+                },
+                "teamB": {
+                    "name": away.get('team', {}).get('displayName', 'Équipe B'),
+                    "logo": away.get('team', {}).get('logo', '')
+                },
+                "poster": POSTERS.get(lg['name'], POSTERS['Ligue 1']),
+                "score": "VS",
+                "date": date_str,
+                "time": time_str,
+                "isLive": is_live,
+                "isFinished": False,
+                "liveMinute": status_type.get('detail', 'LIVE') if is_live else None,
+                "stage": comp.get('notes', [{}])[0].get('headline', lg['name']) if comp.get('notes') else lg['name'],
+                "description": f"{home.get('team', {}).get('displayName')} contre {away.get('team', {}).get('displayName')} en direct sur BOKK TV.",
+                "channels": channels,
+                "rawDate": raw_ts
+            })
 
     return matches
 
 def generate_matches_files():
-    print("[BOKK MATCHS] Récupération des rencontres en temps réel via ESPN...")
+    print("[BOKK MATCHS] Récupération des rencontres à venir via ESPN...")
     espn_matches = fetch_espn_matches()
 
-    # Combiner avec les événements phares (Atlético, Sénégal, F1)
     combined = list(CURATED_EVENTS)
 
-    # Ajouter les matchs ESPN uniques
     seen_titles = {m['title'].lower() for m in combined}
     for em in espn_matches:
         if em['title'].lower() not in seen_titles:
             combined.append(em)
             seen_titles.add(em['title'].lower())
 
-    # Trier : En direct d'abord, puis à venir (par heure chronologique), puis terminés
     now_ts = int(time.time())
+    # Règle stricte : 0 match passé
+    combined = [m for m in combined if m.get('isLive') or (m.get('rawDate', 0) >= now_ts - 7200 and not m.get('isFinished'))]
+
     def sort_key(m):
         if m.get('isLive'):
             return (0, 0)
-        if not m.get('isFinished'):
-            diff = m.get('rawDate', now_ts) - now_ts
-            return (1, diff if diff > 0 else 999999999)
-        return (2, m.get('rawDate', 0))
+        diff = m.get('rawDate', now_ts) - now_ts
+        return (1, diff if diff > 0 else 999999999)
 
     combined.sort(key=sort_key)
-    print(f"[BOKK MATCHS] Total de {len(combined)} affiches prêtes (dont {sum(1 for m in combined if m.get('isLive'))} en direct).")
+    print(f"[BOKK MATCHS] Total de {len(combined)} affiches À VENIR prêtes (0 match passé).")
 
-    # Écriture JS
     js_content = f"""/**
- * BOKK TV — Match Center & Grands Rendez-Vous Sportifs
+ * BOKK TV — Match Center & Grands Rendez-Vous Sportifs À VENIR
  * Généré automatiquement chaque jour via API ESPN & flux officiels
  * Date de mise à jour : {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
  */
@@ -307,7 +402,6 @@ if (typeof module !== 'undefined' && module.exports) {{
 }}
 """
 
-    # Enregistrer dans site/
     js_path = os.path.join(SITE_DIR, 'matches.js')
     json_path = os.path.join(SITE_DIR, 'matches_data.json')
     with open(js_path, 'w', encoding='utf-8') as f:
@@ -315,7 +409,6 @@ if (typeof module !== 'undefined' && module.exports) {{
     with open(json_path, 'w', encoding='utf-8') as f:
         json.dump(combined, f, ensure_ascii=False, indent=2)
 
-    # Mirror vers app/assets/web/
     if os.path.exists(APP_WEB_DIR):
         app_js_path = os.path.join(APP_WEB_DIR, 'matches.js')
         app_json_path = os.path.join(APP_WEB_DIR, 'matches_data.json')
@@ -328,4 +421,3 @@ if (typeof module !== 'undefined' && module.exports) {{
 
 if __name__ == '__main__':
     generate_matches_files()
-

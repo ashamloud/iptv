@@ -2065,16 +2065,26 @@
             billboard.addEventListener('mouseenter', () => { heroIsPaused = true; });
             billboard.addEventListener('mouseleave', () => { heroIsPaused = false; });
 
-            // Support du swipe tactile
-            let touchStartX = 0;
+            // Support du swipe tactile — STRICTEMENT horizontal pour ne pas perturber le scroll de la page
+            let touchStartX = 0, touchStartY = 0;
             billboard.addEventListener('touchstart', (e) => {
-                touchStartX = e.changedTouches[0].screenX;
+                if (e.touches && e.touches.length > 0) {
+                    touchStartX = e.touches[0].clientX;
+                    touchStartY = e.touches[0].clientY;
+                    heroIsPaused = true;
+                }
             }, { passive: true });
             billboard.addEventListener('touchend', (e) => {
-                const touchEndX = e.changedTouches[0].screenX;
-                const diff = touchEndX - touchStartX;
-                if (diff > 50) prevHeroSlide();
-                else if (diff < -50) nextHeroSlide();
+                heroIsPaused = false;
+                if (e.changedTouches && e.changedTouches.length > 0) {
+                    const dx = e.changedTouches[0].clientX - touchStartX;
+                    const dy = e.changedTouches[0].clientY - touchStartY;
+                    // Déclenche uniquement si geste intentionnel horizontal (au moins 2x plus horizontal que vertical)
+                    if (Math.abs(dx) > 70 && Math.abs(dx) > Math.abs(dy) * 2) {
+                        if (dx > 0) prevHeroSlide();
+                        else nextHeroSlide();
+                    }
+                }
             }, { passive: true });
         }
 
@@ -2224,10 +2234,11 @@
                 };
             });
 
-            // Défilement doux vers la pastille active
+            // Défilement doux du conteneur tagsRow vers la pastille active (JAMAIS scrollIntoView qui manipule la page !)
             const activePill = tagsRow.querySelector('.hero-tag-pill.active');
-            if (activePill) {
-                activePill.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+            if (activePill && tagsRow) {
+                const targetLeft = activePill.offsetLeft - (tagsRow.clientWidth - activePill.clientWidth) / 2;
+                tagsRow.scrollTo({ left: Math.max(0, targetLeft), behavior: 'smooth' });
             }
         }
 
@@ -3197,6 +3208,12 @@
                         const isEvToday = (evDate.getDate() === now.getDate() && evDate.getMonth() === now.getMonth() && evDate.getFullYear() === now.getFullYear());
                         const isEvTomorrow = (evDate.getDate() === tomorrow.getDate() && evDate.getMonth() === tomorrow.getMonth() && evDate.getFullYear() === tomorrow.getFullYear());
 
+                        // RÈGLE ABSOLUE : EXCLURE STRICTEMENT TOUT MATCH PASSÉ OU TERMINÉ
+                        const nowTs = Date.now();
+                        if (isFinished || (evDate.getTime() < nowTs - 7200000 && !isLive)) {
+                            return;
+                        }
+
                         let dateStr = evDate.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' });
                         if (isEvToday) dateStr = "Aujourd'hui";
                         else if (isEvTomorrow) dateStr = "Demain";
@@ -3222,7 +3239,7 @@
                             date: dateStr,
                             time: timeStr,
                             isLive: isLive,
-                            isFinished: isFinished,
+                            isFinished: false,
                             liveMinute: liveMinute,
                             stage: comp.notes && comp.notes[0] ? comp.notes[0].headline : league.name,
                             description: `${home.team.displayName} contre ${away.team.displayName} en direct sur BOKK TV.`,
@@ -3234,7 +3251,6 @@
             }));
 
             if (espnMatches.length > 0) {
-                // Conserver les événements personnalisés (Atlético, Sénégal, F1)
                 const existing = (typeof window !== 'undefined' && Array.isArray(window.FEATURED_MATCHES))
                     ? window.FEATURED_MATCHES.filter(m => !m.id.startsWith('espn-'))
                     : [];
@@ -3249,24 +3265,18 @@
                     }
                 }
 
-                // Tri chronologique rigoureux :
-                // 1. En Direct
-                // 2. À venir (du plus proche au plus lointain)
-                // 3. Terminés
+                // Filtrer pour ne garder STRICTEMENT que les événements en direct ou à venir
                 const nowTs = Date.now();
-                combined.sort((a, b) => {
+                const upcomingOnly = combined.filter(m => m.isLive || (m.rawDate >= nowTs - 7200000 && !m.isFinished));
+
+                upcomingOnly.sort((a, b) => {
                     if (a.isLive && !b.isLive) return -1;
                     if (!a.isLive && b.isLive) return 1;
-                    if (!a.isFinished && b.isFinished) return -1;
-                    if (a.isFinished && !b.isFinished) return 1;
-                    if (!a.isFinished && !b.isFinished) {
-                        return (a.rawDate || nowTs) - (b.rawDate || nowTs);
-                    }
-                    return (b.rawDate || 0) - (a.rawDate || 0);
+                    return (a.rawDate || nowTs) - (b.rawDate || nowTs);
                 });
 
-                window.FEATURED_MATCHES = combined;
-                heroMatches = combined;
+                window.FEATURED_MATCHES = upcomingOnly;
+                heroMatches = upcomingOnly;
 
                 // Rafraîchir l'interface
                 renderHeroSlide(heroCurrentIndex);
