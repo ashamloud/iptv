@@ -643,9 +643,17 @@ class BOKKStreamProxyHandler(SimpleHTTPRequestHandler):
 
 
 class SafeThreadingHTTPServer(ThreadingHTTPServer):
-    # Sur Windows, désactiver allow_reuse_address pour empêcher 2 processus d'écouter sur le même port
+    # Support dual-stack IPv4/IPv6 pour que 'localhost' (IPv6 ::1) et '127.0.0.1' répondent instantanément
+    address_family = socket.AF_INET6
     allow_reuse_address = False
     daemon_threads = True
+
+    def server_bind(self):
+        try:
+            self.socket.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 0)
+        except Exception:
+            pass
+        super().server_bind()
 
     def get_request(self):
         sock, addr = super().get_request()
@@ -665,7 +673,7 @@ if __name__ == '__main__':
 
     port = int(sys.argv[1]) if len(sys.argv) > 1 else PORT
     try:
-        server = SafeThreadingHTTPServer(('0.0.0.0', port), BOKKStreamProxyHandler)
+        server = SafeThreadingHTTPServer(('', port), BOKKStreamProxyHandler)
     except OSError as e:
         sys.stderr.write(f"[BOKK TV ERREUR] Le port {port} est déjà utilisé : {e}\n")
         sys.stderr.flush()

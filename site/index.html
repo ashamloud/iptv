@@ -15,7 +15,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=9971">
+    <link rel="stylesheet" href="style.css?v=9975">
 </head>
 <body>
 
@@ -63,7 +63,7 @@
                     <span class="desktop-only-text">Favoris</span>
                 </button>
 
-                <button id="btn-open-account" class="topnav-btn topnav-btn-account" title="Mon Compte & ID BOKK" style="border-color:rgba(0,112,243,0.3); background:rgba(0,112,243,0.1);">
+                <button id="btn-open-account" class="topnav-btn topnav-btn-account" title="Mon Compte & ID BOKK">
                     <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                         <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
                         <circle cx="12" cy="7" r="4"></circle>
@@ -215,25 +215,66 @@
 <main class="page-home" id="page-home">
 
     <!-- HERO BILLBOARD ── Carte Carrousel Cinématique Style Reezn / Netflix -->
-    
-<div class="hero-simple" id="hero-wrapper">
-    <div class="hero-simple-content">
-        <span class="hero-live-pill"><span class="live-dot-pulse"></span>EN DIRECT</span>
-        <h1 class="hero-simple-title">BOKK <span style="color:#e50914;">TV</span></h1>
-        <p class="hero-simple-sub">TV en direct, matchs et cinéma — 6000+ chaînes</p>
-        <div class="hero-simple-cta">
-            <button class="hero-btn-watch" id="hero-btn-watch">
-                <svg width="17" height="17" fill="currentColor" viewBox="0 0 24 24"><polygon points="6 4 20 12 6 20 6 4"></polygon></svg>
-                <span>Toutes les chaînes</span>
-            </button>
-            <button class="hero-btn-matches" id="hero-btn-matches">
-                <svg width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><polygon points="10 8 16 12 10 16 10 8"></polygon></svg>
-                <span>Sports en direct</span>
-            </button>
-        </div>
-    </div>
-</div>
+    <div class="hero-wrapper" id="hero-wrapper">
+        <section class="hero-card" id="hero-billboard">
+            <div class="hero-bg-img" id="hero-bg-img"></div>
+            <div class="hero-card-gradient"></div>
 
+            <!-- Flèches de défilement latéral (Next / Prev) -->
+            <button class="hero-arrow hero-arrow-prev" id="hero-arrow-prev" title="Événement précédent" aria-label="Précédent">
+                <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"></polyline></svg>
+            </button>
+            <button class="hero-arrow hero-arrow-next" id="hero-arrow-next" title="Événement suivant" aria-label="Suivant">
+                <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            </button>
+
+            <div class="hero-card-content">
+                <div class="hero-eyebrow" id="hero-eyebrow">
+                    <span class="hero-live-dot" style="display:none;"></span>
+                    <span id="hero-eyebrow-text">À VENIR • MER. 11 NOV. 20:30</span>
+                </div>
+                <h1 class="hero-headline" id="hero-headline">MAROC <span class="hero-vs">VS</span> CÔTE D'IVOIRE</h1>
+                <p class="hero-sub" id="hero-sub">Choc Africain • Mer. 11 Nov. 20:30 • Diffusion en HD & 4K</p>
+
+                <!-- Indication des chaînes de diffusion directe -->
+                <div class="hero-channels-box" id="hero-channels-box">
+                    <span class="hero-channels-label">Chaînes de diffusion directe :</span>
+                    <div class="hero-channels-chips" id="hero-channels-chips">
+                        <button class="hero-ch-chip" data-chid="3713" data-chname="Canal+ Foot HD">
+                            <span class="hero-ch-badge">FHD</span>
+                            <span>Canal+ Foot HD</span>
+                        </button>
+                        <button class="hero-ch-chip" data-chid="3724" data-chname="beIN Sports 1 AR">
+                            <span class="hero-ch-badge">FHD</span>
+                            <span>beIN Sports 1 AR</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Les 2 boutons côte-à-côte style Reezn [ ▶ LIRE ] et [ + Ma liste ] -->
+                <div class="hero-cta-row">
+                    <button class="hero-btn-watch" id="hero-btn-watch">
+                        <svg width="17" height="17" fill="currentColor" viewBox="0 0 24 24"><polygon points="6 4 20 12 6 20 6 4"></polygon></svg>
+                        <span>LIRE</span>
+                    </button>
+                    <button class="hero-btn-matches" id="hero-btn-matches">
+                        <svg width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                        <span>Ma liste</span>
+                    </button>
+                </div>
+
+                <!-- Défilement latéral des événements / pills cliquables -->
+                <div class="hero-tags-wrapper">
+                    <div class="hero-tags-row" id="hero-tags-row">
+                        <!-- Rempli dynamiquement -->
+                    </div>
+                </div>
+
+                <!-- Indicateurs de position (Dots) -->
+                <div class="hero-dots" id="hero-dots"></div>
+            </div>
+        </section>
+    </div>
 
     <!-- SECTION "EN DIRECT" ── Logos des grandes chaînes avec chevron style Reezn -->
     <section class="home-section" id="section-live-channels">
@@ -247,6 +288,15 @@
     </section>
 
     <!-- SECTION "À LA UNE" -->
+    <section class="home-section" id="section-une">
+        <div class="home-section-header">
+            <span class="home-section-label" data-view="catalogue">À LA UNE <svg class="chevron-svg" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"></polyline></svg></span>
+            <button class="see-all-btn" data-view="catalogue">Tout voir →</button>
+        </div>
+        <div class="une-cards-row" id="une-cards-row">
+            <!-- Rempli par JS -->
+        </div>
+    </section>
 
     <!-- SECTION "MATCH CENTER" ── Affiches grands matchs & programmation en direct -->
     <section class="home-section" id="section-matchs">
@@ -305,8 +355,26 @@
     </section>
 
     <!-- SECTION "FRANCE TNT" -->
+    <section class="home-section" id="section-france">
+        <div class="home-section-header">
+            <span class="home-section-label" data-view="live">FRANCE TNT & NATIONALES <svg class="chevron-svg" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"></polyline></svg></span>
+            <button class="see-all-btn" data-view="live">Tout voir →</button>
+        </div>
+        <div class="channels-scroll-row" id="carousel-france">
+            <!-- Rempli par JS -->
+        </div>
+    </section>
 
     <!-- SECTION "ESPAGNE / LALIGA" -->
+    <section class="home-section" id="section-espagne">
+        <div class="home-section-header">
+            <span class="home-section-label" data-view="catalogue">ESPAGNE — LA LIGA & MOVISTAR+ <svg class="chevron-svg" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"></polyline></svg></span>
+            <button class="see-all-btn" data-view="catalogue">Tout voir →</button>
+        </div>
+        <div class="channels-scroll-row" id="carousel-espagne">
+            <!-- Rempli par JS -->
+        </div>
+    </section>
 
 </main>
 
@@ -358,6 +426,64 @@
 <!-- ══════════════════════════════════════════════════════
      VUE "DÉCOUVRIR" (Page Découvrir Style Reezn / Netflix)
 ══════════════════════════════════════════════════════ -->
+<main class="page-discover" id="page-discover" style="display:none;">
+    <div class="discover-hero-banner">
+        <div class="discover-hero-badge">BOKK TV SÉLECTION</div>
+        <h2 class="discover-hero-title">Découvrir</h2>
+        <p class="discover-hero-desc">Explorez les grands chocs sportifs, le cinéma 24/7 et les meilleures chaînes du moment.</p>
+        <div class="discover-quick-actions">
+            <button class="discover-action-btn" id="discover-btn-surprise">
+                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg>
+                <span>Zapping Surprise</span>
+            </button>
+            <button class="discover-action-btn" id="discover-btn-live-tv">
+                <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M21 3H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h5v2h8v-2h5c1.1 0 1.99-.9 1.99-2L23 5c0-1.1-.9-2-2-2zm0 14H3V5h18v12z"/></svg>
+                <span>Toutes les Chaînes</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Section Découvrir 1 : Chocs & Matchs Immanquables -->
+    <section class="home-section discover-section" id="discover-section-matches">
+        <div class="home-section-header">
+            <span class="home-section-label">🔥 GRANDS CHOCS SPORTIFS DU MOMENT</span>
+            <button class="see-all-btn" id="discover-see-all-matches">Tout voir →</button>
+        </div>
+        <div class="discover-matches-container" id="discover-matches-container">
+            <!-- Rempli dynamiquement en JS -->
+        </div>
+    </section>
+
+    <!-- Section Découvrir 2 : Cinéma & Séries Phares -->
+    <section class="home-section discover-section" id="discover-section-cinema">
+        <div class="home-section-header">
+            <span class="home-section-label">🎬 SÉLECTION CINÉMA & SÉRIES</span>
+        </div>
+        <div class="channels-scroll-row" id="discover-cinema-row">
+            <!-- Rempli dynamiquement en JS -->
+        </div>
+    </section>
+
+    <!-- Section Découvrir 3 : Sénégal Direct & Culture -->
+    <section class="home-section discover-section" id="discover-section-senegal">
+        <div class="home-section-header">
+            <span class="home-section-label">🇸🇳 SÉNÉGAL & ACTUALITÉS</span>
+        </div>
+        <div class="channels-scroll-row" id="discover-senegal-row">
+            <!-- Rempli dynamiquement en JS -->
+        </div>
+    </section>
+
+    <!-- Section Découvrir 4 : Sport & beIN Sports -->
+    <section class="home-section discover-section" id="discover-section-sports">
+        <div class="home-section-header">
+            <span class="home-section-label">⚽ PREMIUM SPORTS MONDIAL</span>
+        </div>
+        <div class="channels-scroll-row" id="discover-sports-row">
+            <!-- Rempli dynamiquement en JS -->
+        </div>
+    </section>
+</main>
 
 <!-- ══════════════════════════════════════════════════════
      VUE "MA LISTE" (Favoris de l'utilisateur)
@@ -637,15 +763,15 @@
 <!-- Firebase Cloud Firestore SDK (Compat) -->
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
-<script src="firebase-service.js?v=9971"></script>
+<script src="firebase-service.js?v=9975"></script>
 
 <!-- Scripts -->
 <script src="mpegts.js"></script>
 <script src="hls.min.js"></script>
-<script src="matches.js?v=9971"></script>
-<script src="epg-data.js?v=9971"></script>
-<script src="epg.js?v=9971"></script>
-<script src="channels.js?v=9971"></script>
-<script src="app.js?v=9971"></script>
+<script src="matches.js?v=9975"></script>
+<script src="epg-data.js?v=9975"></script>
+<script src="epg.js?v=9975"></script>
+<script src="channels.js?v=9975"></script>
+<script src="app.js?v=9975"></script>
 </body>
 </html>
