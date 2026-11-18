@@ -2129,21 +2129,34 @@
     // ── Recherche de chaîne universelle par ID ou Nom ──
     function loadChannelByIdOrQuery(targetId, queryName = '') {
         let foundIdx = -1;
-        if (targetId) {
-            foundIdx = channels.findIndex(c => c.id === targetId || c.stream_id === targetId);
+        if (targetId !== undefined && targetId !== null && targetId !== '') {
+            const targetIdStr = String(targetId).trim();
+            const targetIdNum = Number(targetId);
+            foundIdx = channels.findIndex(c => 
+                String(c.id).trim() === targetIdStr || 
+                String(c.stream_id).trim() === targetIdStr ||
+                (!isNaN(targetIdNum) && (c.id === targetIdNum || c.stream_id === targetIdNum))
+            );
         }
+
+        // Si non trouvé par ID direct, recherche intelligente par Nom
         if (foundIdx === -1 && queryName) {
             const qClean = queryName.toLowerCase().replace(/[^a-z0-9]/g, '');
-            foundIdx = channels.findIndex(c => {
-                const cClean = c.name.toLowerCase().replace(/[^a-z0-9]/g, '');
-                return cClean.includes(qClean) || qClean.includes(cClean);
-            });
-            if (foundIdx === -1) {
-                const tokens = queryName.toLowerCase().split(/\s+/).filter(t => t.length > 2);
+            if (qClean) {
                 foundIdx = channels.findIndex(c => {
-                    const cLower = c.name.toLowerCase();
-                    return tokens.every(t => cLower.includes(t));
+                    const cClean = c.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+                    return cClean.includes(qClean) || qClean.includes(cClean);
                 });
+            }
+            if (foundIdx === -1) {
+                // Recherche par mots-clés (en ignorant les symboles et badges)
+                const tokens = queryName.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter(t => t.length >= 2 && !['hd', 'fhd', '4k', 'live', 'direct'].includes(t));
+                if (tokens.length > 0) {
+                    foundIdx = channels.findIndex(c => {
+                        const cLower = c.name.toLowerCase();
+                        return tokens.every(t => cLower.includes(t));
+                    });
+                }
             }
         }
 
