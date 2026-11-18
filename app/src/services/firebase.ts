@@ -1,4 +1,5 @@
 import { StorageService } from './storage';
+import { Channel } from '../data/channels';
 
 const FIRESTORE_BASE = 'https://firestore.googleapis.com/v1/projects/bokk-tv/databases/(default)/documents';
 
@@ -140,6 +141,44 @@ export const FirebaseService = {
       };
     } catch {
       return null;
+    }
+  },
+
+  async getM3uChannels(): Promise<Channel[]> {
+    try {
+      const res = await fetch(`${FIRESTORE_BASE}/m3u_playlists`);
+      if (!res.ok) return [];
+      const data = await res.json();
+      if (!data.documents) return [];
+
+      const activePlaylists = data.documents.filter((doc: any) => {
+        const fields = doc.fields || {};
+        return fields.enabled?.booleanValue !== false;
+      });
+
+      const allChannels: Channel[] = [];
+      const chunkPromises = activePlaylists.map(async (doc: any) => {
+        try {
+          const chunksRes = await fetch(`${doc.name}/chunks`);
+          if (!chunksRes.ok) return;
+          const chunksData = await chunksRes.json();
+          if (!chunksData.documents) return;
+          chunksData.documents.forEach((cd: any) => {
+            const rawJson = cd.fields?.channelsJson?.stringValue;
+            if (rawJson) {
+              try {
+                const parsed = JSON.parse(rawJson);
+                if (Array.isArray(parsed)) allChannels.push(...parsed);
+              } catch {}
+            }
+          });
+        } catch {}
+      });
+
+      await Promise.all(chunkPromises);
+      return allChannels;
+    } catch {
+      return [];
     }
   }
 };

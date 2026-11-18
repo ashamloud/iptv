@@ -45,8 +45,15 @@ export default function NativeBokkApp() {
   const [favorites, setFavorites] = useState<string[]>([]);
   const [subscriber, setSubscriber] = useState<Subscriber | null>(null);
   const [disabledIds, setDisabledIds] = useState<string[]>([]);
+  const [m3uChannels, setM3uChannels] = useState<Channel[]>([]);
   const [isAccountModalOpen, setIsAccountModalOpen] = useState<boolean>(false);
   const [isInitLoaded, setIsInitLoaded] = useState<boolean>(false);
+
+  // Fusion des chaînes de base et des playlists M3U ajoutées par l'administrateur
+  const allChannels = useMemo(() => {
+    if (!m3uChannels.length) return channelsAll;
+    return [...channelsAll, ...m3uChannels];
+  }, [channelsAll, m3uChannels]);
 
   // Détermination du nombre de colonnes (Smartphones: 2, Tablettes/TV: 3 à 5)
   const numColumns = useMemo(() => {
@@ -56,22 +63,24 @@ export default function NativeBokkApp() {
     return 2;
   }, [width]);
 
-  // Initialisation : Favoris, Session Abonné, Chaînes désactivées
+  // Initialisation : Favoris, Session Abonné, Chaînes désactivées, Chaînes M3U Cloud
   useEffect(() => {
     let isMounted = true;
 
     async function initApp() {
       try {
-        const [favs, sub, disabled] = await Promise.all([
+        const [favs, sub, disabled, cloudM3u] = await Promise.all([
           StorageService.getFavorites(),
           StorageService.getSubscriber(),
-          FirebaseService.getDisabledChannels()
+          FirebaseService.getDisabledChannels(),
+          FirebaseService.getM3uChannels()
         ]);
 
         if (isMounted) {
           setFavorites(favs);
           setSubscriber(sub);
           setDisabledIds(disabled);
+          setM3uChannels(cloudM3u);
           setIsInitLoaded(true);
         }
 
@@ -159,7 +168,7 @@ export default function NativeBokkApp() {
     const query = searchQuery.trim().toLowerCase();
     const disabledSet = new Set(disabledIds);
 
-    return channelsAll.filter((ch) => {
+    return allChannels.filter((ch) => {
       // Exclure chaînes désactivées par l'admin
       if (disabledSet.has(String(ch.id))) return false;
 
@@ -184,7 +193,7 @@ export default function NativeBokkApp() {
 
       return true;
     });
-  }, [channelsAll, disabledIds, selectedCategory, favorites, searchQuery]);
+  }, [allChannels, disabledIds, selectedCategory, favorites, searchQuery]);
 
   // Utilisateur enregistré et actif ?
   const isRegisteredUser = Boolean(subscriber && subscriber.status === 'active');

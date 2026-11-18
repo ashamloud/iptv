@@ -662,6 +662,25 @@
         focusedZone = 'grid';
         focusedIndex = 0;
         focusCurrentElement();
+
+        // Synchronisation des chaînes M3U ajoutées par l'administrateur
+        if (window.BokkFirebase && typeof window.BokkFirebase.listenActiveM3uChannels === 'function') {
+            window.BokkFirebase.listenActiveM3uChannels(m3uChannels => {
+                if (!Array.isArray(m3uChannels)) return;
+                for (let i = channels.length - 1; i >= 0; i--) {
+                    if (String(channels[i].id).startsWith('m3u_')) {
+                        channels.splice(i, 1);
+                    }
+                }
+                if (m3uChannels.length > 0) {
+                    channels.push(...m3uChannels);
+                }
+                renderCategories();
+                renderBouquets();
+                updateFilteredChannels();
+                renderGrid();
+            });
+        }
     }
 
     // Démarrage quand le catalogue est prêt

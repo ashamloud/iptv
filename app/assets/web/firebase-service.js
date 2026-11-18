@@ -437,6 +437,179 @@
         }
     }
 
+    // ── GESTION DES PLAYLISTS M3U ADMIN (AJOUT DE NOUVELLES CHAÎNES) ──
+
+    async function saveM3uPlaylist(name, url, channels) {
+        if (!isInitialized || !db) return { success: false, error: 'Firebase non disponible' };
+        if (!channels || !channels.length) return { success: false, error: 'Aucune chaîne à sauvegarder' };
+
+        try {
+            const playlistId = 'm3u_' + Date.now();
+            const cleanName = (name || 'Playlist M3U').trim();
+            const cleanUrl = (url || '').trim();
+
+            // 1. Sauvegarder la métadonnée de la playlist
+            await db.collection('m3u_playlists').doc(playlistId).set({
+                id: playlistId,
+                name: cleanName,
+                url: cleanUrl,
+                channelCount: channels.length,
+                enabled: true,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+
+            // 2. Sauvegarder les chaînes par morceaux de 300 pour garantir la rapidité et la limite Firestore 1MB
+            const CHUNK_SIZE = 300;
+            const chunkPromises = [];
+            for (let i = 0; i < channels.length; i += CHUNK_SIZE) {
+                const chunk = channels.slice(i, i + CHUNK_SIZE);
+                const chunkIdx = Math.floor(i / CHUNK_SIZE);
+                chunkPromises.push(
+                    db.collection('m3u_playlists').doc(playlistId)
+                      .collection('chunks').doc(String(chunkIdx))
+                      .set({
+                          chunkIndex: chunkIdx,
+                          channelsJson: JSON.stringify(chunk)
+                      })
+                );
+            }
+            await Promise.all(chunkPromises);
+
+            console.log(`[BOKK TV] 💾 Playlist M3U enregistrée: "${cleanName}" (${channels.length} chaînes)`);
+            return { success: true, playlistId: playlistId, channelCount: channels.length };
+        } catch (err) {
+            console.error('[BOKK TV] Erreur saveM3uPlaylist:', err);
+            return { success: false, error: err.message };
+        }
+    }
+
+    async function getM3uPlaylists() {
+        if (!isInitialized || !db) return [];
+        try {
+            const snapshot = await db.collection('m3u_playlists').get();
+            const list = [];
+            snapshot.forEach(doc => {
+                const d = doc.data() || {};
+                list.push({
+                    id: doc.id,
+                    name: d.name || 'Playlist',
+                    url: d.url || '',
+                    channelCount: d.channelCount || 0,
+                    enabled: d.enabled !== false,
+                    createdAt: formatFirestoreTimestamp(d.createdAt),
+                    updatedAt: formatFirestoreTimestamp(d.updatedAt)
+                });
+            });
+            list.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+            return list;
+        } catch (err) {
+            console.warn('[BOKK TV] Erreur getM3uPlaylists:', err);
+            return [];
+        }
+    }
+
+    async function toggleM3uPlaylist(playlistId, enabled) {
+        if (!playlistId || !isInitialized || !db) return { success: false };
+        try {
+            await db.collection('m3u_playlists').doc(String(playlistId)).update({
+                enabled: !!enabled,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            return { success: true };
+        } catch (err) {
+            return { success: false, error: err.message };
+        }
+    }
+
+    async function deleteM3uPlaylist(playlistId) {
+        if (!playlistId || !isInitialized || !db) return { success: false };
+        try {
+            // Supprimer les chunks
+            const chunksSnap = await db.collection('m3u_playlists').doc(String(playlistId)).collection('chunks').get();
+            const delPromises = [];
+            chunksSnap.forEach(cd => delPromises.push(cd.ref.delete()));
+            await Promise.all(delPromises);
+
+            // Supprimer le doc parent
+            await db.collection('m3u_playlists').doc(String(playlistId)).delete();
+            return { success: true };
+        } catch (err) {
+            return { success: false, error: err.message };
+        }
+    }
+
+    function listenM3uPlaylists(callback) {
+        if (!isInitialized || !db) return () => {};
+        try {
+            return db.collection('m3u_playlists')
+                .onSnapshot(snapshot => {
+                    const list = [];
+                    snapshot.forEach(doc => {
+                        const d = doc.data() || {};
+                        list.push({
+                            id: doc.id,
+                            name: d.name || 'Playlist',
+                            url: d.url || '',
+                            channelCount: d.channelCount || 0,
+                            enabled: d.enabled !== false,
+                            createdAt: formatFirestoreTimestamp(d.createdAt),
+                            updatedAt: formatFirestoreTimestamp(d.updatedAt)
+                        });
+                    });
+                    list.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+                    if (typeof callback === 'function') callback(list);
+                }, err => console.warn('[BOKK TV] Erreur listenM3uPlaylists:', err));
+        } catch (e) {
+            return () => {};
+        }
+    }
+
+    async function getActiveM3uChannels() {
+        if (!isInitialized || !db) return [];
+        try {
+            const playlistsSnap = await db.collection('m3u_playlists').where('enabled', '==', true).get();
+            if (playlistsSnap.empty) return [];
+
+            const allChannels = [];
+            const chunkPromises = [];
+
+            playlistsSnap.forEach(doc => {
+                chunkPromises.push(
+                    doc.ref.collection('chunks').get().then(cs => {
+                        cs.forEach(cd => {
+                            const data = cd.data();
+                            if (data && data.channelsJson) {
+                                try {
+                                    const parsed = JSON.parse(data.channelsJson);
+                                    if (Array.isArray(parsed)) allChannels.push(...parsed);
+                                } catch (e) {}
+                            }
+                        });
+                    })
+                );
+            });
+
+            await Promise.all(chunkPromises);
+            return allChannels;
+        } catch (err) {
+            console.warn('[BOKK TV] Erreur getActiveM3uChannels:', err);
+            return [];
+        }
+    }
+
+    function listenActiveM3uChannels(callback) {
+        if (!isInitialized || !db) return () => {};
+        try {
+            return db.collection('m3u_playlists').onSnapshot(async () => {
+                const channels = await getActiveM3uChannels();
+                if (typeof callback === 'function') callback(channels);
+            }, err => console.warn('[BOKK TV] Erreur listenActiveM3uChannels:', err));
+        } catch (e) {
+            return () => {};
+        }
+    }
+
     window.BokkFirebase = {
         isReady: () => isInitialized,
         reportBroken: reportBrokenChannel,
@@ -461,7 +634,16 @@
         listenSubscribers: listenSubscribers,
         listenSubscriber: listenSubscriber,
         getPaywallConfig: getPaywallConfig,
-        setPaywallConfig: setPaywallConfig
+        setPaywallConfig: setPaywallConfig,
+
+        // Gestion des playlists M3U Admin
+        saveM3uPlaylist: saveM3uPlaylist,
+        getM3uPlaylists: getM3uPlaylists,
+        toggleM3uPlaylist: toggleM3uPlaylist,
+        deleteM3uPlaylist: deleteM3uPlaylist,
+        listenM3uPlaylists: listenM3uPlaylists,
+        getActiveM3uChannels: getActiveM3uChannels,
+        listenActiveM3uChannels: listenActiveM3uChannels
     };
 
 })();

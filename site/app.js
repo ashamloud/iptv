@@ -4122,6 +4122,28 @@ function init() {
         renderCategories();
         renderChannelList(true);
 
+        // ── Synchronisation des chaînes M3U ajoutées par l'administrateur ──
+        if (window.BokkFirebase && typeof window.BokkFirebase.listenActiveM3uChannels === 'function') {
+            window.BokkFirebase.listenActiveM3uChannels(m3uChannels => {
+                if (!Array.isArray(m3uChannels)) return;
+                // Nettoyer les précédentes chaînes M3U Cloud
+                for (let i = channels.length - 1; i >= 0; i--) {
+                    if (String(channels[i].id).startsWith('m3u_')) {
+                        channels.splice(i, 1);
+                    }
+                }
+                if (m3uChannels.length > 0) {
+                    channels.push(...m3uChannels);
+                    console.log(`[BOKK TV] 🚀 ${m3uChannels.length} chaînes M3U Cloud synchronisées en direct !`);
+                }
+                populateBouquetFilter();
+                renderCategories();
+                renderChannelList(false);
+                updateCategoryCounts();
+                renderHomeCarousels();
+            });
+        }
+
         // ── Portail Home (style myCANAL) ──
         renderLiveLogosRow();
         renderUneCards();
