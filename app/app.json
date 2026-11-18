@@ -3,7 +3,7 @@
     "name": "BOKK TV",
     "slug": "loudstreamtv",
     "version": "2.0.0",
-    "orientation": "landscape",
+    "orientation": "default",
     "icon": "./assets/images/icon.png",
     "scheme": "bokktv",
     "userInterfaceStyle": "dark",

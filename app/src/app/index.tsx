@@ -1,210 +1,586 @@
-import React, { useRef, useState, useCallback } from 'react';
+// ═══════════════════════════════════════════════════════════════
+// BOKK TV — Application Mobile & Smart TV 100% Native
+// Moteur natif : expo-video (ExoPlayer Android / AVPlayer iOS)
+// Sans WebView • Fast Streaming • Synchronisation temps réel
+// ═══════════════════════════════════════════════════════════════
+
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   StyleSheet,
   View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  FlatList,
   StatusBar,
   BackHandler,
   Platform,
+  useWindowDimensions,
   ActivityIndicator,
-  Text,
-  TouchableOpacity,
+  ScrollView,
+  Alert
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { WebView } from 'react-native-webview';
+import { Ionicons } from '@expo/vector-icons';
 
-// URLs officielles BOKK TV : Smart TV vs Mobile (Android & iPhone)
-const TV_ONLINE_URL = 'https://bokktv.vercel.app/tv';
-const MOBILE_ONLINE_URL = 'https://bokktv.vercel.app/';
+import channelsAll, { Channel, CATEGORIES } from '../data/channels';
+import { ChannelCard } from '../components/ChannelCard';
+import { NativePlayer } from '../components/NativePlayer';
+import { AccountModal } from '../components/AccountModal';
+import { StorageService } from '../services/storage';
+import { FirebaseService, Subscriber } from '../services/firebase';
 
-// Détection automatique du type d'appareil
-const isTVDevice = Platform.isTV || (Platform.OS === 'android' && (Platform as any).constants?.uiMode === 'television');
-const TARGET_URL = isTVDevice ? TV_ONLINE_URL : MOBILE_ONLINE_URL;
+export default function NativeBokkApp() {
+  const { width } = useWindowDimensions();
 
-// Injection de script pour garantir la suppression totale de tout bouton de téléchargement ou raccourci inutile
-const INJECTED_JS = `
-  (function() {
-    var style = document.createElement('style');
-    style.innerHTML = '.btn-apk, #btn-shortcuts, #btn-theater-header { display: none !important; }';
-    document.head.appendChild(style);
-    document.body.classList.add('is-native-app');
-  })();
-  true;
-`;
+  // État lecteur & chaîne active
+  const [activeChannel, setActiveChannel] = useState<Channel | null>(null);
 
-export default function App() {
-  const webViewRef = useRef<WebView>(null);
-  const [canGoBack, setCanGoBack] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [loadError, setLoadError] = useState(false);
+  // Filtres & recherche
+  const [selectedCategory, setSelectedCategory] = useState<string>('tous');
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [isSearchOpen, setIsSearchOpen] = useState<boolean>(false);
 
-  // Gestion du bouton physique Retour (Télécommande TV / Android)
-  React.useEffect(() => {
+  // Données utilisateur & favoris
+  const [favorites, setFavorites] = useState<string[]>([]);
+  const [subscriber, setSubscriber] = useState<Subscriber | null>(null);
+  const [disabledIds, setDisabledIds] = useState<string[]>([]);
+  const [isAccountModalOpen, setIsAccountModalOpen] = useState<boolean>(false);
+  const [isInitLoaded, setIsInitLoaded] = useState<boolean>(false);
+
+  // Détermination du nombre de colonnes (Smartphones: 2, Tablettes/TV: 3 à 5)
+  const numColumns = useMemo(() => {
+    if (width >= 1024) return 5;
+    if (width >= 768) return 4;
+    if (width >= 480) return 3;
+    return 2;
+  }, [width]);
+
+  // Initialisation : Favoris, Session Abonné, Chaînes désactivées
+  useEffect(() => {
+    let isMounted = true;
+
+    async function initApp() {
+      try {
+        const [favs, sub, disabled] = await Promise.all([
+          StorageService.getFavorites(),
+          StorageService.getSubscriber(),
+          FirebaseService.getDisabledChannels()
+        ]);
+
+        if (isMounted) {
+          setFavorites(favs);
+          setSubscriber(sub);
+          setDisabledIds(disabled);
+          setIsInitLoaded(true);
+        }
+
+        // Vérification de validité de l'abonné auprès de Firebase
+        if (sub && sub.id) {
+          const remoteStatus = await FirebaseService.checkSubscriberStatus(sub.id);
+          if (remoteStatus && isMounted) {
+            if (remoteStatus.status === 'suspended') {
+              setSubscriber((prev) => prev ? { ...prev, status: 'suspended' } : null);
+              Alert.alert('Compte suspendu', 'Votre abonnement a été suspendu par l\'administrateur.');
+            }
+          }
+        }
+      } catch (err) {
+        if (isMounted) setIsInitLoaded(true);
+      }
+    }
+
+    initApp();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // Gestion du bouton retour physique (Android / Télécommande Smart TV)
+  useEffect(() => {
     if (Platform.OS !== 'android') return;
 
     const onBackPress = () => {
-      if (canGoBack && webViewRef.current) {
-        webViewRef.current.goBack();
+      // 1. Si la vidéo tourne, on ferme le lecteur en priorité
+      if (activeChannel) {
+        setActiveChannel(null);
         return true;
       }
-      return false;
+      // 2. Si la recherche est ouverte, on la ferme
+      if (isSearchOpen) {
+        setIsSearchOpen(false);
+        setSearchQuery('');
+        return true;
+      }
+      // 3. Si la catégorie n'est pas 'tous', on revient à 'tous'
+      if (selectedCategory !== 'tous') {
+        setSelectedCategory('tous');
+        return true;
+      }
+      return false; // Quitter l'application
     };
 
     const backHandler = BackHandler.addEventListener('hardwareBackPress', onBackPress);
     return () => backHandler.remove();
-  }, [canGoBack]);
+  }, [activeChannel, isSearchOpen, selectedCategory]);
 
-  const handleRetry = useCallback(() => {
-    setLoadError(false);
-    setIsLoading(true);
-    if (webViewRef.current) {
-      webViewRef.current.reload();
-    }
+  // Bascule favori
+  const handleToggleFavorite = useCallback(async (channelId: string | number) => {
+    const nextFavs = await StorageService.toggleFavorite(channelId);
+    setFavorites(nextFavs);
   }, []);
 
-  return (
-    <SafeAreaView style={styles.container} edges={[]}>
-      <StatusBar hidden={true} />
+  // Sélection d'une chaîne
+  const handleSelectChannel = useCallback((channel: Channel) => {
+    setActiveChannel(channel);
+  }, []);
 
-      {/* Sur navigateur Web (Preview Expo Web) */}
-      {Platform.OS === 'web' ? (
-        <View style={StyleSheet.absoluteFill}>
-          <iframe
-            src={TARGET_URL}
-            style={{ width: '100%', height: '100%', border: 'none', backgroundColor: '#06090e' }}
-            allow="autoplay; fullscreen; picture-in-picture"
-            onLoad={() => setIsLoading(false)}
-            onError={() => {
-              setIsLoading(false);
-              setLoadError(true);
+  // Fermeture du lecteur
+  const handleClosePlayer = useCallback(() => {
+    setActiveChannel(null);
+  }, []);
+
+  // Déclenchement de la restriction 3s (pour les visiteurs non enregistrés)
+  const handlePreviewLock = useCallback(() => {
+    setIsAccountModalOpen(true);
+    Alert.alert(
+      'Aperçu gratuit terminé',
+      'Pour regarder la télévision en direct illimité, activez votre Pass Gratuit (1 mois offert) ou connectez votre identifiant.',
+      [
+        { text: 'Activer mon Pass', onPress: () => setIsAccountModalOpen(true) },
+        { text: 'Fermer', style: 'cancel' }
+      ]
+    );
+  }, []);
+
+  // Filtrage ultra-rapide des chaînes
+  const filteredChannels = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    const disabledSet = new Set(disabledIds);
+
+    return channelsAll.filter((ch) => {
+      // Exclure chaînes désactivées par l'admin
+      if (disabledSet.has(String(ch.id))) return false;
+
+      // Filtre catégorie
+      if (selectedCategory === 'favoris') {
+        if (!favorites.includes(String(ch.id))) return false;
+      } else if (selectedCategory !== 'tous') {
+        const catKey = (ch.category || '').toLowerCase();
+        const grpKey = (ch.group || '').toLowerCase();
+        if (!catKey.includes(selectedCategory) && !grpKey.includes(selectedCategory)) {
+          return false;
+        }
+      }
+
+      // Filtre recherche textuelle
+      if (query) {
+        const nameMatch = ch.name.toLowerCase().includes(query);
+        const groupMatch = ch.group ? ch.group.toLowerCase().includes(query) : false;
+        const countryMatch = ch.country ? ch.country.toLowerCase().includes(query) : false;
+        return nameMatch || groupMatch || countryMatch;
+      }
+
+      return true;
+    });
+  }, [channelsAll, disabledIds, selectedCategory, favorites, searchQuery]);
+
+  // Utilisateur enregistré et actif ?
+  const isRegisteredUser = Boolean(subscriber && subscriber.status === 'active');
+
+  // Rendu de chaque carte de chaîne
+  const renderChannelItem = useCallback(
+    ({ item }: { item: Channel }) => {
+      const isPlaying = activeChannel ? String(activeChannel.id) === String(item.id) : false;
+      const isFav = favorites.includes(String(item.id));
+
+      return (
+        <ChannelCard
+          channel={item}
+          isPlaying={isPlaying}
+          isFavorite={isFav}
+          onPress={() => handleSelectChannel(item)}
+          onToggleFavorite={() => handleToggleFavorite(item.id)}
+        />
+      );
+    },
+    [activeChannel, favorites, handleSelectChannel, handleToggleFavorite]
+  );
+
+  const keyExtractor = useCallback((item: Channel) => String(item.id), []);
+
+  return (
+    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+      <StatusBar barStyle="light-content" backgroundColor="#0a0c10" />
+
+      {/* ── HEADER BOKK TV ── */}
+      <View style={styles.header}>
+        <View style={styles.logoRow}>
+          <View style={styles.logoBadge}>
+            <Text style={styles.logoBold}>BOKK</Text>
+            <Text style={styles.logoSub}>TV</Text>
+          </View>
+          <View style={styles.livePill}>
+            <View style={styles.liveDot} />
+            <Text style={styles.liveText}>DIRECT</Text>
+          </View>
+        </View>
+
+        <View style={styles.headerActions}>
+          {/* Bouton Recherche */}
+          <TouchableOpacity
+            style={[styles.headerIconBtn, isSearchOpen && styles.headerIconBtnActive]}
+            onPress={() => {
+              setIsSearchOpen((prev) => !prev);
+              if (isSearchOpen) setSearchQuery('');
             }}
+            accessibilityLabel="Rechercher une chaîne"
+          >
+            <Ionicons
+              name={isSearchOpen ? 'close' : 'search'}
+              size={20}
+              color={isSearchOpen ? '#e50914' : '#f0f3f8'}
+            />
+          </TouchableOpacity>
+
+          {/* Bouton Compte / VIP */}
+          <TouchableOpacity
+            style={[styles.accountBtn, isRegisteredUser ? styles.accountBtnVip : styles.accountBtnFree]}
+            onPress={() => setIsAccountModalOpen(true)}
+            activeOpacity={0.8}
+          >
+            <Ionicons
+              name={isRegisteredUser ? 'ribbon' : 'person-circle-outline'}
+              size={18}
+              color={isRegisteredUser ? '#22c55e' : '#f59e0b'}
+            />
+            <Text style={[styles.accountBtnText, isRegisteredUser && styles.accountBtnTextVip]}>
+              {subscriber ? subscriber.prenom || subscriber.id : 'Pass Gratuit'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* ── BARRE DE RECHERCHE DÉPLIABLE ── */}
+      {isSearchOpen && (
+        <View style={styles.searchBarContainer}>
+          <Ionicons name="search" size={18} color="#8a94a6" style={styles.searchIcon} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Rechercher une chaîne (Canal+, beIN, RTS, TF1...)"
+            placeholderTextColor="#64748b"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            autoFocus
+            returnKeyType="search"
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery('')} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+              <Ionicons name="close-circle" size={18} color="#8a94a6" />
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
+
+      {/* ── LECTEUR VIDÉO NATIF DOCKÉ ── */}
+      {activeChannel && (
+        <View style={styles.playerContainer}>
+          <NativePlayer
+            channel={activeChannel}
+            onClose={handleClosePlayer}
+            onPreviewLockTriggered={handlePreviewLock}
+            isRegistered={isRegisteredUser}
           />
         </View>
+      )}
+
+      {/* ── SELECTEUR DE CATÉGORIES ── */}
+      <View style={styles.categoryBarWrap}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.categoryScroll}
+        >
+          {CATEGORIES.map((cat) => {
+            const isSelected = selectedCategory === cat.key;
+            return (
+              <TouchableOpacity
+                key={cat.key}
+                style={[
+                  styles.categoryPill,
+                  isSelected && styles.categoryPillActive
+                ]}
+                onPress={() => setSelectedCategory(cat.key)}
+                activeOpacity={0.7}
+              >
+                <Ionicons
+                  name={cat.icon as any}
+                  size={14}
+                  color={isSelected ? '#ffffff' : '#8a94a6'}
+                  style={styles.catIcon}
+                />
+                <Text style={[styles.catText, isSelected && styles.catTextActive]}>
+                  {cat.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      </View>
+
+      {/* ── INDICATEUR DE RÉSULTATS ── */}
+      <View style={styles.metaRow}>
+        <Text style={styles.metaText}>
+          {filteredChannels.length} {filteredChannels.length > 1 ? 'chaînes disponibles' : 'chaîne disponible'}
+          {selectedCategory !== 'tous' ? ` • ${selectedCategory.toUpperCase()}` : ''}
+        </Text>
+      </View>
+
+      {/* ── GRILLE DES CHAÎNES (FLATLIST FLUIDE 60 FPS) ── */}
+      {!isInitLoaded ? (
+        <View style={styles.centerContainer}>
+          <ActivityIndicator size="large" color="#e50914" />
+          <Text style={styles.loadingText}>Chargement du bouquet BOKK TV...</Text>
+        </View>
+      ) : filteredChannels.length === 0 ? (
+        <View style={styles.emptyContainer}>
+          <Ionicons name="tv-outline" size={48} color="#334155" />
+          <Text style={styles.emptyTitle}>Aucune chaîne trouvée</Text>
+          <Text style={styles.emptyDesc}>
+            {searchQuery
+              ? `Aucun résultat pour « ${searchQuery} »`
+              : 'Aucune chaîne dans cette catégorie'}
+          </Text>
+        </View>
       ) : (
-        /* Sur Android TV ou Smartphone Android / iPhone (WebView) */
-        <WebView
-          ref={webViewRef}
-          source={{ uri: TARGET_URL }}
-          style={styles.webview}
-          // Configuration vidéo et média haute performance
-          allowsInlineMediaPlayback={true}
-          mediaPlaybackRequiresUserAction={false}
-          javaScriptEnabled={true}
-          domStorageEnabled={true}
-          mixedContentMode="always"
-          thirdPartyCookiesEnabled={true}
-          sharedCookiesEnabled={true}
-          cacheEnabled={true}
-          injectedJavaScript={INJECTED_JS}
-          allowsBackForwardNavigationGestures={true}
-          onNavigationStateChange={(navState: { canGoBack: boolean }) => {
-            setCanGoBack(navState.canGoBack);
-          }}
-          onLoadStart={() => {
-            setLoadError(false);
-            setIsLoading(true);
-          }}
-          onLoadEnd={() => {
-            setIsLoading(false);
-          }}
-          onError={() => {
-            setIsLoading(false);
-            setLoadError(true);
-          }}
-          userAgent={
-            isTVDevice
-              ? "Mozilla/5.0 (Linux; Android 12; Android TV) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36 BOKKTV-App/2.0 TV"
-              : "Mozilla/5.0 (Linux; Android 13; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36 BOKKTV-App/2.0 Mobile"
-          }
-          scalesPageToFit={false}
+        <FlatList
+          key={numColumns} // Re-render propre si l'écran pivote
+          data={filteredChannels}
+          renderItem={renderChannelItem}
+          keyExtractor={keyExtractor}
+          numColumns={numColumns}
+          contentContainerStyle={styles.gridContent}
+          initialNumToRender={18}
+          maxToRenderPerBatch={24}
+          windowSize={7}
+          removeClippedSubviews={Platform.OS === 'android'}
+          showsVerticalScrollIndicator={false}
         />
       )}
 
-      {/* Écran de chargement initial */}
-      {isLoading && (
-        <View style={styles.loadingOverlay}>
-          <ActivityIndicator size="large" color="#6366f1" />
-          <Text style={styles.loadingText}>
-            {isTVDevice ? "BOKK TV Smart TV..." : "BOKK TV Mobile..."}
-          </Text>
-        </View>
-      )}
-
-      {/* Écran d'erreur en cas de coupure réseau */}
-      {loadError && (
-        <View style={styles.errorOverlay}>
-          <Text style={styles.errorTitle}>Connexion interrompue</Text>
-          <Text style={styles.errorSub}>
-            Impossible de charger le service. Vérifiez votre connexion Internet.
-          </Text>
-          <TouchableOpacity style={styles.retryButton} onPress={handleRetry} activeOpacity={0.8}>
-            <Text style={styles.retryText}>Réessayer</Text>
-          </TouchableOpacity>
-        </View>
-      )}
+      {/* ── MODALE COMPTE & PASS VIP ── */}
+      <AccountModal
+        visible={isAccountModalOpen}
+        subscriber={subscriber}
+        onClose={() => setIsAccountModalOpen(false)}
+        onSubscriberUpdated={(sub) => setSubscriber(sub)}
+      />
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
-    backgroundColor: '#06090e',
+    backgroundColor: '#0a0c10',
   },
-  webview: {
-    flex: 1,
-    backgroundColor: '#06090e',
-  },
-  loadingOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: '#06090e',
-    justifyContent: 'center',
+  header: {
+    height: 56,
+    flexDirection: 'row',
     alignItems: 'center',
-    zIndex: 10,
-    gap: 14,
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    backgroundColor: '#0d1017',
+    borderBottomWidth: 1,
+    borderBottomColor: '#1a2233',
+  },
+  logoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  logoBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  logoBold: {
+    fontSize: 22,
+    fontWeight: '900',
+    color: '#e50914',
+    letterSpacing: -0.5,
+  },
+  logoSub: {
+    fontSize: 22,
+    fontWeight: '900',
+    color: '#ffffff',
+    marginLeft: 2,
+  },
+  livePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(229, 9, 20, 0.15)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 12,
+    gap: 5,
+  },
+  liveDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#e50914',
+  },
+  liveText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#e50914',
+    letterSpacing: 0.5,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  headerIconBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#161b26',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerIconBtnActive: {
+    backgroundColor: 'rgba(229, 9, 20, 0.2)',
+  },
+  accountBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 20,
+    gap: 6,
+  },
+  accountBtnFree: {
+    backgroundColor: '#1b2230',
+    borderWidth: 1,
+    borderColor: '#2d3748',
+  },
+  accountBtnVip: {
+    backgroundColor: 'rgba(34, 197, 94, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(34, 197, 94, 0.4)',
+  },
+  accountBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#f0f3f8',
+  },
+  accountBtnTextVip: {
+    color: '#22c55e',
+  },
+  searchBarContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#121622',
+    marginHorizontal: 14,
+    marginTop: 10,
+    paddingHorizontal: 12,
+    height: 42,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#1e2433',
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    color: '#ffffff',
+    fontSize: 14,
+    paddingVertical: 0,
+  },
+  playerContainer: {
+    width: '100%',
+    backgroundColor: '#000000',
+    borderBottomWidth: 1,
+    borderBottomColor: '#1e2433',
+  },
+  categoryBarWrap: {
+    height: 48,
+    marginTop: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#141a26',
+  },
+  categoryScroll: {
+    paddingHorizontal: 14,
+    alignItems: 'center',
+    gap: 8,
+  },
+  categoryPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#121622',
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#1e2433',
+  },
+  categoryPillActive: {
+    backgroundColor: '#e50914',
+    borderColor: '#e50914',
+  },
+  catIcon: {
+    marginRight: 6,
+  },
+  catText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#8a94a6',
+  },
+  catTextActive: {
+    color: '#ffffff',
+    fontWeight: '800',
+  },
+  metaRow: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  metaText: {
+    fontSize: 12,
+    color: '#64748b',
+    fontWeight: '500',
+  },
+  gridContent: {
+    paddingHorizontal: 10,
+    paddingBottom: 40,
+  },
+  centerContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
   },
   loadingText: {
-    color: '#94a3b8',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  errorOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: '#06090e',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 20,
-    paddingHorizontal: 40,
-    gap: 14,
-  },
-  errorTitle: {
-    color: '#f8fafc',
-    fontSize: 22,
-    fontWeight: '700',
-  },
-  errorSub: {
-    color: '#64748b',
+    color: '#8a94a6',
     fontSize: 14,
-    textAlign: 'center',
-    lineHeight: 20,
   },
-  retryButton: {
-    marginTop: 10,
-    backgroundColor: '#6366f1',
-    paddingHorizontal: 28,
-    paddingVertical: 12,
-    borderRadius: 10,
+  emptyContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 32,
+    gap: 10,
   },
-  retryText: {
-    color: '#ffffff',
-    fontSize: 15,
+  emptyTitle: {
+    fontSize: 17,
     fontWeight: '700',
+    color: '#f0f3f8',
+  },
+  emptyDesc: {
+    fontSize: 13,
+    color: '#64748b',
+    textAlign: 'center',
   },
 });
