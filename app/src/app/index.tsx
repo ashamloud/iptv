@@ -19,7 +19,9 @@ import {
   ScrollView,
   Alert,
   Pressable,
-  Linking
+  Linking,
+  AppState,
+  RefreshControl
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -31,6 +33,8 @@ import channelsAll, { Channel, CATEGORIES } from '../data/channels';
 import { ChannelCard } from '../components/ChannelCard';
 import { NativePlayer } from '../components/NativePlayer';
 import { AccountModal } from '../components/AccountModal';
+import { MatchHeaderTicker } from '../components/MatchHeaderTicker';
+import { MatchesService, MatchItem } from '../services/matches';
 import { StorageService } from '../services/storage';
 import { FirebaseService, Subscriber } from '../services/firebase';
 
@@ -90,11 +94,13 @@ export default function NativeBokkApp() {
   // Index du carrousel Hero
   const [heroIndex, setHeroIndex] = useState<number>(0);
 
-  // Données utilisateur & favoris
+  // Données utilisateur, favoris, synchronisation admin & matchs
   const [favorites, setFavorites] = useState<string[]>([]);
   const [subscriber, setSubscriber] = useState<Subscriber | null>(null);
   const [disabledIds, setDisabledIds] = useState<string[]>([]);
   const [m3uChannels, setM3uChannels] = useState<Channel[]>([]);
+  const [matches, setMatches] = useState<MatchItem[]>([]);
+  const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [isAccountModalOpen, setIsAccountModalOpen] = useState<boolean>(false);
   const [isInitLoaded, setIsInitLoaded] = useState<boolean>(false);
 
@@ -106,26 +112,57 @@ export default function NativeBokkApp() {
     return [...channelsAll, ...m3uChannels];
   }, [channelsAll, m3uChannels]);
 
-  // Détermination du nombre de colonnes (Smartphone: 2 en Grille / 1 en Liste, Tablettes: 3 à 5)
+  // Détermination du nombre de colonnes (Smartphone: 2 en Grille, Tablettes: 3 à 5, Smart TV / TV Box: 6)
   const numColumns = useMemo(() => {
     if (viewMode === 'list') return 1;
+    if (Platform.isTV || width >= 1200) return 6;
     if (width >= 1024) return 5;
     if (width >= 768) return 4;
     if (width >= 480) return 3;
     return 2;
   }, [width, viewMode]);
 
-  // Initialisation : Favoris, Session Abonné, Chaînes désactivées, Chaînes M3U Cloud
+  // ── Synchronisation Temps Réel avec le Panneau Admin ──
+  const syncAdminData = useCallback(async () => {
+    try {
+      const [disabled, cloudM3u] = await Promise.all([
+        FirebaseService.getDisabledChannels(),
+        FirebaseService.getM3uChannels()
+      ]);
+      setDisabledIds(disabled);
+      setM3uChannels(cloudM3u);
+    } catch {}
+  }, []);
+
+  // ── Chargement des Chocs & Matchs Sportifs ──
+  const syncMatches = useCallback(async () => {
+    try {
+      const liveMatches = await MatchesService.getLiveAndUpcomingMatches();
+      if (liveMatches && liveMatches.length > 0) {
+        setMatches(liveMatches);
+      }
+    } catch {}
+  }, []);
+
+  // Action Pull-to-refresh de l'utilisateur
+  const handleRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    await Promise.all([syncAdminData(), syncMatches()]);
+    setIsRefreshing(false);
+  }, [syncAdminData, syncMatches]);
+
+  // Initialisation : Favoris, Session Abonné, Chaînes désactivées, Chaînes M3U Cloud, Matchs
   useEffect(() => {
     let isMounted = true;
 
     async function initApp() {
       try {
-        const [favs, sub, disabled, cloudM3u] = await Promise.all([
+        const [favs, sub, disabled, cloudM3u, liveMatches] = await Promise.all([
           StorageService.getFavorites(),
           StorageService.getSubscriber(),
           FirebaseService.getDisabledChannels(),
-          FirebaseService.getM3uChannels()
+          FirebaseService.getM3uChannels(),
+          MatchesService.getLiveAndUpcomingMatches()
         ]);
 
         if (isMounted) {
@@ -133,6 +170,7 @@ export default function NativeBokkApp() {
           setSubscriber(sub);
           setDisabledIds(disabled);
           setM3uChannels(cloudM3u);
+          if (liveMatches && liveMatches.length > 0) setMatches(liveMatches);
           setIsInitLoaded(true);
         }
 
@@ -141,7 +179,7 @@ export default function NativeBokkApp() {
           const remoteStatus = await FirebaseService.checkSubscriberStatus(sub.id);
           if (remoteStatus && isMounted) {
             if (remoteStatus.status === 'suspended') {
-              setSubscriber((prev) => prev ? { ...prev, status: 'suspended' } : null);
+              setSubscriber((prev) => (prev ? { ...prev, status: 'suspended' } : null));
               Alert.alert('Compte suspendu', 'Votre abonnement a été suspendu par l\'administrateur.');
             }
           }
@@ -157,6 +195,33 @@ export default function NativeBokkApp() {
       isMounted = false;
     };
   }, []);
+
+  // ── Polling automatique en arrière-plan : Sync Admin toutes les 25 secondes ──
+  useEffect(() => {
+    const adminInterval = setInterval(() => {
+      syncAdminData();
+    }, 25000);
+
+    const matchesInterval = setInterval(() => {
+      syncMatches();
+    }, 90000); // Rafraîchir les scores de matchs toutes les 90s
+
+    return () => {
+      clearInterval(adminInterval);
+      clearInterval(matchesInterval);
+    };
+  }, [syncAdminData, syncMatches]);
+
+  // ── Re-sync dès que l'application repasse au premier plan (Foreground) ──
+  useEffect(() => {
+    const subApp = AppState.addEventListener('change', (state) => {
+      if (state === 'active') {
+        syncAdminData();
+        syncMatches();
+      }
+    });
+    return () => subApp.remove();
+  }, [syncAdminData, syncMatches]);
 
   // Gestion du bouton retour physique (Android / Télécommande Smart TV)
   useEffect(() => {
@@ -311,6 +376,35 @@ export default function NativeBokkApp() {
     }
   };
 
+  // Clic sur un choc sportif du Header Ticker -> Lancement direct de la chaîne sportive
+  const handleSelectMatch = useCallback(
+    (match: MatchItem) => {
+      const matchQuery = (match.channels || '').toLowerCase();
+      let found = allChannels.find((c) => {
+        const name = c.name.toLowerCase();
+        if (matchQuery.includes('canal+') && (name.includes('canal+ sport') || name.includes('canal+ foot') || name.includes('canal+ 360'))) {
+          return true;
+        }
+        if (matchQuery.includes('bein') && (name.includes('bein') || name.includes('bei̇n'))) {
+          return true;
+        }
+        return false;
+      });
+
+      if (!found) {
+        found = allChannels.find((c) => (c.category || '').toLowerCase() === 'sport');
+      }
+
+      if (found) {
+        setActiveChannel(found);
+      } else {
+        setSelectedCategory('sport');
+        setActiveNavTab('sport');
+      }
+    },
+    [allChannels]
+  );
+
   // Rendu de chaque carte de chaîne
   const renderChannelItem = useCallback(
     ({ item }: { item: Channel }) => {
@@ -399,6 +493,11 @@ export default function NativeBokkApp() {
           </TouchableOpacity>
         </View>
       </View>
+
+      {/* ── TICKER MATCHS & CHOCS DU JOUR (STYLE SPORT NATIF) ── */}
+      {!activeChannel && matches.length > 0 && !searchQuery && (
+        <MatchHeaderTicker matches={matches} onSelectMatch={handleSelectMatch} />
+      )}
 
       {/* ── BARRE DE RECHERCHE FLOTTANTE DÉPLIABLE ── */}
       {isSearchOpen && (
@@ -594,6 +693,14 @@ export default function NativeBokkApp() {
           windowSize={7}
           removeClippedSubviews={Platform.OS === 'android'}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefreshing}
+              onRefresh={handleRefresh}
+              tintColor="#e50914"
+              colors={['#e50914', '#0070f3']}
+            />
+          }
         />
       )}
 

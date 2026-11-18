@@ -33,19 +33,33 @@ export function normalizePhone(rawPhone: string): string {
 }
 
 export const FirebaseService = {
-  // ── 1. Chaînes désactivées ──
+  // ── 1. Chaînes désactivées (avec pagination et anti-cache) ──
   async getDisabledChannels(): Promise<string[]> {
     try {
-      const url = `${FIRESTORE_BASE}/disabled_channels`;
-      const res = await fetch(url);
-      if (!res.ok) return [];
-      const data = await res.json();
-      if (!data.documents) return [];
+      const allIds: string[] = [];
+      let pageToken = '';
 
-      return data.documents.map((doc: any) => {
-        const parts = doc.name.split('/');
-        return parts[parts.length - 1];
-      });
+      do {
+        const tokenParam = pageToken ? `&pageToken=${encodeURIComponent(pageToken)}` : '';
+        const url = `${FIRESTORE_BASE}/disabled_channels?pageSize=300&_t=${Date.now()}${tokenParam}`;
+        const res = await fetch(url, {
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache'
+          }
+        });
+        if (!res.ok) break;
+        const data = await res.json();
+        if (data.documents) {
+          data.documents.forEach((doc: any) => {
+            const parts = doc.name.split('/');
+            allIds.push(parts[parts.length - 1]);
+          });
+        }
+        pageToken = data.nextPageToken || '';
+      } while (pageToken);
+
+      return allIds;
     } catch {
       return [];
     }
@@ -279,10 +293,16 @@ export const FirebaseService = {
     } catch {}
   },
 
-  // ── 5. Chaînes M3U Cloud synchronisées ──
+  // ── 5. Chaînes M3U Cloud synchronisées (avec anti-cache) ──
   async getM3uChannels(): Promise<Channel[]> {
     try {
-      const res = await fetch(`${FIRESTORE_BASE}/m3u_playlists`);
+      const url = `${FIRESTORE_BASE}/m3u_playlists?pageSize=100&_t=${Date.now()}`;
+      const res = await fetch(url, {
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache'
+        }
+      });
       if (!res.ok) return [];
       const data = await res.json();
       if (!data.documents) return [];
@@ -295,7 +315,12 @@ export const FirebaseService = {
       const allChannels: Channel[] = [];
       const chunkPromises = activePlaylists.map(async (doc: any) => {
         try {
-          const chunksRes = await fetch(`${doc.name}/chunks`);
+          const chunksUrl = `${doc.name}/chunks?pageSize=100&_t=${Date.now()}`;
+          const chunksRes = await fetch(chunksUrl, {
+            headers: {
+              'Cache-Control': 'no-cache, no-store, must-revalidate'
+            }
+          });
           if (!chunksRes.ok) return;
           const chunksData = await chunksRes.json();
           if (!chunksData.documents) return;

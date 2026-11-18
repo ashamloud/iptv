@@ -30,9 +30,11 @@ export const ChannelCard = memo(function ChannelCard({
   if (viewMode === 'list') {
     return (
       <Pressable
-        style={({ pressed }) => [
+        focusable={true}
+        style={({ pressed, focused }: any) => [
           styles.listCard,
           isPlaying && styles.listCardPlaying,
+          focused && styles.cardFocused,
           pressed && styles.cardActive
         ]}
         onPress={onPress}
@@ -102,9 +104,11 @@ export const ChannelCard = memo(function ChannelCard({
   // ── MODE GRILLE (Carte moderne style myCANAL / Netflix) ──
   return (
     <Pressable
-      style={({ pressed }) => [
+      focusable={true}
+      style={({ pressed, focused }: any) => [
         styles.gridCard,
         isPlaying && styles.gridCardPlaying,
+        focused && styles.cardFocused,
         pressed && styles.cardActive
       ]}
       onPress={onPress}
@@ -212,6 +216,15 @@ const styles = StyleSheet.create({
   cardActive: {
     transform: [{ scale: 0.97 }],
     opacity: 0.9,
+  },
+  cardFocused: {
+    borderColor: '#00d2ff',
+    borderWidth: 2.5,
+    transform: [{ scale: 1.04 }],
+    shadowColor: '#00d2ff',
+    shadowOpacity: 0.8,
+    shadowRadius: 10,
+    elevation: 10,
   },
   gridVisualBox: {
     height: 84,
