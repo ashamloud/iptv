@@ -12,7 +12,6 @@ import {
   TextInput,
   TouchableOpacity,
   FlatList,
-  StatusBar,
   BackHandler,
   Platform,
   useWindowDimensions,
@@ -20,6 +19,7 @@ import {
   ScrollView,
   Alert
 } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -221,7 +221,7 @@ export default function NativeBokkApp() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
-      <StatusBar barStyle="light-content" backgroundColor="#0a0c10" />
+      <StatusBar style="light" />
 
       {/* ── HEADER BOKK TV ── */}
       <View style={styles.header}>
