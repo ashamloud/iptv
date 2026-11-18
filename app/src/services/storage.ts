@@ -1,7 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Device from 'expo-device';
 
 const FAVORITES_KEY = 'bokk_native_favorites';
 const SUBSCRIBER_KEY = 'bokk_native_subscriber';
+const DEVICE_ID_KEY = 'bokk_native_device_id';
 
 export const StorageService = {
   async getFavorites(): Promise<string[]> {
@@ -44,6 +46,24 @@ export const StorageService = {
     try {
       await AsyncStorage.removeItem(SUBSCRIBER_KEY);
     } catch {}
+  },
+
+  async getDeviceId(): Promise<string> {
+    try {
+      let id = await AsyncStorage.getItem(DEVICE_ID_KEY);
+      if (!id) {
+        id = `dev_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+        await AsyncStorage.setItem(DEVICE_ID_KEY, id);
+      }
+      return id;
+    } catch {
+      return `dev_${Date.now()}`;
+    }
+  },
+
+  getDeviceName(): string {
+    const brand = Device.brand ? Device.brand.charAt(0).toUpperCase() + Device.brand.slice(1) : '';
+    const model = Device.modelName || 'Smartphone';
+    return brand ? `${brand} ${model}` : model;
   }
 };
-

@@ -363,6 +363,19 @@
         }
     }
 
+    async function clearActiveSession(id) {
+        if (!id || !isInitialized || !db) return { success: false };
+        try {
+            await db.collection('subscribers').doc(String(id)).update({
+                activeSessionId: '',
+                activeDeviceName: ''
+            });
+            return { success: true };
+        } catch (e) {
+            return { success: false, error: e.message };
+        }
+    }
+
     function listenSubscribers(callback) {
         if (!isInitialized || !db) return () => {};
         try {
@@ -377,7 +390,10 @@
                             phone: d.phone || '',
                             createdAt: formatFirestoreTimestamp(d.createdAt),
                             expiresAt: formatFirestoreTimestamp(d.expiresAt),
-                            status: d.status || 'active'
+                            status: d.status || 'active',
+                            activeSessionId: d.activeSessionId || '',
+                            activeDeviceName: d.activeDeviceName || '',
+                            lastActiveAt: formatFirestoreTimestamp(d.lastActiveAt)
                         });
                     });
                     // Tri en mémoire par date décroissante
@@ -631,6 +647,7 @@
         renewSubscriber: renewSubscriber,
         updateSubscriberStatus: updateSubscriberStatus,
         deleteSubscriber: deleteSubscriber,
+        clearActiveSession: clearActiveSession,
         listenSubscribers: listenSubscribers,
         listenSubscriber: listenSubscriber,
         getPaywallConfig: getPaywallConfig,

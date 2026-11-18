@@ -417,6 +417,7 @@ export default function NativeBokkApp() {
             onClose={handleClosePlayer}
             onPreviewLockTriggered={handlePreviewLock}
             isRegistered={isRegisteredUser}
+            subscriber={subscriber}
             onNextChannel={handleNextChannel}
             onPrevChannel={handlePrevChannel}
           />

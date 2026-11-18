@@ -15,13 +15,15 @@ import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { Channel } from '../data/channels';
 import { resolveStreamUrl } from '../services/stream';
-import { FirebaseService } from '../services/firebase';
+import { FirebaseService, Subscriber } from '../services/firebase';
+import { StorageService } from '../services/storage';
 
 interface NativePlayerProps {
   channel: Channel;
   onClose: () => void;
   onPreviewLockTriggered?: () => void;
   isRegistered?: boolean;
+  subscriber?: Subscriber | null;
   onNextChannel?: () => void;
   onPrevChannel?: () => void;
 }
@@ -44,6 +46,7 @@ export function NativePlayer({
   onClose,
   onPreviewLockTriggered,
   isRegistered = false,
+  subscriber,
   onNextChannel,
   onPrevChannel
 }: NativePlayerProps) {
@@ -52,19 +55,79 @@ export function NativePlayer({
   const [isReported, setIsReported] = useState<boolean>(false);
   const [hasError, setHasError] = useState<boolean>(false);
   const [statusMessage, setStatusMessage] = useState<string>('');
+  const [concurrencyError, setConcurrencyError] = useState<string | null>(null);
+
   const previewTimerRef = useRef<any>(null);
+  const sessionIdRef = useRef<string>('');
 
   const player = useVideoPlayer(streamSource, (p) => {
     p.loop = false;
     p.play();
   });
 
+  // ── Solution 3 : Verrouillage Session Unique (1 Écran Simultané) ──
+  useEffect(() => {
+    let intervalId: any = null;
+    let isCancelled = false;
+
+    async function initSession() {
+      if (subscriber && subscriber.id) {
+        const deviceId = await StorageService.getDeviceId();
+        const deviceName = StorageService.getDeviceName();
+        const sessionId = `sess_${deviceId}_${Date.now()}`;
+        sessionIdRef.current = sessionId;
+
+        await FirebaseService.claimActiveSession(subscriber.id, sessionId, deviceName);
+
+        // Vérification de concurrence toutes les 10 secondes
+        intervalId = setInterval(async () => {
+          if (isCancelled) return;
+          const res = await FirebaseService.verifyActiveSession(subscriber.id, sessionIdRef.current);
+          if (!res.isValid) {
+            player.pause();
+            if (res.isSuspended) {
+              setConcurrencyError("Votre compte a été suspendu par l'administrateur.");
+            } else if (res.otherDevice) {
+              setConcurrencyError(
+                `Lecture interrompue : ce compte diffuse actuellement sur « ${res.otherDevice} ». Votre formule BOKK TV est limitée à 1 écran à la fois.`
+              );
+            }
+          } else {
+            setConcurrencyError(null);
+          }
+        }, 10000);
+      }
+    }
+
+    initSession();
+
+    return () => {
+      isCancelled = true;
+      if (intervalId) clearInterval(intervalId);
+      if (subscriber && subscriber.id && sessionIdRef.current) {
+        FirebaseService.releaseActiveSession(subscriber.id, sessionIdRef.current);
+      }
+    };
+  }, [subscriber, channel.id]);
+
+  // Forcer la reprise sur cet écran
+  const handleReclaimSession = async () => {
+    if (!subscriber || !subscriber.id) return;
+    const deviceId = await StorageService.getDeviceId();
+    const deviceName = StorageService.getDeviceName();
+    const sessionId = `sess_${deviceId}_${Date.now()}`;
+    sessionIdRef.current = sessionId;
+
+    await FirebaseService.claimActiveSession(subscriber.id, sessionId, deviceName);
+    setConcurrencyError(null);
+    player.play();
+  };
+
   // Écouter les erreurs de lecture
   useEffect(() => {
     const sub = player.addListener('statusChange', ({ status, error }) => {
       if (status === 'error' || error) {
         setHasError(true);
-        // Si la connexion directe a échoué et qu'on n'est pas encore sur le proxy, suggérer le secours
         if (!useProxy) {
           setStatusMessage('Échec direct, test du flux de secours...');
           handleRetryWithProxy();
@@ -85,6 +148,7 @@ export function NativePlayer({
   // Recharger le flux si la chaîne change
   useEffect(() => {
     setUseProxy(false);
+    setConcurrencyError(null);
     const nextSource = buildVideoSource(channel, false);
     setStreamSource(nextSource);
     setHasError(false);
@@ -245,8 +309,40 @@ export function NativePlayer({
         </View>
       </LinearGradient>
 
+      {/* ── Overlay Concurrence : 1 Seul Écran Autorisé (Solution 3) ── */}
+      {concurrencyError && (
+        <View style={styles.concurrencyOverlay}>
+          <View style={styles.concurrencyCard}>
+            <View style={styles.concurrencyIconWrap}>
+              <Ionicons name="tv" size={32} color="#f59e0b" />
+            </View>
+            <Text style={styles.concurrencyTitle}>Limite 1 Écran Atteinte</Text>
+            <Text style={styles.concurrencyDesc}>{concurrencyError}</Text>
+
+            <View style={styles.concurrencyActionsRow}>
+              <TouchableOpacity
+                style={styles.reclaimBtn}
+                onPress={handleReclaimSession}
+                activeOpacity={0.85}
+              >
+                <Ionicons name="play" size={15} color="#fff" />
+                <Text style={styles.reclaimBtnText}>Regarder ici</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.concurrencyCloseBtn}
+                onPress={onClose}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.concurrencyCloseText}>Fermer</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
+
       {/* Overlay Erreur avec options de secours */}
-      {hasError && (
+      {hasError && !concurrencyError && (
         <View style={styles.errorOverlay}>
           <View style={styles.errorCard}>
             <View style={styles.errorIconWrap}>
@@ -431,6 +527,71 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 255, 255, 0.15)',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  concurrencyOverlay: {
+    position: 'absolute',
+    inset: 0,
+    backgroundColor: 'rgba(5, 8, 15, 0.95)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+    zIndex: 20,
+  },
+  concurrencyCard: {
+    alignItems: 'center',
+    maxWidth: 340,
+    padding: 18,
+    borderRadius: 16,
+    backgroundColor: '#121626',
+    borderWidth: 1,
+    borderColor: 'rgba(245, 158, 11, 0.4)',
+  },
+  concurrencyIconWrap: {
+    marginBottom: 6,
+  },
+  concurrencyTitle: {
+    color: '#f59e0b',
+    fontSize: 15,
+    fontWeight: '900',
+    textAlign: 'center',
+  },
+  concurrencyDesc: {
+    color: '#cbd5e1',
+    fontSize: 11.5,
+    textAlign: 'center',
+    marginTop: 6,
+    marginBottom: 14,
+    lineHeight: 16,
+  },
+  concurrencyActionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  reclaimBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: '#e50914',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  reclaimBtnText: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  concurrencyCloseBtn: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  concurrencyCloseText: {
+    color: '#94a3b8',
+    fontSize: 12,
+    fontWeight: '600',
   },
   errorOverlay: {
     position: 'absolute',

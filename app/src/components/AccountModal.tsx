@@ -8,10 +8,13 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Linking,
-  Alert
+  Alert,
+  Clipboard
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { Subscriber, FirebaseService } from '../services/firebase';
+import { StorageService } from '../services/storage';
 
 interface AccountModalProps {
   visible: boolean;
@@ -26,53 +29,51 @@ export function AccountModal({
   onClose,
   onSubscriberUpdated
 }: AccountModalProps) {
-  const [tab, setTab] = useState<'register' | 'login'>('register');
-  const [prenom, setPrenom] = useState('');
   const [phone, setPhone] = useState('');
-  const [loginId, setLoginId] = useState('');
+  const [prenom, setPrenom] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleRegister = async () => {
-    if (!prenom.trim()) {
-      Alert.alert('Erreur', 'Veuillez saisir votre prénom.');
+  const deviceName = StorageService.getDeviceName();
+
+  const handleAuth = async () => {
+    if (!phone.trim()) {
+      Alert.alert('Numéro Requis', 'Veuillez saisir votre numéro de téléphone (ex: 77 123 45 67).');
       return;
     }
+
     setIsLoading(true);
-    const sub = await FirebaseService.registerSubscriber(prenom, phone);
+    const sub = await FirebaseService.loginOrRegisterWithPhone(phone, prenom);
     setIsLoading(false);
+
     if (sub) {
       onSubscriberUpdated(sub);
-      Alert.alert('Félicitations !', `Votre ID BOKK TV est : ${sub.id}\n(1 mois d'accès offert)`);
+      Alert.alert(
+        'Accès BOKK TV Validé !',
+        `Bienvenue ${sub.prenom} !\nVotre numéro ${sub.phone} est maintenant activé.\n(1 seul écran simultané)`
+      );
       onClose();
     } else {
-      Alert.alert('Erreur', 'Impossible de créer votre ID.');
+      Alert.alert('Erreur', 'Impossible de valider votre numéro. Vérifiez votre connexion internet.');
     }
   };
 
-  const handleLogin = async () => {
-    if (!loginId.trim()) {
-      Alert.alert('Erreur', 'Veuillez saisir votre ID (ex: BK-4821).');
-      return;
-    }
-    setIsLoading(true);
-    const sub = await FirebaseService.loginSubscriber(loginId);
-    setIsLoading(false);
-    if (sub) {
-      onSubscriberUpdated(sub);
-      Alert.alert('Bon retour !', `ID ${sub.id} validé avec succès.`);
-      onClose();
-    } else {
-      Alert.alert('ID Introuvable', 'Vérifiez votre identifiant.');
-    }
-  };
-
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await StorageService.removeSubscriber();
     onSubscriberUpdated(null);
     onClose();
   };
 
+  const handleCopyId = () => {
+    if (subscriber?.phone || subscriber?.id) {
+      Clipboard.setString(subscriber.phone || subscriber.id);
+      Alert.alert('Copié !', 'Votre numéro BOKK TV a été copié dans le presse-papiers.');
+    }
+  };
+
   const handleWhatsApp = () => {
-    const text = encodeURIComponent(`Bonjour, mon ID BOKK TV est ${subscriber?.id || ''} (${subscriber?.prenom || ''}).`);
+    const text = encodeURIComponent(
+      `Bonjour BOKK TV, mon compte est lié au numéro ${subscriber?.phone || subscriber?.id || ''} (${subscriber?.prenom || ''}).`
+    );
     Linking.openURL(`https://wa.me/?text=${text}`).catch(() => {});
   };
 
@@ -89,22 +90,30 @@ export function AccountModal({
           {/* Header */}
           <View style={styles.header}>
             <View style={styles.headerTitleWrap}>
-              <Text style={styles.headerEmoji}>🎟️</Text>
-              <Text style={styles.headerTitle}>Mon ID & Abonnement</Text>
+              <Ionicons name="tv-outline" size={20} color="#e50914" />
+              <Text style={styles.headerTitle}>Pass 1 Écran & Abonnement</Text>
             </View>
-            <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-              <Ionicons name="close" size={22} color="#fff" />
+            <TouchableOpacity onPress={onClose} style={styles.closeBtn} hitSlop={10}>
+              <Ionicons name="close" size={20} color="#94a3b8" />
             </TouchableOpacity>
           </View>
 
           {subscriber ? (
-            /* Profil Connecté */
+            /* Profil Connecté avec Carte Membre 1 Écran */
             <View style={styles.body}>
-              <View style={styles.passCard}>
+              <LinearGradient
+                colors={['#1c1017', '#121626', '#0a0d16']}
+                style={styles.passCard}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+              >
                 <View style={styles.passHeader}>
-                  <Text style={styles.passLabel}>PASS MEMBRE BOKK TV</Text>
+                  <View style={styles.passChip}>
+                    <Ionicons name="hardware-chip-outline" size={16} color="#e50914" />
+                    <Text style={styles.passLabel}>BOKK TV • 1 ÉCRAN</Text>
+                  </View>
                   <View style={[styles.statusBadge, subscriber.status === 'suspended' && styles.statusSuspended]}>
-                    <Text style={styles.statusText}>
+                    <Text style={[styles.statusText, subscriber.status === 'suspended' && styles.statusTextSuspended]}>
                       {subscriber.status === 'suspended' ? '● SUSPENDU' : `● ACTIF (${daysRemaining}J)`}
                     </Text>
                   </View>
@@ -114,96 +123,95 @@ export function AccountModal({
 
                 <View style={styles.passFooter}>
                   <View>
-                    <Text style={styles.idLabel}>VOTRE ID UNIQUE</Text>
-                    <Text style={styles.idValue}>{subscriber.id}</Text>
+                    <Text style={styles.idLabel}>NUMÉRO LIÉ AU COMPTE</Text>
+                    <Text style={styles.idValue}>{subscriber.phone || subscriber.id}</Text>
                   </View>
+                  <TouchableOpacity style={styles.copyPill} onPress={handleCopyId} activeOpacity={0.8}>
+                    <Ionicons name="copy-outline" size={13} color="#fff" />
+                    <Text style={styles.copyPillText}>Copier</Text>
+                  </TouchableOpacity>
                 </View>
-              </View>
 
-              <TouchableOpacity style={styles.whatsappBtn} onPress={handleWhatsApp}>
-                <Ionicons name="logo-whatsapp" size={18} color="#25d366" />
-                <Text style={styles.whatsappText}>Support WhatsApp</Text>
-              </TouchableOpacity>
+                <View style={styles.deviceRow}>
+                  <Ionicons name="phone-portrait-outline" size={12} color="#94a3b8" />
+                  <Text style={styles.deviceText}>Appareil actuel : {deviceName}</Text>
+                </View>
+              </LinearGradient>
 
-              <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
-                <Text style={styles.logoutText}>Déconnexion</Text>
-              </TouchableOpacity>
-            </View>
-          ) : (
-            /* Formulaire Inscription / Connexion */
-            <View style={styles.body}>
-              <View style={styles.noticeBox}>
-                <Text style={styles.noticeText}>
-                  🎁 <Text style={{ fontWeight: '700' }}>Accès Gratuit !</Text> Entrez simplement votre prénom pour obtenir votre ID personnel et profiter de 1 mois de stream offert.
+              <View style={styles.ruleNotice}>
+                <Ionicons name="shield-checkmark-outline" size={16} color="#22c55e" />
+                <Text style={styles.ruleNoticeText}>
+                  Règle 1 Écran : Si vous lancez une vidéo sur un autre appareil, la lecture se mettra automatiquement en pause ici.
                 </Text>
               </View>
 
-              {tab === 'register' ? (
-                <View>
-                  <Text style={styles.label}>Votre Prénom</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Ex: Moussa, Fatou..."
-                    placeholderTextColor="#6b7280"
-                    value={prenom}
-                    onChangeText={setPrenom}
-                  />
+              <TouchableOpacity style={styles.whatsappBtn} onPress={handleWhatsApp} activeOpacity={0.85}>
+                <Ionicons name="logo-whatsapp" size={18} color="#25d366" />
+                <Text style={styles.whatsappText}>Contacter le Support WhatsApp</Text>
+              </TouchableOpacity>
 
-                  <Text style={styles.label}>WhatsApp (Optionnel)</Text>
+              <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout} activeOpacity={0.8}>
+                <Ionicons name="log-out-outline" size={16} color="#ef4444" />
+                <Text style={styles.logoutText}>Changer de compte / Déconnexion</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            /* Formulaire Authentification Numéro Unique */
+            <View style={styles.body}>
+              <View style={styles.noticeBox}>
+                <Text style={styles.noticeTitle}>🎁 1 Mois d'accès Offert !</Text>
+                <Text style={styles.noticeText}>
+                  1 compte est réservé à 1 seul écran à la fois. Entrez simplement votre numéro de téléphone pour activer votre accès.
+                </Text>
+              </View>
+
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Numéro de Téléphone (WhatsApp / Mobile)</Text>
+                <View style={styles.inputWrap}>
+                  <Ionicons name="call-outline" size={18} color="#64748b" style={styles.inputIcon} />
                   <TextInput
                     style={styles.input}
-                    placeholder="Ex: +221 77 123 45 67"
-                    placeholderTextColor="#6b7280"
+                    placeholder="Ex: 77 123 45 67 ou +221..."
+                    placeholderTextColor="#64748b"
                     keyboardType="phone-pad"
                     value={phone}
                     onChangeText={setPhone}
+                    autoFocus
                   />
-
-                  <TouchableOpacity
-                    style={[styles.primaryBtn, isLoading && styles.btnDisabled]}
-                    onPress={handleRegister}
-                    disabled={isLoading}
-                  >
-                    {isLoading ? (
-                      <ActivityIndicator color="#fff" size="small" />
-                    ) : (
-                      <Text style={styles.primaryBtnText}>Obtenir mon ID BOKK</Text>
-                    )}
-                  </TouchableOpacity>
-
-                  <TouchableOpacity onPress={() => setTab('login')} style={styles.switchBtn}>
-                    <Text style={styles.switchText}>Vous avez déjà un ID ? Connectez-vous</Text>
-                  </TouchableOpacity>
                 </View>
-              ) : (
-                <View>
-                  <Text style={styles.label}>Votre Identifiant BOKK (ID)</Text>
+
+                <Text style={styles.label}>Votre Prénom</Text>
+                <View style={styles.inputWrap}>
+                  <Ionicons name="person-outline" size={18} color="#64748b" style={styles.inputIcon} />
                   <TextInput
-                    style={[styles.input, styles.inputUppercase]}
-                    placeholder="Ex: BK-4821"
-                    placeholderTextColor="#6b7280"
-                    autoCapitalize="characters"
-                    value={loginId}
-                    onChangeText={setLoginId}
+                    style={styles.input}
+                    placeholder="Ex: Moussa, Fatou, Ibrahima..."
+                    placeholderTextColor="#64748b"
+                    value={prenom}
+                    onChangeText={setPrenom}
                   />
-
-                  <TouchableOpacity
-                    style={[styles.primaryBtn, isLoading && styles.btnDisabled]}
-                    onPress={handleLogin}
-                    disabled={isLoading}
-                  >
-                    {isLoading ? (
-                      <ActivityIndicator color="#fff" size="small" />
-                    ) : (
-                      <Text style={styles.primaryBtnText}>Valider mon ID</Text>
-                    )}
-                  </TouchableOpacity>
-
-                  <TouchableOpacity onPress={() => setTab('register')} style={styles.switchBtn}>
-                    <Text style={styles.switchText}>⬅ Créer un nouvel identifiant</Text>
-                  </TouchableOpacity>
                 </View>
-              )}
+
+                <TouchableOpacity
+                  style={[styles.primaryBtn, isLoading && styles.btnDisabled]}
+                  onPress={handleAuth}
+                  disabled={isLoading}
+                  activeOpacity={0.85}
+                >
+                  {isLoading ? (
+                    <ActivityIndicator color="#fff" size="small" />
+                  ) : (
+                    <>
+                      <Ionicons name="checkmark-circle-outline" size={18} color="#fff" />
+                      <Text style={styles.primaryBtnText}>Activer / Valider mon Compte</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              </View>
+
+              <Text style={styles.helperFooter}>
+                Si vous avez déjà un compte avec ce numéro, votre abonnement sera automatiquement restauré sur cet appareil.
+              </Text>
             </View>
           )}
         </View>
@@ -215,7 +223,7 @@ export function AccountModal({
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.85)',
+    backgroundColor: 'rgba(0, 0, 0, 0.85)',
     alignItems: 'center',
     justifyContent: 'center',
     padding: 16,
@@ -223,78 +231,92 @@ const styles = StyleSheet.create({
   modalBox: {
     width: '100%',
     maxWidth: 420,
-    backgroundColor: '#0f121d',
-    borderRadius: 16,
+    backgroundColor: '#0c0f17',
+    borderRadius: 20,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
+    borderColor: 'rgba(255, 255, 255, 0.12)',
     overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 16 },
+    shadowOpacity: 0.6,
+    shadowRadius: 24,
+    elevation: 16,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 16,
+    paddingHorizontal: 18,
+    paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.08)',
+    borderBottomColor: 'rgba(255, 255, 255, 0.08)',
   },
   headerTitleWrap: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
   },
-  headerEmoji: {
-    fontSize: 18,
-  },
   headerTitle: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '700',
+    color: '#ffffff',
+    fontSize: 15,
+    fontWeight: '800',
   },
   closeBtn: {
     padding: 4,
   },
   body: {
-    padding: 20,
+    padding: 18,
   },
   passCard: {
-    backgroundColor: '#161b2c',
-    borderRadius: 14,
+    borderRadius: 16,
     padding: 16,
     borderWidth: 1,
-    borderColor: 'rgba(229,9,20,0.4)',
-    marginBottom: 16,
+    borderColor: 'rgba(229, 9, 20, 0.4)',
+    marginBottom: 12,
   },
   passHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 10,
+    marginBottom: 8,
+  },
+  passChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
   },
   passLabel: {
     color: '#e50914',
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 1,
+    fontSize: 10,
+    fontWeight: '900',
+    letterSpacing: 0.8,
   },
   statusBadge: {
-    backgroundColor: 'rgba(16,185,129,0.18)',
+    backgroundColor: 'rgba(34, 197, 94, 0.18)',
+    borderWidth: 1,
+    borderColor: 'rgba(34, 197, 94, 0.35)',
     paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 12,
+    paddingVertical: 2,
+    borderRadius: 10,
   },
   statusSuspended: {
-    backgroundColor: 'rgba(230,57,70,0.2)',
+    backgroundColor: 'rgba(239, 68, 68, 0.18)',
+    borderColor: 'rgba(239, 68, 68, 0.4)',
   },
   statusText: {
-    color: '#10b981',
+    color: '#22c55e',
     fontSize: 10,
-    fontWeight: '700',
+    fontWeight: '800',
+  },
+  statusTextSuspended: {
+    color: '#f87171',
   },
   passName: {
-    color: '#fff',
+    color: '#ffffff',
     fontSize: 20,
-    fontWeight: '800',
-    marginBottom: 14,
+    fontWeight: '900',
+    marginBottom: 10,
+    letterSpacing: -0.3,
   },
   passFooter: {
     flexDirection: 'row',
@@ -302,106 +324,169 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   idLabel: {
-    color: '#8b949e',
+    color: '#94a3b8',
+    fontSize: 9.5,
+    fontWeight: '700',
+    letterSpacing: 0.4,
+  },
+  idValue: {
+    color: '#ffffff',
+    fontSize: 17,
+    fontWeight: '900',
+    fontFamily: 'monospace',
+    letterSpacing: 0.5,
+    marginTop: 2,
+  },
+  copyPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  copyPillText: {
+    color: '#ffffff',
     fontSize: 10,
     fontWeight: '700',
   },
-  idValue: {
-    color: '#fff',
-    fontSize: 22,
-    fontWeight: '900',
-    fontFamily: 'monospace',
-    letterSpacing: 1.5,
+  deviceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    marginTop: 10,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.08)',
+  },
+  deviceText: {
+    color: '#94a3b8',
+    fontSize: 10.5,
+  },
+  ruleNotice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: 'rgba(34, 197, 94, 0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(34, 197, 94, 0.25)',
+    borderRadius: 10,
+    padding: 10,
+    marginBottom: 12,
+  },
+  ruleNoticeText: {
+    flex: 1,
+    color: '#cbd5e1',
+    fontSize: 11,
+    lineHeight: 15,
   },
   whatsappBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    height: 44,
+    height: 42,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: 'rgba(37,211,102,0.3)',
-    backgroundColor: 'rgba(37,211,102,0.08)',
-    marginBottom: 10,
+    borderColor: 'rgba(37, 211, 102, 0.35)',
+    backgroundColor: 'rgba(37, 211, 102, 0.1)',
+    marginBottom: 8,
   },
   whatsappText: {
     color: '#25d366',
     fontWeight: '700',
-    fontSize: 13,
+    fontSize: 12.5,
   },
   logoutBtn: {
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    height: 40,
+    gap: 6,
+    height: 38,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: 'rgba(230,57,70,0.3)',
+    borderColor: 'rgba(239, 68, 68, 0.25)',
+    backgroundColor: 'rgba(239, 68, 68, 0.05)',
   },
   logoutText: {
-    color: '#e63946',
-    fontSize: 13,
+    color: '#f87171',
+    fontSize: 12,
     fontWeight: '600',
   },
   noticeBox: {
-    backgroundColor: 'rgba(229,9,20,0.1)',
+    backgroundColor: 'rgba(229, 9, 20, 0.1)',
     borderWidth: 1,
-    borderColor: 'rgba(229,9,20,0.25)',
-    borderRadius: 10,
+    borderColor: 'rgba(229, 9, 20, 0.3)',
+    borderRadius: 12,
     padding: 12,
     marginBottom: 16,
   },
+  noticeTitle: {
+    color: '#e50914',
+    fontSize: 13,
+    fontWeight: '800',
+    marginBottom: 2,
+  },
   noticeText: {
-    color: '#f3f4f6',
-    fontSize: 12,
-    lineHeight: 18,
+    color: '#cbd5e1',
+    fontSize: 11.5,
+    lineHeight: 16,
+  },
+  formGroup: {
+    marginBottom: 10,
   },
   label: {
-    color: '#9ca3af',
-    fontSize: 12,
+    color: '#94a3b8',
+    fontSize: 11.5,
     fontWeight: '600',
     marginBottom: 6,
   },
-  input: {
-    height: 44,
-    backgroundColor: '#0a0d14',
+  inputWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#111522',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
+    borderColor: 'rgba(255, 255, 255, 0.12)',
     borderRadius: 10,
-    color: '#fff',
-    paddingHorizontal: 14,
-    fontSize: 14,
-    marginBottom: 14,
+    height: 42,
+    paddingHorizontal: 12,
+    marginBottom: 12,
   },
-  inputUppercase: {
-    fontWeight: '700',
-    letterSpacing: 1,
-    fontSize: 16,
+  inputIcon: {
+    marginRight: 8,
+  },
+  input: {
+    flex: 1,
+    color: '#ffffff',
+    fontSize: 13.5,
+    paddingVertical: 0,
   },
   primaryBtn: {
+    flexDirection: 'row',
     height: 44,
     backgroundColor: '#e50914',
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 6,
     marginTop: 4,
   },
   btnDisabled: {
     opacity: 0.6,
   },
   primaryBtnText: {
-    color: '#fff',
+    color: '#ffffff',
     fontWeight: '800',
-    fontSize: 14,
+    fontSize: 13.5,
   },
-  switchBtn: {
-    marginTop: 14,
-    alignItems: 'center',
-  },
-  switchText: {
-    color: '#9ca3af',
-    fontSize: 12,
-    textDecorationLine: 'underline',
+  helperFooter: {
+    color: '#64748b',
+    fontSize: 10.5,
+    textAlign: 'center',
+    lineHeight: 14,
+    marginTop: 6,
   },
 });
-
