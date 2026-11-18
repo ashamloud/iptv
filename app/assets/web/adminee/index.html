@@ -409,9 +409,10 @@
     <!-- Scripts -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
-    <script src="../firebase-service.js?v=9966"></script>
+    <script src="../firebase-service.js?v=9978"></script>
+    <script src="../mpegts.js"></script>
     <script src="../hls.min.js"></script>
-    <script src="../channels.js?v=9966"></script>
+    <script src="../channels.js?v=9978"></script>
 
     <script>
     (function () {
@@ -421,6 +422,7 @@
         let disabledIdsSet = new Set();
         let reportedList = [];
         let hlsInstance = null;
+        let mpegtsInstance = null;
 
         // ── Auth / PIN ──
         const loginScreen = document.getElementById('login-screen');
@@ -866,11 +868,55 @@
             playerModal.style.display = 'flex';
 
             if (hlsInstance) { hlsInstance.destroy(); hlsInstance = null; }
+            if (mpegtsInstance) {
+                try {
+                    mpegtsInstance.pause();
+                    mpegtsInstance.unload();
+                    mpegtsInstance.detachMediaElement();
+                    mpegtsInstance.destroy();
+                } catch(e) {}
+                mpegtsInstance = null;
+            }
+            testVideo.pause();
+            testVideo.removeAttribute('src');
+            testVideo.load();
 
-            const proxyUrl = `https://bokk-tv-proxy.pgueye866.workers.dev/proxy?url=${encodeURIComponent(streamUrl)}`;
+            // Résolution du proxy (Local si port 8080, sinon Cloudflare Worker)
+            const isLocal = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+            let extra = '';
+            const isMegaTv = streamUrl.includes('megatv') || streamUrl.includes(':80/live/') || streamUrl.includes(':8080/live/');
+            const ua = (ch && ch.userAgent) ? ch.userAgent : 'IPTVSmartersPro';
+            extra += `&ua=${encodeURIComponent(ua)}`;
+            if (ch && ch.referrer) extra += `&ref=${encodeURIComponent(ch.referrer)}`;
 
-            if (Hls.isSupported()) {
-                hlsInstance = new Hls({ lowLatencyMode: false });
+            let proxyUrl = '';
+            if (isLocal && window.location.port === '8080') {
+                proxyUrl = `${window.location.origin}/proxy?url=${encodeURIComponent(streamUrl)}${extra}`;
+            } else {
+                proxyUrl = `https://bokk-tv-proxy.pgueye866.workers.dev/proxy?url=${encodeURIComponent(streamUrl)}${extra}`;
+            }
+
+            const lower = streamUrl.toLowerCase().split('?')[0];
+            const isTs = lower.endsWith('.ts') || lower.endsWith('.mpegts') || (ch && ch.type === 'ts');
+
+            if (isTs && typeof mpegts !== 'undefined' && mpegts.isSupported()) {
+                console.log('[BOKK ADMIN] Test flux MPEG-TS:', proxyUrl);
+                mpegtsInstance = mpegts.createPlayer({
+                    type: 'mse',
+                    isLive: true,
+                    url: proxyUrl
+                }, {
+                    enableWorker: false,
+                    lazyLoad: false,
+                    enableStashBuffer: true,
+                    stashInitialSize: 128
+                });
+                mpegtsInstance.attachMediaElement(testVideo);
+                mpegtsInstance.load();
+                testVideo.play().catch(() => {});
+            } else if (typeof Hls !== 'undefined' && Hls.isSupported()) {
+                console.log('[BOKK ADMIN] Test flux HLS:', proxyUrl);
+                hlsInstance = new Hls({ lowLatencyMode: false, enableWorker: true });
                 hlsInstance.loadSource(proxyUrl);
                 hlsInstance.attachMedia(testVideo);
                 hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => testVideo.play().catch(() => {}));
@@ -882,8 +928,18 @@
 
         btnClosePlayer.onclick = () => {
             if (hlsInstance) { hlsInstance.destroy(); hlsInstance = null; }
+            if (mpegtsInstance) {
+                try {
+                    mpegtsInstance.pause();
+                    mpegtsInstance.unload();
+                    mpegtsInstance.detachMediaElement();
+                    mpegtsInstance.destroy();
+                } catch(e) {}
+                mpegtsInstance = null;
+            }
             testVideo.pause();
-            testVideo.src = '';
+            testVideo.removeAttribute('src');
+            testVideo.load();
             playerModal.style.display = 'none';
         };
 

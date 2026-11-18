@@ -302,6 +302,16 @@
         } catch (e) {}
     }
 
+    function formatFirestoreTimestamp(val) {
+        if (!val) return '';
+        try {
+            if (typeof val.toDate === 'function') return val.toDate().toISOString();
+            if (val instanceof Date) return val.toISOString();
+            if (typeof val === 'string') return val;
+        } catch (e) {}
+        return '';
+    }
+
     async function renewSubscriber(id, days = 30) {
         if (!id || !isInitialized || !db) return { success: false };
         try {
@@ -312,7 +322,7 @@
             const data = doc.data();
             let baseDate = new Date();
             if (data.expiresAt) {
-                const curExp = data.expiresAt.toDate();
+                const curExp = (typeof data.expiresAt.toDate === 'function') ? data.expiresAt.toDate() : new Date(data.expiresAt);
                 if (curExp.getTime() > Date.now()) {
                     baseDate = curExp;
                 }
@@ -357,23 +367,47 @@
         if (!isInitialized || !db) return () => {};
         try {
             return db.collection('subscribers')
-                .orderBy('createdAt', 'desc')
-                .limit(500)
                 .onSnapshot(snapshot => {
                     const list = [];
                     snapshot.forEach(doc => {
-                        const d = doc.data();
+                        const d = doc.data() || {};
                         list.push({
                             id: doc.id,
                             prenom: d.prenom || '',
                             phone: d.phone || '',
-                            createdAt: d.createdAt ? d.createdAt.toDate().toISOString() : '',
-                            expiresAt: d.expiresAt ? d.expiresAt.toDate().toISOString() : '',
+                            createdAt: formatFirestoreTimestamp(d.createdAt),
+                            expiresAt: formatFirestoreTimestamp(d.expiresAt),
                             status: d.status || 'active'
                         });
                     });
+                    // Tri en mémoire par date décroissante
+                    list.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
                     if (typeof callback === 'function') callback(list);
-                }, err => console.warn(err));
+                }, err => console.warn('[BOKK TV] Erreur listenSubscribers:', err));
+        } catch (e) {
+            console.warn('[BOKK TV] Exception listenSubscribers:', e);
+            return () => {};
+        }
+    }
+
+    function listenSubscriber(id, callback) {
+        if (!id || !isInitialized || !db) return () => {};
+        try {
+            return db.collection('subscribers').doc(String(id))
+                .onSnapshot(doc => {
+                    if (doc.exists) {
+                        const d = doc.data() || {};
+                        const subObj = {
+                            id: doc.id,
+                            prenom: d.prenom || '',
+                            phone: d.phone || '',
+                            createdAt: formatFirestoreTimestamp(d.createdAt),
+                            expiresAt: formatFirestoreTimestamp(d.expiresAt),
+                            status: d.status || 'active'
+                        };
+                        if (typeof callback === 'function') callback(subObj);
+                    }
+                }, err => console.warn('[BOKK TV] Erreur listenSubscriber:', err));
         } catch (e) {
             return () => {};
         }
@@ -425,6 +459,7 @@
         updateSubscriberStatus: updateSubscriberStatus,
         deleteSubscriber: deleteSubscriber,
         listenSubscribers: listenSubscribers,
+        listenSubscriber: listenSubscriber,
         getPaywallConfig: getPaywallConfig,
         setPaywallConfig: setPaywallConfig
     };

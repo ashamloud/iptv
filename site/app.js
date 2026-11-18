@@ -2649,6 +2649,7 @@
         for (let i = 0; i < channels.length && count < max; i++) {
             const ch = channels[i];
             if (ch.name.startsWith('###')) continue;
+            if (window.BokkFirebase && window.BokkFirebase.isDisabled(ch.id)) continue;
             if (filterFn(ch)) {
                 track.appendChild(createCarouselCard(ch, i));
                 count++;
@@ -3820,6 +3821,14 @@
                 window.BokkFirebase.listenDisabledChannels((disabledIds) => {
                     console.log(`[BOKK TV] 🔥 Synchronisation Firebase : ${disabledIds.length} chaînes masquées`);
                     renderChannelList(false);
+                    renderHomeCarousels();
+                    if (typeof renderLiveLogosRow === 'function') renderLiveLogosRow();
+
+                    // Si la chaîne en cours est masquée par l'administrateur, arrêt immédiat
+                    if (currentIndex !== -1 && channels[currentIndex] && window.BokkFirebase.isDisabled(channels[currentIndex].id)) {
+                        destroyActivePlayer();
+                        showPlayerError('Cette chaîne a été temporairement désactivée par l\'administrateur.');
+                    }
                 });
             }
         } else {
@@ -3910,9 +3919,37 @@
             }
         }
 
+        let liveSubUnsub = null;
+        function startLiveSubscriberSync(subId) {
+            if (liveSubUnsub) { liveSubUnsub(); liveSubUnsub = null; }
+            if (window.BokkFirebase && typeof window.BokkFirebase.listenSubscriber === 'function' && subId) {
+                liveSubUnsub = window.BokkFirebase.listenSubscriber(subId, (liveSub) => {
+                    console.log('[BOKK TV] 🔥 Synchronisation abonné en direct:', liveSub);
+                    try {
+                        localStorage.setItem('bokk_subscriber', JSON.stringify(liveSub));
+                    } catch (e) {}
+                    updateAccountUI(liveSub);
+
+                    if (liveSub.status === 'suspended') {
+                        destroyActivePlayer();
+                        if (videoEl) videoEl.pause();
+                        isStreamPreviewLocked = true;
+                        openModal();
+                        const noticeText = document.getElementById('account-auth-notice-text');
+                        if (noticeText) {
+                            noticeText.innerHTML = '🚫 <strong>Accès Suspendu :</strong> Votre abonnement a été suspendu par l\'administrateur.';
+                        }
+                    }
+                });
+            }
+        }
+
         if (window.BokkFirebase && typeof window.BokkFirebase.getCurrentSubscriber === 'function') {
             const current = window.BokkFirebase.getCurrentSubscriber();
             updateAccountUI(current);
+            if (current && current.id) {
+                startLiveSubscriberSync(current.id);
+            }
         }
 
         function openModal() {
@@ -3979,6 +4016,7 @@
 
                     if (res.success && res.subscriber) {
                         updateAccountUI(res.subscriber);
+                        startLiveSubscriberSync(res.subscriber.id);
                         showToast('🎉 Félicitations ' + prenom + ' ! Votre ID est ' + res.subscriber.id + ' (1 mois offert)');
                         isStreamPreviewLocked = false;
                         closeModal(true);
@@ -4019,6 +4057,7 @@
 
                     if (res.success && res.subscriber) {
                         updateAccountUI(res.subscriber);
+                        startLiveSubscriberSync(res.subscriber.id);
                         showToast('✅ Bon retour ' + (res.subscriber.prenom || '') + ' !');
                         isStreamPreviewLocked = false;
                         closeModal(true);
@@ -4054,6 +4093,7 @@
 
         if (btnSubLogout) {
             btnSubLogout.onclick = () => {
+                if (liveSubUnsub) { liveSubUnsub(); liveSubUnsub = null; }
                 if (window.BokkFirebase && typeof window.BokkFirebase.logoutSubscriber === 'function') {
                     window.BokkFirebase.logoutSubscriber();
                 }
