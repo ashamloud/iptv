@@ -2460,3 +2460,160 @@ h1, h2, h3, .topnav-brand-name, .hero-headline, .home-section-label {
     .carousel-card { flex: 0 0 120px; }
     .player-wrapper.is-mini-pip { width: 200px; bottom: 90px; right: 8px; }
 }
+
+
+/* ══════════════════════════════════════════════════════
+   SURCHARGES DESIGN ÉPURÉ — BOKK TV v9971
+   Fond noir · Rouge BOKK · Sobriété maximale
+══════════════════════════════════════════════════════ */
+
+/* Supprimer effets de glow / text-shadow excessifs */
+.brand-red { text-shadow: none; }
+.hero-headline { text-shadow: none; }
+.btn-primary { box-shadow: none !important; }
+.btn-secondary { box-shadow: none !important; }
+
+/* Sections home : espacement réduit, design plat */
+.home-section {
+    padding: 24px 24px 10px !important;
+    margin-bottom: 0 !important;
+}
+.home-section-label {
+    font-size: 0.8rem !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.08em !important;
+    color: var(--text-muted) !important;
+    text-transform: uppercase !important;
+}
+.home-section-label svg { display: none; }
+.see-all-btn {
+    font-size: 0.78rem !important;
+    color: var(--brand) !important;
+    background: none !important;
+    border: none !important;
+    padding: 4px 8px !important;
+    font-weight: 600 !important;
+}
+
+/* Nav : plus sobre */
+.topnav {
+    backdrop-filter: blur(10px) !important;
+    -webkit-backdrop-filter: blur(10px) !important;
+    border-bottom: 1px solid rgba(255,255,255,0.08) !important;
+}
+.topnav-btn {
+    font-size: 0.8rem !important;
+    padding: 0 10px !important;
+    height: 34px !important;
+    border-radius: 6px !important;
+    border: 1px solid rgba(255,255,255,0.1) !important;
+    background: rgba(255,255,255,0.04) !important;
+}
+.topnav-btn:hover { background: rgba(255,255,255,0.08) !important; }
+
+/* Cartes chaînes : coins plus petits, ombre légère */
+.channel-card, .carousel-card {
+    border-radius: 8px !important;
+    box-shadow: none !important;
+}
+.channel-card:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.5) !important;
+}
+
+/* Match cards : épurées */
+.match-mini-card {
+    border-radius: 8px !important;
+    box-shadow: none !important;
+    border: 1px solid rgba(255,255,255,0.07) !important;
+}
+
+/* ── HERO SIMPLE ── */
+.hero-simple {
+    padding: 48px 24px 36px;
+    background: #000;
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+    text-align: center;
+}
+.hero-simple-content {
+    max-width: 600px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+}
+.hero-live-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--brand);
+    background: rgba(229,9,20,0.12);
+    border: 1px solid rgba(229,9,20,0.3);
+    padding: 4px 12px;
+    border-radius: 999px;
+}
+.hero-simple-title {
+    font-size: 2.8rem;
+    font-weight: 900;
+    font-family: 'Outfit', sans-serif;
+    line-height: 1.1;
+    color: #fff;
+    letter-spacing: -0.02em;
+}
+.hero-simple-sub {
+    font-size: 0.95rem;
+    color: var(--text-muted);
+    max-width: 420px;
+    line-height: 1.5;
+}
+.hero-simple-cta {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 6px;
+}
+/* Surcharge hero btn */
+.hero-btn-watch {
+    background: #e50914 !important;
+    color: #fff !important;
+    border: none !important;
+    border-radius: 8px !important;
+    height: 44px !important;
+    padding: 0 24px !important;
+    font-size: 0.9rem !important;
+    font-weight: 700 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    cursor: pointer !important;
+    box-shadow: none !important;
+}
+.hero-btn-watch:hover { background: #c40812 !important; }
+.hero-btn-matches {
+    background: rgba(255,255,255,0.08) !important;
+    color: #fff !important;
+    border: 1px solid rgba(255,255,255,0.15) !important;
+    border-radius: 8px !important;
+    height: 44px !important;
+    padding: 0 20px !important;
+    font-size: 0.9rem !important;
+    font-weight: 600 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    cursor: pointer !important;
+    box-shadow: none !important;
+}
+.hero-btn-matches:hover { background: rgba(255,255,255,0.14) !important; }
+
+@media (max-width: 600px) {
+    .hero-simple { padding: 32px 16px 24px; }
+    .hero-simple-title { font-size: 2rem; }
+    .home-section { padding: 16px 14px 8px !important; }
+}
