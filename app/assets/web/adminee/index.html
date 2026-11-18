@@ -893,7 +893,7 @@
             if (isLocal && window.location.port === '8080') {
                 proxyUrl = `${window.location.origin}/proxy?url=${encodeURIComponent(streamUrl)}${extra}`;
             } else {
-                proxyUrl = `https://bokk-tv-proxy.pgueye866.workers.dev/proxy?url=${encodeURIComponent(streamUrl)}${extra}`;
+                proxyUrl = `/api/proxy?url=${encodeURIComponent(streamUrl)}${extra}`;
             }
 
             const lower = streamUrl.toLowerCase().split('?')[0];

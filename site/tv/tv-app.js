@@ -7,8 +7,6 @@
     'use strict';
 
     // ── Proxies Cloud Haute Disponibilité & Résolution Universelle ──
-    const CF_WORKER = 'https://bokk-tv-proxy.pgueye866.workers.dev';
-
     function resolveStreamUrl(rawUrl, stage = 0) {
         if (!rawUrl) return '';
         if (rawUrl.startsWith('data:') || rawUrl.startsWith('blob:')) return rawUrl;
@@ -24,13 +22,15 @@
 
         // En local sur port 8080 : utiliser le proxy Python local ultra-rapide
         if (isLocalHost) {
-            if (stage === 0) return `/proxy?url=${encodeURIComponent(rawUrl)}${extraParams}`;
-            return `${CF_WORKER}/proxy?url=${encodeURIComponent(rawUrl)}${extraParams}`;
+            if (stage === 1) return rawUrl; // Essai direct
+            return `/proxy?url=${encodeURIComponent(rawUrl)}${extraParams}`;
         }
 
-        // En production : Cloudflare Worker en premier (Edge CDN gratuit 100k req/j)
+        // En production : API proxy Vercel natif (zéro dépendance externe Cloudflare/Render)
         if (stage === 0) {
-            return `${CF_WORKER}/proxy?url=${encodeURIComponent(rawUrl)}${extraParams}`;
+            return `/api/proxy?url=${encodeURIComponent(rawUrl)}${extraParams}`;
+        } else if (stage === 1) {
+            return rawUrl; // Essai direct
         } else {
             return `/api/proxy?url=${encodeURIComponent(rawUrl)}${extraParams}`;
         }

@@ -21,29 +21,40 @@ interface NativePlayerProps {
   isRegistered?: boolean;
 }
 
+function buildVideoSource(channel: Channel) {
+  const uri = resolveStreamUrl(channel.url, channel);
+  const headers: Record<string, string> = {
+    'User-Agent': (channel && channel.userAgent) || 'IPTVSmartersPro',
+  };
+  if (channel && channel.referrer) {
+    headers['Referer'] = channel.referrer;
+  }
+  return { uri, headers };
+}
+
 export function NativePlayer({
   channel,
   onClose,
   onPreviewLockTriggered,
   isRegistered = false
 }: NativePlayerProps) {
-  const [streamUrl, setStreamUrl] = useState(() => resolveStreamUrl(channel.url, channel));
+  const [streamSource, setStreamSource] = useState(() => buildVideoSource(channel));
   const [isReported, setIsReported] = useState(false);
   const [hasError, setHasError] = useState(false);
   const previewTimerRef = useRef<any>(null);
 
-  const player = useVideoPlayer(streamUrl, (p) => {
+  const player = useVideoPlayer(streamSource, (p) => {
     p.loop = false;
     p.play();
   });
 
   // Recharger le flux si la chaîne change
   useEffect(() => {
-    const nextUrl = resolveStreamUrl(channel.url, channel);
-    setStreamUrl(nextUrl);
+    const nextSource = buildVideoSource(channel);
+    setStreamSource(nextSource);
     setHasError(false);
     setIsReported(false);
-    player.replace(nextUrl);
+    player.replace(nextSource);
     player.play();
 
     // Règle des 3 secondes si visiteur non enregistré
@@ -71,9 +82,13 @@ export function NativePlayer({
 
   const handleRetry = () => {
     setHasError(false);
-    const nextUrl = resolveStreamUrl(channel.fallbackUrl || channel.url, channel);
-    setStreamUrl(nextUrl);
-    player.replace(nextUrl);
+    const retryChannel = {
+      ...channel,
+      url: channel.fallbackUrl || channel.url
+    };
+    const nextSource = buildVideoSource(retryChannel);
+    setStreamSource(nextSource);
+    player.replace(nextSource);
     player.play();
   };
 

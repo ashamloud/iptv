@@ -558,9 +558,8 @@
         }
     }
 
-    // Proxies Cloud haute disponibilité (Cloudflare Worker Edge ultra-rapide)
-    const RENDER_PROXY_BASE = null; // Désactivé (Render free suspendu par quota de 5 Go)
-    const CF_WORKER_BASE    = 'https://bokk-tv-proxy.pgueye866.workers.dev';
+    // Proxy BOKK TV : Serveur Python local ou Vercel Edge API natif (/api/proxy)
+    // Zéro dépendance envers Cloudflare Workers ou Render
 
     function resolveStreamUrl(rawUrl, stage = 0, channel = null) {
         if (!rawUrl) return '';
@@ -588,38 +587,28 @@
 
         const isProduction = !isPort8080 && !isLocalHost && !isFileProtocol;
 
-        // ── EN PRODUCTION : Cloudflare Worker haute performance (Edge CDN mondial) ──
+        // ── EN PRODUCTION : Vercel Edge API Proxy (Zéro dépendance Cloudflare Worker / Render) ──
         if (isProduction) {
-            // Stage 0 : Cloudflare Worker CDN (100k req/jour, non bridé à 5 Go)
-            if (stage === 0 && CF_WORKER_BASE) {
-                return `${CF_WORKER_BASE}/proxy?url=${encodeURIComponent(rawUrl)}${extraParams}`;
-            }
-            // Stage 1 : Fallback Vercel /api/proxy
-            if (stage === 1) {
+            // Stage 0 : Proxy interne Vercel même domaine (/api/proxy)
+            if (stage === 0) {
                 return `/api/proxy?url=${encodeURIComponent(rawUrl)}${extraParams}`;
             }
-            // Stage 2 : URL directe (certains flux supportent CORS nativement)
-            if (stage === 2) {
+            // Stage 1 : Essai direct (flux compatibles HTTPS/CORS)
+            if (stage === 1) {
                 return rawUrl;
             }
-            // Stage 3+ : Retour Cloudflare Worker avec délai
-            if (CF_WORKER_BASE) {
-                return `${CF_WORKER_BASE}/proxy?url=${encodeURIComponent(rawUrl)}${extraParams}`;
-            }
+            // Stage 2+ : Fallback /api/proxy
+            return `/api/proxy?url=${encodeURIComponent(rawUrl)}${extraParams}`;
         }
 
         // ── EN LOCAL (port 8080 avec serveur Python local illimité) ──
-        if (stage === 0) {
-            let proxyBase = '/proxy';
-            if (!isPort8080) proxyBase = `http://${fallbackLocalHost}:8080/proxy`;
-            return `${proxyBase}?url=${encodeURIComponent(rawUrl)}${extraParams}`;
-        } else if (stage === 1 && CF_WORKER_BASE) {
-            return `${CF_WORKER_BASE}/proxy?url=${encodeURIComponent(rawUrl)}${extraParams}`;
-        } else {
-            let proxyBase = '/proxy';
-            if (!isPort8080) proxyBase = `http://${fallbackLocalHost}:8080/proxy`;
-            return `${proxyBase}?url=${encodeURIComponent(rawUrl)}${extraParams}`;
+        let proxyBase = '/proxy';
+        if (!isPort8080) proxyBase = `http://${fallbackLocalHost}:8080/proxy`;
+
+        if (stage === 1) {
+            return rawUrl; // Essai direct
         }
+        return `${proxyBase}?url=${encodeURIComponent(rawUrl)}${extraParams}`;
     }
 
     // ── Chargement d'une chaîne (Support Dual Engine MPEG-TS & HLS) ──

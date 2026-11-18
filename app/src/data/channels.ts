@@ -15,6 +15,8 @@ export interface Channel {
   badge?: string;
   desc?: string;
   logo?: string;
+  userAgent?: string;
+  referrer?: string;
 }
 
 export interface Category {
