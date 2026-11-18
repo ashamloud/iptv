@@ -1,10 +1,11 @@
 // ═══════════════════════════════════════════════════════════════
-// BOKK TV — Résolution directe des flux natifs (Android / iOS / TV)
-// Zéro proxy • Zéro Cloudflare Worker • Zéro Render
-// Connexion TCP/HTTP directe vers la source IPTV (Ultra-rapide)
+// BOKK TV — Résolution intelligente des flux natifs (Android / iOS / TV)
+// Connexion directe ultra-rapide + Fallback Proxy Vercel sécurisé
 // ═══════════════════════════════════════════════════════════════
 
-// Pool de comptes MegaTV vérifiés pour rotation directe
+const RTS_CHANNELS = new Set(['rts1', 'rts2', 'rts3', 'rts4', 'rts5', 'sentv', '2stv', 'leraltv', 'walftv', 'walf']);
+
+// Pool de comptes MegaTV vérifiés pour rotation
 const MEGATV_ACCOUNTS = [
   ['430834571696283', '57URoE9Lii'],
   ['61F6598D4955DCF', 'dA5BZGgigb'],
@@ -28,16 +29,40 @@ function rewriteMegaTvUrl(targetUrl: string): string {
   return targetUrl;
 }
 
-export function resolveStreamUrl(rawUrl: string, channel?: any): string {
+export function resolveStreamUrl(
+  rawUrl: string,
+  channel?: any,
+  useProxyFallback: boolean = false
+): string {
   if (!rawUrl) return '';
 
   let finalUrl = rawUrl.trim();
 
-  // Si c'est un flux MegaTV, injecter les identifiants actifs directement
+  // 1. Chaînes officielles RTS / ACAN : routage direct vers l'API signée
+  const lowerUrl = finalUrl.toLowerCase();
+  if (RTS_CHANNELS.has(lowerUrl)) {
+    return `https://bokktv.vercel.app/api/proxy?url=${encodeURIComponent(lowerUrl)}`;
+  }
+
+  // 2. Si le proxy de secours est demandé (ex: rejet direct 401/403/timeout par l'opérateur)
+  if (useProxyFallback) {
+    const ua = (channel && channel.userAgent) || 'IPTVSmartersPro';
+    let proxyUrl = `https://bokktv.vercel.app/api/proxy?url=${encodeURIComponent(finalUrl)}&ua=${encodeURIComponent(ua)}`;
+    if (channel && channel.referrer) {
+      proxyUrl += `&ref=${encodeURIComponent(channel.referrer)}`;
+    }
+    return proxyUrl;
+  }
+
+  // 3. Détection et rotation des flux MegaTV
   if (finalUrl.includes('megatv5074.com') && finalUrl.includes('/live/')) {
     finalUrl = rewriteMegaTvUrl(finalUrl);
   }
 
-  // Connexion DIRECTE : ExoPlayer gère HLS et MPEG-TS nativement sans aucun proxy
+  // 4. Contournement DNS des domaines souvent bloqués par les opérateurs mobiles
+  if (finalUrl.includes('barrelastv.ottcst.org')) {
+    finalUrl = finalUrl.replace('barrelastv.ottcst.org', '103.205.17.108');
+  }
+
   return finalUrl;
 }
