@@ -63,6 +63,9 @@ export function AccountModal({
     onClose();
   };
 
+  const WAVE_PAY_URL = 'https://pay.wave.com/m/M_sn_cop5B9UJYF8P/c/sn/?amount=3000';
+  const WHATSAPP_PHONE = '221783055520';
+
   const handleCopyId = () => {
     if (subscriber?.phone || subscriber?.id) {
       Clipboard.setString(subscriber.phone || subscriber.id);
@@ -70,11 +73,19 @@ export function AccountModal({
     }
   };
 
+  const handleWavePay = () => {
+    Linking.openURL(WAVE_PAY_URL).catch(() => {
+      Alert.alert('Erreur', 'Impossible d\'ouvrir le lien de paiement Wave.');
+    });
+  };
+
   const handleWhatsApp = () => {
     const text = encodeURIComponent(
-      `Bonjour BOKK TV, mon compte est lié au numéro ${subscriber?.phone || subscriber?.id || ''} (${subscriber?.prenom || ''}).`
+      `Bonjour BOKK TV, mon compte est lié au numéro ${subscriber?.phone || subscriber?.id || phone || ''} (${subscriber?.prenom || prenom || ''}). Je vous contacte au sujet de mon abonnement.`
     );
-    Linking.openURL(`https://wa.me/?text=${text}`).catch(() => {});
+    Linking.openURL(`https://wa.me/${WHATSAPP_PHONE}?text=${text}`).catch(() => {
+      Alert.alert('Erreur', 'Impossible d\'ouvrir WhatsApp.');
+    });
   };
 
   let daysRemaining = 30;
@@ -145,9 +156,24 @@ export function AccountModal({
                 </Text>
               </View>
 
+              {/* Boîte Paiement Wave & Tarif */}
+              <View style={styles.paymentBox}>
+                <View style={styles.paymentHeader}>
+                  <Ionicons name="card-outline" size={16} color="#00d2ff" />
+                  <Text style={styles.paymentTitle}>Abonnement : 3 000 F CFA / mois</Text>
+                </View>
+                <Text style={styles.paymentDesc}>
+                  Paiement sécurisé via Wave (TerangaJob). Ajoutez cet expéditeur à vos contacts pour rendre le lien cliquable. Après paiement, compte activé sous quelques instants (2h max).
+                </Text>
+                <TouchableOpacity style={styles.waveBtn} onPress={handleWavePay} activeOpacity={0.85}>
+                  <Ionicons name="water-outline" size={16} color="#fff" />
+                  <Text style={styles.waveBtnText}>Payer 3 000 F avec Wave</Text>
+                </TouchableOpacity>
+              </View>
+
               <TouchableOpacity style={styles.whatsappBtn} onPress={handleWhatsApp} activeOpacity={0.85}>
                 <Ionicons name="logo-whatsapp" size={18} color="#25d366" />
-                <Text style={styles.whatsappText}>Contacter le Support WhatsApp</Text>
+                <Text style={styles.whatsappText}>WhatsApp Support (+221 78 305 55 20)</Text>
               </TouchableOpacity>
 
               <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout} activeOpacity={0.8}>
@@ -207,6 +233,27 @@ export function AccountModal({
                     </>
                   )}
                 </TouchableOpacity>
+              </View>
+
+              {/* Boîte Paiement Wave & Support */}
+              <View style={styles.paymentBox}>
+                <View style={styles.paymentHeader}>
+                  <Ionicons name="card-outline" size={16} color="#00d2ff" />
+                  <Text style={styles.paymentTitle}>Tarif : 3 000 F CFA / mois (1 Écran)</Text>
+                </View>
+                <Text style={styles.paymentDesc}>
+                  Veuillez payer TerangaJob 3.000F avec Wave en cliquant ci-dessous. Ajoutez cet expéditeur à vos contacts pour rendre le lien cliquable. Après paiement, patientez quelques instants à 2 heures max.
+                </Text>
+                <View style={{ flexDirection: 'row', gap: 8, marginTop: 4 }}>
+                  <TouchableOpacity style={[styles.waveBtn, { flex: 1 }]} onPress={handleWavePay} activeOpacity={0.85}>
+                    <Ionicons name="water-outline" size={16} color="#fff" />
+                    <Text style={styles.waveBtnText}>Payer avec Wave</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[styles.whatsappBtn, { flex: 1, marginBottom: 0 }]} onPress={handleWhatsApp} activeOpacity={0.85}>
+                    <Ionicons name="logo-whatsapp" size={16} color="#25d366" />
+                    <Text style={styles.whatsappText}>WhatsApp</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
 
               <Text style={styles.helperFooter}>
@@ -382,6 +429,45 @@ const styles = StyleSheet.create({
     color: '#cbd5e1',
     fontSize: 11,
     lineHeight: 15,
+  },
+  paymentBox: {
+    backgroundColor: 'rgba(0, 210, 255, 0.06)',
+    borderWidth: 1,
+    borderColor: 'rgba(0, 210, 255, 0.25)',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 12,
+  },
+  paymentHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 4,
+  },
+  paymentTitle: {
+    color: '#00d2ff',
+    fontSize: 12.5,
+    fontWeight: '800',
+  },
+  paymentDesc: {
+    color: '#94a3b8',
+    fontSize: 11,
+    lineHeight: 15,
+    marginBottom: 8,
+  },
+  waveBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    height: 38,
+    borderRadius: 10,
+    backgroundColor: '#0070f3',
+  },
+  waveBtnText: {
+    color: '#ffffff',
+    fontWeight: '700',
+    fontSize: 12,
   },
   whatsappBtn: {
     flexDirection: 'row',

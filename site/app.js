@@ -3894,7 +3894,7 @@
                 if (profileExpiry) profileExpiry.textContent = daysText;
 
                 if (btnWhatsapp) {
-                    btnWhatsapp.href = 'https://wa.me/?text=' + encodeURIComponent('Bonjour, mon ID BOKK TV est ' + sub.id + ' (' + (sub.prenom || '') + ').');
+                    btnWhatsapp.href = 'https://wa.me/221783055520?text=' + encodeURIComponent('Bonjour BOKK TV, mon compte est lié à l\'identifiant ' + sub.id + ' (' + (sub.prenom || '') + '). Je vous contacte au sujet de mon abonnement.');
                 }
             } else {
                 if (navAccountText) navAccountText.textContent = 'Mon ID';
