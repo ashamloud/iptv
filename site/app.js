@@ -317,11 +317,10 @@
             noticeBox.style.background = 'rgba(230, 57, 70, 0.12)';
             noticeBox.style.borderColor = 'rgba(230, 57, 70, 0.35)';
             noticeText.innerHTML = '⏱️ <strong>Durée de visionnage expirée</strong><br><br>' +
-                'Veuillez Payer TerangaJob 3.000F avec Wave en cliquant sur ce lien : <a href="https://pay.wave.com/m/M_sn_cop5B9UJYF8P/c/sn/?amount=3000" target="_blank" style="color:#00d2ff; font-weight:700; text-decoration:underline;">https://pay.wave.com/m/M_sn_cop5B9UJYF8P/c/sn/?amount=3000</a>.<br><br>' +
-                'Ajoutez cet expéditeur à vos contacts pour rendre le lien cliquable. Après paiement, veuillez patienter quelques instants voir deux heures max.<br><br>' +
+                'Veuillez payer TerangaJob 3.000F avec Wave en cliquant sur le bouton ci-dessous. Après paiement, veuillez patienter quelques instants (2h maximum) pour l\'activation.<br><br>' +
                 '<div style="display:flex; gap:8px; margin-top:6px; flex-wrap:wrap;">' +
                 '<a href="https://pay.wave.com/m/M_sn_cop5B9UJYF8P/c/sn/?amount=3000" target="_blank" class="btn-primary" style="flex:1; height:38px; display:inline-flex; align-items:center; justify-content:center; gap:6px; font-size:0.85rem; font-weight:700; border-radius:8px; text-decoration:none; background:linear-gradient(135deg, #0070f3 0%, #00d2ff 100%);">🌊 Payer 3 000 F avec Wave</a>' +
-                '<a href="https://wa.me/221783055520?text=' + encodeURIComponent('Bonjour BOKK TV, je souhaite activer mon compte.') + '" target="_blank" class="btn-secondary" style="height:38px; display:inline-flex; align-items:center; justify-content:center; gap:6px; padding:0 14px; font-size:0.82rem; border-radius:8px; text-decoration:none; color:#25d366; border-color:rgba(37,211,102,0.35);">💬 WhatsApp</a>' +
+                '<a href="https://wa.me/221783055520?text=' + encodeURIComponent('Bonjour BOKK TV, je souhaite activer mon compte après paiement.') + '" target="_blank" class="btn-secondary" style="height:38px; display:inline-flex; align-items:center; justify-content:center; gap:6px; padding:0 14px; font-size:0.82rem; border-radius:8px; text-decoration:none; color:#25d366; border-color:rgba(37,211,102,0.35);">💬 WhatsApp</a>' +
                 '</div>';
         }
 

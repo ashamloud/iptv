@@ -25,7 +25,6 @@ import {
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -37,42 +36,6 @@ import { MatchHeaderTicker } from '../components/MatchHeaderTicker';
 import { MatchesService, MatchItem } from '../services/matches';
 import { StorageService } from '../services/storage';
 import { FirebaseService, Subscriber } from '../services/firebase';
-
-// Chaînes vedettes pour le carrousel Hero à l'accueil
-const FEATURED_HIGHLIGHTS = [
-  {
-    name: 'RTS 1 Sénégal',
-    desc: 'Direct National • Journal Télévisé & Séries Sénégalaises',
-    badge: 'DIRECT HD',
-    category: 'senegal',
-    logo: 'https://i.ibb.co/6P26Qk7/rts1.png',
-    filterKey: 'senegal',
-  },
-  {
-    name: 'Canal+ Sport',
-    desc: 'Football Européen • Premier League, UEFA & Grands Rendez-vous',
-    badge: 'LIVE 1080p',
-    category: 'sport',
-    logo: 'https://i.ibb.co/3WkmFmC/canal-sport.png',
-    filterKey: 'sport',
-  },
-  {
-    name: 'beIN Sports 1',
-    desc: 'Ligue des Champions, LaLiga, Serie A & Émissions en Direct',
-    badge: '4K ULTRA',
-    category: 'sport',
-    logo: 'https://i.ibb.co/b3w664b/bein1.png',
-    filterKey: 'sport',
-  },
-  {
-    name: 'France 2 Direct',
-    desc: 'Actualités, Magazines & Cinéma Francophone en Haute Définition',
-    badge: 'FHD 1080p',
-    category: 'francophone',
-    logo: 'https://i.ibb.co/1K2WkQG/france2.png',
-    filterKey: 'francophone',
-  }
-];
 
 export default function NativeBokkApp() {
   const { width } = useWindowDimensions();
@@ -90,9 +53,6 @@ export default function NativeBokkApp() {
   const [selectedCategory, setSelectedCategory] = useState<string>('tous');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [isSearchOpen, setIsSearchOpen] = useState<boolean>(false);
-
-  // Index du carrousel Hero
-  const [heroIndex, setHeroIndex] = useState<number>(0);
 
   // Données utilisateur, favoris, synchronisation admin & matchs
   const [favorites, setFavorites] = useState<string[]>([]);
@@ -274,10 +234,10 @@ export default function NativeBokkApp() {
     setIsAccountModalOpen(true);
     Alert.alert(
       'Durée de visionnage expirée',
-      'Veuillez Payer TerangaJob 3.000F avec Wave en cliquant sur le lien ci-dessous. Ajoutez cet expéditeur à vos contacts pour rendre le lien cliquable. Après paiement, patientez quelques instants voir deux heures max.',
+      'Votre période de visionnage est expirée. Pour continuer à profiter de toutes vos chaînes en direct et en illimité, renouvelez votre abonnement (3 000 F / mois) via Wave. Après paiement, patientez quelques instants (2h max) pour l\'activation de votre compte.',
       [
         {
-          text: 'Payer 3 000 F avec Wave',
+          text: 'Payer avec Wave (3 000 F)',
           onPress: () => {
             Linking.openURL('https://pay.wave.com/m/M_sn_cop5B9UJYF8P/c/sn/?amount=3000').catch(() => {});
           }
@@ -285,7 +245,7 @@ export default function NativeBokkApp() {
         {
           text: 'Support WhatsApp',
           onPress: () => {
-            Linking.openURL('https://wa.me/221783055520?text=' + encodeURIComponent('Bonjour BOKK TV, je souhaite activer mon compte.')).catch(() => {});
+            Linking.openURL('https://wa.me/221783055520?text=' + encodeURIComponent('Bonjour BOKK TV, je souhaite activer mon compte après paiement.')).catch(() => {});
           }
         },
         { text: 'Fermer', style: 'cancel' }
@@ -364,18 +324,6 @@ export default function NativeBokkApp() {
   // Utilisateur enregistré et actif ?
   const isRegisteredUser = Boolean(subscriber && subscriber.status === 'active');
 
-  // Lancement rapide depuis le Hero
-  const handleLaunchHero = () => {
-    const hero = FEATURED_HIGHLIGHTS[heroIndex];
-    // Chercher la chaîne correspondante dans la liste
-    const found = allChannels.find((c) => c.name.toLowerCase().includes(hero.name.toLowerCase().split(' ')[0]));
-    if (found) {
-      setActiveChannel(found);
-    } else {
-      setSelectedCategory(hero.filterKey);
-    }
-  };
-
   // Clic sur un choc sportif du Header Ticker -> Lancement direct de la chaîne sportive
   const handleSelectMatch = useCallback(
     (match: MatchItem) => {
@@ -426,8 +374,6 @@ export default function NativeBokkApp() {
   );
 
   const keyExtractor = useCallback((item: Channel) => String(item.id), []);
-
-  const currentHero = FEATURED_HIGHLIGHTS[heroIndex];
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
@@ -554,60 +500,6 @@ export default function NativeBokkApp() {
               </ScrollView>
             </View>
           )}
-        </View>
-      ) : activeNavTab === 'home' && !searchQuery ? (
-        /* ── HERO SPOTLIGHT BILLBOARD (Style Netflix / myCANAL) ── */
-        <View style={styles.heroContainer}>
-          <LinearGradient
-            colors={['#1c0c12', '#121626', '#090c14']}
-            style={styles.heroCard}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-          >
-            <View style={styles.heroTopRow}>
-              <View style={styles.heroBadgePill}>
-                <View style={styles.heroLiveDot} />
-                <Text style={styles.heroBadgeText}>{currentHero.badge}</Text>
-              </View>
-
-              <View style={styles.heroIndicators}>
-                {FEATURED_HIGHLIGHTS.map((_, idx) => (
-                  <TouchableOpacity
-                    key={idx}
-                    onPress={() => setHeroIndex(idx)}
-                    style={[styles.heroDot, idx === heroIndex && styles.heroDotActive]}
-                  />
-                ))}
-              </View>
-            </View>
-
-            <View style={styles.heroContent}>
-              <Text style={styles.heroTitle}>{currentHero.name}</Text>
-              <Text style={styles.heroDesc} numberOfLines={2}>
-                {currentHero.desc}
-              </Text>
-
-              <View style={styles.heroActionsRow}>
-                <TouchableOpacity
-                  style={styles.heroWatchBtn}
-                  onPress={handleLaunchHero}
-                  activeOpacity={0.85}
-                >
-                  <Ionicons name="play" size={16} color="#000" />
-                  <Text style={styles.heroWatchBtnText}>Regarder en direct</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={styles.heroExploreBtn}
-                  onPress={() => setSelectedCategory(currentHero.filterKey)}
-                  activeOpacity={0.8}
-                >
-                  <Ionicons name="compass-outline" size={16} color="#fff" />
-                  <Text style={styles.heroExploreBtnText}>Explorer</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </LinearGradient>
         </View>
       ) : null}
 
@@ -959,120 +851,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '600',
     maxWidth: 120,
-  },
-
-  // ── Hero Spotlight ──
-  heroContainer: {
-    paddingHorizontal: 12,
-    paddingTop: 10,
-    paddingBottom: 4,
-  },
-  heroCard: {
-    borderRadius: 18,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.5,
-    shadowRadius: 16,
-    elevation: 8,
-  },
-  heroTopRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  heroBadgePill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(229, 9, 20, 0.25)',
-    borderWidth: 1,
-    borderColor: 'rgba(229, 9, 20, 0.5)',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 12,
-    gap: 5,
-  },
-  heroLiveDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#e50914',
-  },
-  heroBadgeText: {
-    color: '#ffffff',
-    fontSize: 9.5,
-    fontWeight: '900',
-    letterSpacing: 0.5,
-  },
-  heroIndicators: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  heroDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: 'rgba(255, 255, 255, 0.25)',
-  },
-  heroDotActive: {
-    width: 18,
-    borderRadius: 3,
-    backgroundColor: '#e50914',
-  },
-  heroContent: {
-    marginTop: 4,
-  },
-  heroTitle: {
-    color: '#ffffff',
-    fontSize: 20,
-    fontWeight: '900',
-    letterSpacing: -0.3,
-  },
-  heroDesc: {
-    color: '#94a3b8',
-    fontSize: 12,
-    lineHeight: 16,
-    marginTop: 3,
-    marginBottom: 12,
-  },
-  heroActionsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  heroWatchBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#ffffff',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-    gap: 6,
-  },
-  heroWatchBtnText: {
-    color: '#000000',
-    fontSize: 12.5,
-    fontWeight: '800',
-  },
-  heroExploreBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.18)',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 8,
-    gap: 6,
-  },
-  heroExploreBtnText: {
-    color: '#ffffff',
-    fontSize: 12,
-    fontWeight: '700',
   },
 
   // ── Catégories ──

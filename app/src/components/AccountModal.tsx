@@ -161,11 +161,11 @@ export function AccountModal({
               {(daysRemaining <= 0 || showProlongInfo) ? (
                 <View style={styles.paymentBox}>
                   <View style={styles.paymentHeader}>
-                    <Ionicons name="time-outline" size={16} color="#00d2ff" />
+                    <Ionicons name="time-outline" size={16} color="#38bdf8" />
                     <Text style={styles.paymentTitle}>Prolonger l'abonnement (3 000 F / mois)</Text>
                   </View>
                   <Text style={styles.paymentDesc}>
-                    Veuillez Payer TerangaJob 3.000F avec Wave en cliquant sur le lien ci-dessous. Ajoutez cet expéditeur à vos contacts pour rendre le lien cliquable. Après paiement, veuillez patienter quelques instants (2h max) pour l'activation.
+                    Veuillez payer TerangaJob 3.000F avec Wave en cliquant sur le bouton ci-dessous. Après paiement, veuillez patienter quelques instants (2h max) pour l'activation.
                   </Text>
                   <TouchableOpacity style={styles.waveBtn} onPress={handleWavePay} activeOpacity={0.85}>
                     <Ionicons name="card-outline" size={16} color="#fff" />
@@ -194,12 +194,12 @@ export function AccountModal({
               </TouchableOpacity>
             </View>
           ) : (
-            /* Formulaire Authentification Numéro Unique */
+            /* Formulaire Authentification Numéro Unique (100% Gratuit) */
             <View style={styles.body}>
               <View style={styles.noticeBox}>
                 <Text style={styles.noticeTitle}>🎁 1 Mois d'accès Offert !</Text>
                 <Text style={styles.noticeText}>
-                  1 compte est réservé à 1 seul écran à la fois. Entrez simplement votre numéro de téléphone pour activer votre accès.
+                  L'inscription est gratuite et réservée à 1 seul écran à la fois. Entrez votre numéro pour activer votre compte.
                 </Text>
               </View>
 
@@ -241,19 +241,9 @@ export function AccountModal({
                   ) : (
                     <>
                       <Ionicons name="checkmark-circle-outline" size={18} color="#fff" />
-                      <Text style={styles.primaryBtnText}>Activer / Valider mon Compte</Text>
+                      <Text style={styles.primaryBtnText}>Activer mon Accès Gratuit</Text>
                     </>
                   )}
-                </TouchableOpacity>
-
-                {/* Bouton de paiement Wave direct sans texte inutile */}
-                <TouchableOpacity
-                  style={[styles.waveBtn, { marginTop: 10 }]}
-                  onPress={handleWavePay}
-                  activeOpacity={0.85}
-                >
-                  <Ionicons name="card-outline" size={16} color="#fff" />
-                  <Text style={styles.waveBtnText}>Payer avec Wave (3 000 F)</Text>
                 </TouchableOpacity>
               </View>
 
@@ -432,9 +422,9 @@ const styles = StyleSheet.create({
     lineHeight: 15,
   },
   paymentBox: {
-    backgroundColor: 'rgba(0, 210, 255, 0.06)',
+    backgroundColor: 'rgba(56, 189, 248, 0.08)',
     borderWidth: 1,
-    borderColor: 'rgba(0, 210, 255, 0.25)',
+    borderColor: 'rgba(56, 189, 248, 0.25)',
     borderRadius: 12,
     padding: 12,
     marginBottom: 12,
@@ -446,7 +436,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   paymentTitle: {
-    color: '#00d2ff',
+    color: '#38bdf8',
     fontSize: 12.5,
     fontWeight: '800',
   },
@@ -463,7 +453,7 @@ const styles = StyleSheet.create({
     gap: 6,
     height: 38,
     borderRadius: 10,
-    backgroundColor: '#0070f3',
+    backgroundColor: '#0284c7',
   },
   waveBtnText: {
     color: '#ffffff',
