@@ -18,7 +18,8 @@ import {
   ActivityIndicator,
   ScrollView,
   Alert,
-  Pressable
+  Pressable,
+  Linking
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -203,14 +204,25 @@ export default function NativeBokkApp() {
     setActiveChannel(null);
   }, []);
 
-  // Déclenchement de la restriction 3s (pour les visiteurs non enregistrés)
+  // Déclenchement de la restriction / expiration de visionnage
   const handlePreviewLock = useCallback(() => {
     setIsAccountModalOpen(true);
     Alert.alert(
-      'Aperçu gratuit terminé',
-      'Pour regarder la télévision en direct en illimité, activez votre Pass Gratuit (1 mois offert) ou entrez votre ID personnel.',
+      'Durée de visionnage expirée',
+      'Veuillez Payer TerangaJob 3.000F avec Wave en cliquant sur le lien ci-dessous. Ajoutez cet expéditeur à vos contacts pour rendre le lien cliquable. Après paiement, patientez quelques instants voir deux heures max.',
       [
-        { text: 'Activer mon Pass', onPress: () => setIsAccountModalOpen(true) },
+        {
+          text: 'Payer 3 000 F avec Wave',
+          onPress: () => {
+            Linking.openURL('https://pay.wave.com/m/M_sn_cop5B9UJYF8P/c/sn/?amount=3000').catch(() => {});
+          }
+        },
+        {
+          text: 'Support WhatsApp',
+          onPress: () => {
+            Linking.openURL('https://wa.me/221783055520?text=' + encodeURIComponent('Bonjour BOKK TV, je souhaite activer mon compte.')).catch(() => {});
+          }
+        },
         { text: 'Fermer', style: 'cancel' }
       ]
     );

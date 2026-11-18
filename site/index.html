@@ -526,9 +526,9 @@
         <div class="modal-body" style="padding:20px;">
             <!-- Vue 1: Formulaire Inscription / Connexion (si non connecté) -->
             <div id="account-view-auth">
-                <div id="account-auth-notice" style="background:rgba(0,112,243,0.08); border:1px solid rgba(0,112,243,0.25); border-radius:12px; padding:12px 14px; margin-bottom:18px;">
-                    <p id="account-auth-notice-text" style="font-size:0.82rem; color:#e0e8ff; line-height:1.45;">
-                        🎁 <strong>Abonnement BOKK TV (3 000 F / mois)</strong> : 1 compte est réservé à 1 seul écran à la fois. Entrez votre prénom pour obtenir votre ID ou payez par Wave pour activer votre accès.
+                <div id="account-auth-notice" style="background:rgba(0,112,243,0.08); border:1px solid rgba(0,112,243,0.25); border-radius:12px; padding:10px 14px; margin-bottom:14px;">
+                    <p id="account-auth-notice-text" style="font-size:0.82rem; color:#e0e8ff; line-height:1.4;">
+                        🎁 Entrez votre prénom pour obtenir votre ID BOKK TV (1 compte = 1 écran).
                     </p>
                 </div>
 
@@ -545,6 +545,10 @@
                         <span>Obtenir mon ID BOKK</span>
                         <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
                     </button>
+                    <!-- Bouton paiement Wave direct sans message -->
+                    <a href="https://pay.wave.com/m/M_sn_cop5B9UJYF8P/c/sn/?amount=3000" target="_blank" style="margin-top:10px; width:100%; height:40px; font-size:0.85rem; font-weight:700; border-radius:10px; background:linear-gradient(135deg, #0070f3 0%, #00d2ff 100%); display:flex; align-items:center; justify-content:center; gap:6px; color:#fff; text-decoration:none; box-sizing:border-box;">
+                        🌊 Payer avec Wave (3 000 F)
+                    </a>
                     <div style="text-align:center; margin-top:14px;">
                         <button id="btn-switch-to-login" style="background:none; border:none; color:var(--brand); font-size:0.8rem; cursor:pointer; text-decoration:underline;">Vous avez déjà un ID ? Connectez-vous ici</button>
                     </div>

@@ -32,6 +32,7 @@ export function AccountModal({
   const [phone, setPhone] = useState('');
   const [prenom, setPrenom] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showProlongInfo, setShowProlongInfo] = useState(false);
 
   const deviceName = StorageService.getDeviceName();
 
@@ -156,20 +157,31 @@ export function AccountModal({
                 </Text>
               </View>
 
-              {/* Boîte Paiement Wave & Tarif */}
-              <View style={styles.paymentBox}>
-                <View style={styles.paymentHeader}>
-                  <Ionicons name="card-outline" size={16} color="#00d2ff" />
-                  <Text style={styles.paymentTitle}>Abonnement : 3 000 F CFA / mois</Text>
+              {/* Section Prolonger / Renouveler la date d'expiration */}
+              {(daysRemaining <= 0 || showProlongInfo) ? (
+                <View style={styles.paymentBox}>
+                  <View style={styles.paymentHeader}>
+                    <Ionicons name="time-outline" size={16} color="#00d2ff" />
+                    <Text style={styles.paymentTitle}>Prolonger l'abonnement (3 000 F / mois)</Text>
+                  </View>
+                  <Text style={styles.paymentDesc}>
+                    Veuillez Payer TerangaJob 3.000F avec Wave en cliquant sur le lien ci-dessous. Ajoutez cet expéditeur à vos contacts pour rendre le lien cliquable. Après paiement, veuillez patienter quelques instants (2h max) pour l'activation.
+                  </Text>
+                  <TouchableOpacity style={styles.waveBtn} onPress={handleWavePay} activeOpacity={0.85}>
+                    <Ionicons name="card-outline" size={16} color="#fff" />
+                    <Text style={styles.waveBtnText}>Payer 3 000 F avec Wave</Text>
+                  </TouchableOpacity>
                 </View>
-                <Text style={styles.paymentDesc}>
-                  Paiement sécurisé via Wave (TerangaJob). Ajoutez cet expéditeur à vos contacts pour rendre le lien cliquable. Après paiement, compte activé sous quelques instants (2h max).
-                </Text>
-                <TouchableOpacity style={styles.waveBtn} onPress={handleWavePay} activeOpacity={0.85}>
-                  <Ionicons name="water-outline" size={16} color="#fff" />
-                  <Text style={styles.waveBtnText}>Payer 3 000 F avec Wave</Text>
+              ) : (
+                <TouchableOpacity
+                  style={[styles.waveBtn, { marginBottom: 12 }]}
+                  onPress={() => setShowProlongInfo(true)}
+                  activeOpacity={0.85}
+                >
+                  <Ionicons name="calendar-outline" size={16} color="#fff" />
+                  <Text style={styles.waveBtnText}>Prolonger la date d'expiration (Wave)</Text>
                 </TouchableOpacity>
-              </View>
+              )}
 
               <TouchableOpacity style={styles.whatsappBtn} onPress={handleWhatsApp} activeOpacity={0.85}>
                 <Ionicons name="logo-whatsapp" size={18} color="#25d366" />
@@ -233,27 +245,16 @@ export function AccountModal({
                     </>
                   )}
                 </TouchableOpacity>
-              </View>
 
-              {/* Boîte Paiement Wave & Support */}
-              <View style={styles.paymentBox}>
-                <View style={styles.paymentHeader}>
-                  <Ionicons name="card-outline" size={16} color="#00d2ff" />
-                  <Text style={styles.paymentTitle}>Tarif : 3 000 F CFA / mois (1 Écran)</Text>
-                </View>
-                <Text style={styles.paymentDesc}>
-                  Veuillez payer TerangaJob 3.000F avec Wave en cliquant ci-dessous. Ajoutez cet expéditeur à vos contacts pour rendre le lien cliquable. Après paiement, patientez quelques instants à 2 heures max.
-                </Text>
-                <View style={{ flexDirection: 'row', gap: 8, marginTop: 4 }}>
-                  <TouchableOpacity style={[styles.waveBtn, { flex: 1 }]} onPress={handleWavePay} activeOpacity={0.85}>
-                    <Ionicons name="water-outline" size={16} color="#fff" />
-                    <Text style={styles.waveBtnText}>Payer avec Wave</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={[styles.whatsappBtn, { flex: 1, marginBottom: 0 }]} onPress={handleWhatsApp} activeOpacity={0.85}>
-                    <Ionicons name="logo-whatsapp" size={16} color="#25d366" />
-                    <Text style={styles.whatsappText}>WhatsApp</Text>
-                  </TouchableOpacity>
-                </View>
+                {/* Bouton de paiement Wave direct sans texte inutile */}
+                <TouchableOpacity
+                  style={[styles.waveBtn, { marginTop: 10 }]}
+                  onPress={handleWavePay}
+                  activeOpacity={0.85}
+                >
+                  <Ionicons name="card-outline" size={16} color="#fff" />
+                  <Text style={styles.waveBtnText}>Payer avec Wave (3 000 F)</Text>
+                </TouchableOpacity>
               </View>
 
               <Text style={styles.helperFooter}>
