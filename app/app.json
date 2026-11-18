@@ -13,6 +13,7 @@
     },
     "android": {
       "usesCleartextTraffic": true,
+      "jsEngine": "hermes",
       "adaptiveIcon": {
         "backgroundColor": "#0d1117",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -20,7 +21,7 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.asham_loud.bokktv.tv",
+      "package": "com.ashamloud.bokktv",
       "permissions": [
         "INTERNET",
         "ACCESS_NETWORK_STATE"

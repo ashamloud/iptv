@@ -856,28 +856,98 @@
             });
         }
 
-        // ── Rendu Toutes les Chaînes (avec pagination de recherche) ──
+        // ── Rendu Toutes les Chaînes (avec filtres par source M3U + catégorie) ──
         function renderAllChannels() {
             const container = document.getElementById('all-channels-list');
             const searchInput = document.getElementById('search-all-input');
-            const allChannels = window.channels || [];
 
-            function renderFiltered(query = '') {
-                container.innerHTML = '';
-                const q = query.toLowerCase().trim();
+            // Injecter les filtres si pas déjà présents
+            if (!document.getElementById('ch-filter-bar')) {
+                const filterBar = document.createElement('div');
+                filterBar.id = 'ch-filter-bar';
+                filterBar.style.cssText = 'display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px; align-items:center;';
+                filterBar.innerHTML = `
+                    <select id="ch-filter-source" style="background:var(--bg-card); color:var(--text); border:1px solid var(--border); border-radius:8px; padding:6px 10px; font-size:0.82rem; cursor:pointer;">
+                        <option value="">🔗 Toutes les sources</option>
+                        <option value="__static__">📌 Chaînes statiques</option>
+                    </select>
+                    <select id="ch-filter-cat" style="background:var(--bg-card); color:var(--text); border:1px solid var(--border); border-radius:8px; padding:6px 10px; font-size:0.82rem; cursor:pointer;">
+                        <option value="">📂 Toutes les catégories</option>
+                        <option value="sport">⚽ Sport</option>
+                        <option value="cinema">🎬 Cinéma/Séries</option>
+                        <option value="senegal">🇸🇳 Sénégal</option>
+                        <option value="francophone">🇫🇷 Francophone</option>
+                        <option value="documentaire">🎙 Documentaire</option>
+                        <option value="jeunesse">👶 Jeunesse</option>
+                        <option value="music">🎵 Musique</option>
+                        <option value="uk">🇬🇧 UK/USA</option>
+                        <option value="tous">🌍 Général</option>
+                    </select>
+                    <span id="ch-filter-count" style="margin-left:auto; font-size:0.8rem; color:var(--text-muted);"></span>
+                `;
+                container.parentElement.insertBefore(filterBar, container);
+
+                // Peupler le select source avec les playlists M3U
+                const srcSelect = filterBar.querySelector('#ch-filter-source');
+                m3uPlaylistsList.forEach(p => {
+                    const opt = document.createElement('option');
+                    opt.value = p.id;
+                    opt.textContent = `🔗 ${p.name} (${(p.channelCount || 0).toLocaleString('fr-FR')} ch.)`;
+                    srcSelect.appendChild(opt);
+                });
+
+                srcSelect.onchange = applyFilters;
+                filterBar.querySelector('#ch-filter-cat').onchange = applyFilters;
+            }
+
+            function getM3uSourcePrefix(ch) {
+                // Les chaînes M3U ont un id de type "m3u_TIMESTAMP_N" ou "m3u_<playlistId>_N"
+                const idStr = String(ch.id || '');
+                if (idStr.startsWith('m3u_')) {
+                    // Trouver quelle playlist
+                    for (const p of m3uPlaylistsList) {
+                        if (ch.sourcePlaylistId === p.id || idStr.includes(p.id)) return p.id;
+                    }
+                    return '__m3u__';
+                }
+                return '__static__';
+            }
+
+            function applyFilters() {
+                const q = (searchInput ? searchInput.value : '').toLowerCase().trim();
+                const srcFilter = document.getElementById('ch-filter-source')?.value || '';
+                const catFilter = document.getElementById('ch-filter-cat')?.value || '';
+
+                const allChannels = window.channels || [];
                 const filtered = allChannels.filter(c => {
-                    if (!q) return true;
-                    return String(c.id).includes(q) || (c.name || '').toLowerCase().includes(q) || (c.group || '').toLowerCase().includes(q);
-                }).slice(0, 150);
+                    if (q && !String(c.id).includes(q) && !(c.name || '').toLowerCase().includes(q) && !(c.group || '').toLowerCase().includes(q)) return false;
+                    if (srcFilter) {
+                        const src = getM3uSourcePrefix(c);
+                        if (srcFilter === '__static__' && src !== '__static__') return false;
+                        if (srcFilter !== '__static__' && src !== srcFilter && !String(c.id || '').includes(srcFilter)) return false;
+                    }
+                    if (catFilter && (c.category || 'tous') !== catFilter) return false;
+                    return true;
+                });
 
+                const countEl = document.getElementById('ch-filter-count');
+                if (countEl) countEl.textContent = `${filtered.length.toLocaleString('fr-FR')} chaîne(s)`;
+
+                container.innerHTML = '';
                 if (filtered.length === 0) {
-                    container.innerHTML = '<p style="text-align:center; color:var(--text-muted); padding:30px;">Aucune chaîne trouvée.</p>';
+                    container.innerHTML = '<p style="text-align:center; color:var(--text-muted); padding:30px;">Aucune chaîne trouvée pour ces filtres.</p>';
                     return;
                 }
 
-                filtered.forEach(ch => {
+                filtered.slice(0, 200).forEach(ch => {
                     const idStr = String(ch.id);
                     const isDisabled = disabledIdsSet.has(idStr);
+                    const srcLabel = (() => {
+                        const src = getM3uSourcePrefix(ch);
+                        if (src === '__static__') return '<span style="font-size:0.65rem; background:rgba(16,185,129,0.15); color:#10b981; padding:2px 6px; border-radius:6px;">📌 Statique</span>';
+                        const pl = m3uPlaylistsList.find(p => src === p.id || String(ch.id).includes(p.id));
+                        return `<span style="font-size:0.65rem; background:rgba(0,112,243,0.12); color:#60a5fa; padding:2px 6px; border-radius:6px; max-width:140px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; display:inline-block;" title="${pl ? pl.url || pl.name : 'M3U'}">🔗 ${pl ? pl.name : 'M3U'}</span>`;
+                    })();
 
                     const row = document.createElement('div');
                     row.className = 'channel-row' + (isDisabled ? ' is-disabled' : '');
@@ -885,7 +955,7 @@
                         <div class="ch-info">
                             <span class="ch-id">#${idStr}</span>
                             <div>
-                                <div class="ch-name">${ch.name}</div>
+                                <div class="ch-name" style="display:flex; align-items:center; gap:6px;">${ch.name} ${srcLabel}</div>
                                 <div class="ch-group">${ch.group || ch.category || 'Direct'}</div>
                             </div>
                         </div>
@@ -906,8 +976,8 @@
                 });
             }
 
-            renderFiltered();
-            searchInput.oninput = (e) => renderFiltered(e.target.value);
+            applyFilters();
+            if (searchInput) searchInput.oninput = applyFilters;
         }
 
         // ── Rendu Chaînes Masquées ──
@@ -1236,7 +1306,14 @@
                             </div>
                             <div class="m3u-card-meta">
                                 <span>Ajoutée le : <strong>${p.createdAt || 'Récemment'}</strong></span>
-                                ${p.url ? `<span style="max-width:350px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">Source : <code style="color:#60a5fa;">${p.url}</code></span>` : '<span>Source : Import texte direct</span>'}
+                                ${p.url 
+                                    ? `<div style="display:flex; align-items:center; gap:6px; margin-top:4px; flex-wrap:wrap;">
+                                        <span style="font-size:0.75rem; color:var(--text-muted);">🔗 Source :</span>
+                                        <code style="color:#60a5fa; font-size:0.72rem; background:rgba(96,165,250,0.08); padding:3px 8px; border-radius:6px; max-width:320px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; display:inline-block;" title="${p.url}">${p.url}</code>
+                                        <button onclick="navigator.clipboard.writeText('${p.url.replace(/'/g,"\\'")}'); showToast('🔗 Lien copié !')" style="background:transparent; border:1px solid var(--border); color:var(--text-muted); font-size:0.68rem; padding:2px 7px; border-radius:5px; cursor:pointer;">📋 Copier</button>
+                                       </div>`
+                                    : '<span style="font-size:0.75rem; color:var(--text-muted);">📄 Source : Import texte direct</span>'
+                                }
                             </div>
                         </div>
                         <div style="display:flex; gap:8px; align-items:center;">
