@@ -616,12 +616,95 @@
         return `${proxyBase}?url=${encodeURIComponent(rawUrl)}${extraParams}`;
     }
 
+    // ── Historique des Dernières Chaînes Regardées ──
+    function addToLastWatched(channelId) {
+        if (!channelId) return;
+        try {
+            const idStr = String(channelId);
+            let list = JSON.parse(localStorage.getItem('bokk_last_watched') || '[]');
+            list = list.filter(id => String(id) !== idStr);
+            list.unshift(idStr);
+            if (list.length > 10) list = list.slice(0, 10);
+            localStorage.setItem('bokk_last_watched', JSON.stringify(list));
+            renderRecentChannels();
+        } catch(e) {}
+    }
+
+    function renderRecentChannels() {
+        const section = document.getElementById('recent-channels-section');
+        const row = document.getElementById('recent-channels-row');
+        if (!section || !row) return;
+        try {
+            const list = JSON.parse(localStorage.getItem('bokk_last_watched') || '[]');
+            if (!list || list.length === 0) {
+                section.style.display = 'none';
+                return;
+            }
+            const recentChs = list.map(id => channels.find(c => String(c.id) === String(id))).filter(Boolean);
+            if (recentChs.length === 0) {
+                section.style.display = 'none';
+                return;
+            }
+            section.style.display = 'block';
+            row.innerHTML = recentChs.slice(0, 8).map(ch => {
+                const idx = channels.indexOf(ch);
+                const logo = ch.logo || 'favicon.png';
+                return `
+                <div class="recent-ch-card" data-index="${idx}" style="flex-shrink:0; width:100px; background:#10131b; border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:8px 6px; text-align:center; cursor:pointer; transition:transform 0.15s, border-color 0.15s;">
+                    <img src="${logo}" alt="" onerror="this.src='favicon.png'" style="width:34px; height:34px; object-fit:contain; border-radius:6px; margin:0 auto 4px; display:block;">
+                    <div style="font-size:0.7rem; font-weight:700; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${ch.name}</div>
+                </div>`;
+            }).join('');
+
+            row.querySelectorAll('.recent-ch-card').forEach(card => {
+                card.onclick = () => {
+                    const idx = parseInt(card.dataset.index, 10);
+                    if (!isNaN(idx)) loadChannel(idx);
+                };
+            });
+        } catch(e) {
+            section.style.display = 'none';
+        }
+    }
+
+    // ── Bannière d'alerte d'expiration (non-bloquante) ──
+    function checkExpiryBanner() {
+        if (sessionStorage.getItem('bokk_expiry_banner_closed') === 'true') return;
+        if (!window.BokkFirebase || typeof window.BokkFirebase.getCurrentSubscriber !== 'function') return;
+        const sub = window.BokkFirebase.getCurrentSubscriber();
+        if (!sub || !sub.expiresAt) return;
+        const exp = new Date(sub.expiresAt).getTime();
+        const now = Date.now();
+        const daysLeft = Math.ceil((exp - now) / (1000 * 60 * 60 * 24));
+        
+        const banner = document.getElementById('bokk-expiry-banner');
+        const bannerText = document.getElementById('bokk-expiry-banner-text');
+        const closeBtn = document.getElementById('btn-close-expiry-banner');
+        if (!banner || !bannerText) return;
+
+        if (daysLeft > 0 && daysLeft <= 3) {
+            bannerText.innerHTML = `⚠️ Votre abonnement BOKK TV expire dans <strong>${daysLeft} jour${daysLeft > 1 ? 's' : ''}</strong>.`;
+            banner.style.display = 'flex';
+        } else if (daysLeft <= 0) {
+            bannerText.innerHTML = `⚠️ Votre abonnement BOKK TV est <strong>expiré</strong>.`;
+            banner.style.display = 'flex';
+        }
+
+        if (closeBtn) {
+            closeBtn.onclick = () => {
+                banner.style.display = 'none';
+                sessionStorage.setItem('bokk_expiry_banner_closed', 'true');
+            };
+        }
+    }
+
     // ── Chargement d'une chaîne (Support Dual Engine MPEG-TS & HLS) ──
     function loadChannel(index, useFallback = false, retryStage = 0) {
         if (index < 0 || index >= channels.length) return;
         const channel = channels[index];
         currentIndex = index;
         isTryingFallback = useFallback;
+        addToLastWatched(channel.id);
 
         // Révéler le lecteur vidéo dès qu'une chaîne est sélectionnée
         revealPlayer();
@@ -1824,6 +1907,8 @@
         userManuallySelectedCategory = true;
         renderCategories();
         renderChannelList(true);
+        renderRecentChannels();
+        checkExpiryBanner();
         updateM3uModalStatus();
         showToast(`${newChannels.length.toLocaleString('fr-FR')} chaîne(s) importée(s) avec succès`);
         closeM3uModal();
@@ -3875,6 +3960,8 @@
 
                 if (profilePrenom) profilePrenom.textContent = sub.prenom || 'Abonne';
                 if (profileId) profileId.textContent = sub.id;
+                const profileAvatar = document.getElementById('sub-profile-avatar');
+                if (profileAvatar) profileAvatar.textContent = ((sub.prenom || 'A')[0] || 'A').toUpperCase();
 
                 let daysText = '30 jours restants';
                 if (sub.expiresAt) {
@@ -4126,6 +4213,8 @@ function init() {
         populateBouquetFilter();
         renderCategories();
         renderChannelList(true);
+        renderRecentChannels();
+        checkExpiryBanner();
 
         // ── Synchronisation des chaînes M3U ajoutées par l'administrateur ──
         if (window.BokkFirebase && typeof window.BokkFirebase.listenActiveM3uChannels === 'function') {

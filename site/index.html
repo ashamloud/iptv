@@ -84,6 +84,18 @@
     </div>
 </header>
 
+<!-- Bannière d'expiration proactive (discrète et non-bloquante) -->
+<div id="bokk-expiry-banner" style="display:none; background:#12141c; border-bottom:1px solid rgba(229,9,20,0.3); padding:8px 16px; align-items:center; justify-content:space-between; font-size:0.8rem; z-index:90;">
+    <div style="display:flex; align-items:center; gap:8px;">
+        <span style="color:#e50914; font-size:1rem;">⚠️</span>
+        <span id="bokk-expiry-banner-text" style="color:#f1f5f9;">Votre abonnement expire bientôt.</span>
+    </div>
+    <div style="display:flex; align-items:center; gap:10px;">
+        <a href="https://pay.wave.com/m/M_sn_cop5B9UJYF8P/c/sn/?amount=3000" target="_blank" style="background:#e50914; color:#fff; padding:4px 10px; border-radius:6px; text-decoration:none; font-weight:700; font-size:0.75rem;">Renouveler (Wave)</a>
+        <button id="btn-close-expiry-banner" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:1.1rem; line-height:1; padding:0 4px;">✕</button>
+    </div>
+</div>
+
 <!-- ══════════════════════════════════════════════════════
      LECTEUR VIDÉO (MASQUÉ PAR DÉFAUT, RÉVÉLÉ AU CLIC)
 ══════════════════════════════════════════════════════ -->
@@ -420,6 +432,15 @@
             </div>
         </div>
     </div>
+
+    <!-- Section Vues Récemment (Minimaliste) -->
+    <div id="recent-channels-section" style="display:none; padding:10px 16px; margin:0 14px 12px; background:rgba(255,255,255,0.02); border-radius:12px; border:1px solid rgba(255,255,255,0.06);">
+        <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.8px; margin-bottom:8px; display:flex; align-items:center; gap:6px;">
+            <span style="color:#e50914;">▶</span> Vues récemment
+        </div>
+        <div id="recent-channels-row" style="display:flex; gap:10px; overflow-x:auto; padding-bottom:6px; scrollbar-width:thin;"></div>
+    </div>
+
     <div class="channel-list-scroll" id="channel-list"></div>
 </main>
 
@@ -566,49 +587,56 @@
 
             <!-- Vue 2: Profil & Carte Abonné (si connecté) -->
             <div id="account-view-profile" style="display:none;">
-                <div class="subscriber-vip-card" style="background:linear-gradient(135deg, #131722 0%, #1a2035 100%); border:1px solid rgba(0,112,243,0.3); border-radius:16px; padding:20px; box-shadow:0 8px 24px rgba(0,0,0,0.4); margin-bottom:18px; position:relative; overflow:hidden;">
-                    <div style="position:absolute; top:-20px; right:-20px; width:90px; height:90px; background:radial-gradient(circle, rgba(0,112,243,0.3) 0%, transparent 70%); border-radius:50%;"></div>
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-                        <span style="font-size:0.7rem; font-weight:800; letter-spacing:1.5px; text-transform:uppercase; color:var(--brand);">PASS MEMBRE BOKK TV</span>
-                        <span id="sub-badge-status" style="font-size:0.7rem; font-weight:700; padding:3px 10px; border-radius:20px; background:rgba(16,185,129,0.2); color:#10b981; border:1px solid rgba(16,185,129,0.3);">● ACTIF</span>
+                <div class="subscriber-vip-card" style="background:linear-gradient(135deg, #10121a 0%, #161a26 100%); border:1px solid rgba(255,255,255,0.08); border-radius:16px; padding:20px; box-shadow:0 8px 24px rgba(0,0,0,0.5); margin-bottom:16px; position:relative; overflow:hidden;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+                        <span style="font-size:0.7rem; font-weight:800; letter-spacing:1.5px; text-transform:uppercase; color:#e50914;">MEMBRE BOKK TV</span>
+                        <span id="sub-badge-status" style="font-size:0.7rem; font-weight:700; padding:3px 10px; border-radius:20px; background:rgba(16,185,129,0.15); color:#10b981; border:1px solid rgba(16,185,129,0.3);">● ACTIF</span>
                     </div>
-                    <div style="margin-bottom:14px;">
-                        <span style="font-size:0.75rem; color:var(--text-muted); display:block;">TITULAIRE</span>
-                        <strong id="sub-profile-prenom" style="font-size:1.15rem; color:#fff;">Moussa</strong>
-                    </div>
-                    <div style="display:flex; justify-content:space-between; align-items:flex-end;">
+                    <div style="display:flex; align-items:center; gap:12px; margin-bottom:14px;">
+                        <div id="sub-profile-avatar" style="width:46px; height:46px; border-radius:50%; background:#e50914; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:1.2rem; color:#fff; flex-shrink:0;">A</div>
                         <div>
-                            <span style="font-size:0.75rem; color:var(--text-muted); display:block;">VOTRE ID UNIQUE</span>
-                            <span id="sub-profile-id" style="font-size:1.4rem; font-weight:900; letter-spacing:2px; color:#fff; font-family:monospace;">BK-0000</span>
+                            <span style="font-size:0.7rem; color:var(--text-muted); display:block; text-transform:uppercase;">Titulaire</span>
+                            <strong id="sub-profile-prenom" style="font-size:1.15rem; color:#fff;">Abonné</strong>
                         </div>
-                        <button id="btn-copy-sub-id" style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); color:#fff; border-radius:8px; padding:6px 12px; font-size:0.75rem; cursor:pointer; display:flex; align-items:center; gap:5px;">
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:flex-end; border-top:1px solid rgba(255,255,255,0.06); padding-top:12px;">
+                        <div>
+                            <span style="font-size:0.7rem; color:var(--text-muted); display:block;">IDENTIFIANT</span>
+                            <span id="sub-profile-id" style="font-size:1.2rem; font-weight:900; letter-spacing:1.5px; color:#fff; font-family:monospace;">BK-0000</span>
+                        </div>
+                        <button id="btn-copy-sub-id" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:#fff; border-radius:8px; padding:6px 12px; font-size:0.75rem; cursor:pointer; display:flex; align-items:center; gap:5px;">
                             📋 Copier
                         </button>
                     </div>
                 </div>
 
                 <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:12px; padding:12px 16px; margin-bottom:14px;">
-                    <div style="display:flex; justify-content:space-between; font-size:0.82rem; margin-bottom:6px;">
+                    <div style="display:flex; justify-content:space-between; font-size:0.82rem;">
                         <span style="color:var(--text-muted);">Période de validité :</span>
                         <strong id="sub-profile-expiry" style="color:#fff;">30 jours restants</strong>
                     </div>
-                    <div style="display:flex; justify-content:space-between; font-size:0.82rem;">
-                        <span style="color:var(--text-muted);">Tarif abonnement :</span>
-                        <span style="color:#00d2ff; font-weight:700;">3 000 F CFA / mois</span>
-                    </div>
                 </div>
 
-                <!-- Boîte Paiement Wave & Activation -->
-                <div style="background:rgba(0,112,243,0.08); border:1px solid rgba(0,112,243,0.3); border-radius:12px; padding:14px; margin-bottom:16px;">
-                    <div style="font-size:0.85rem; font-weight:700; color:#00a8ff; margin-bottom:6px; display:flex; align-items:center; gap:6px;">
-                        <span>🌊</span> Renouvellement / Paiement Wave
+                <!-- Boîte Paiement Wave & 3 Plans -->
+                <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:14px; margin-bottom:16px;">
+                    <div style="font-size:0.82rem; font-weight:700; color:#fff; margin-bottom:8px; display:flex; align-items:center; justify-content:space-between;">
+                        <span>🌊 Renouvellement avec Wave</span>
+                        <span style="font-size:0.7rem; color:var(--text-muted);">Validation rapide</span>
                     </div>
-                    <p style="font-size:0.75rem; color:#cbd5e1; line-height:1.45; margin-bottom:10px;">
-                        Veuillez payer TerangaJob 3.000F avec Wave en cliquant sur le bouton ci-dessous. Après paiement, patientez quelques instants (2h maximum) pour l'activation.
-                    </p>
-                    <a href="https://pay.wave.com/m/M_sn_cop5B9UJYF8P/c/sn/?amount=3000" target="_blank" class="btn-primary" style="width:100%; height:38px; font-size:0.82rem; font-weight:700; border-radius:8px; display:flex; align-items:center; justify-content:center; gap:6px; text-decoration:none; background:linear-gradient(135deg, #0070f3 0%, #00d2ff 100%);">
-                        <span>🌊 Payer 3 000 F avec Wave</span>
-                    </a>
+                    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-bottom:8px;">
+                        <a href="https://pay.wave.com/m/M_sn_cop5B9UJYF8P/c/sn/?amount=3000" target="_blank" style="display:flex; flex-direction:column; align-items:center; justify-content:center; background:#12141c; border:1px solid rgba(229,9,20,0.4); border-radius:10px; padding:8px 4px; text-decoration:none;">
+                            <span style="font-size:0.68rem; color:var(--text-muted); font-weight:600;">1 Mois</span>
+                            <strong style="font-size:0.85rem; color:#fff; margin-top:2px;">3 000 F</strong>
+                        </a>
+                        <a href="https://pay.wave.com/m/M_sn_cop5B9UJYF8P/c/sn/?amount=7500" target="_blank" style="display:flex; flex-direction:column; align-items:center; justify-content:center; background:#12141c; border:1px solid rgba(0,112,243,0.4); border-radius:10px; padding:8px 4px; text-decoration:none; position:relative;">
+                            <span style="font-size:0.68rem; color:var(--text-muted); font-weight:600;">3 Mois</span>
+                            <strong style="font-size:0.85rem; color:#38bdf8; margin-top:2px;">7 500 F</strong>
+                        </a>
+                        <a href="https://pay.wave.com/m/M_sn_cop5B9UJYF8P/c/sn/?amount=25000" target="_blank" style="display:flex; flex-direction:column; align-items:center; justify-content:center; background:#12141c; border:1px solid rgba(245,158,11,0.4); border-radius:10px; padding:8px 4px; text-decoration:none; position:relative;">
+                            <span style="font-size:0.68rem; color:var(--text-muted); font-weight:600;">12 Mois</span>
+                            <strong style="font-size:0.85rem; color:#f59e0b; margin-top:2px;">25 000 F</strong>
+                        </a>
+                    </div>
                 </div>
 
                 <div style="display:flex; gap:10px;">
