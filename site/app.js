@@ -292,6 +292,12 @@
 
         isStreamPreviewLocked = true;
 
+        const sub = window.BokkFirebase && typeof window.BokkFirebase.getCurrentSubscriber === 'function'
+            ? window.BokkFirebase.getCurrentSubscriber()
+            : null;
+
+        const isRegisteredButExpired = sub && sub.id && sub.expiresAt && (new Date(sub.expiresAt).getTime() < Date.now());
+
         const accountModal = document.getElementById('account-modal');
         const modalTitle = document.getElementById('account-modal-title');
         const modalSub = document.getElementById('account-modal-sub');
@@ -302,26 +308,37 @@
         const tabRegister = document.getElementById('auth-tab-register');
         const tabLogin = document.getElementById('auth-tab-login');
 
-        if (viewAuth) viewAuth.style.display = 'block';
-        if (viewProfile) viewProfile.style.display = 'none';
-        if (tabRegister) tabRegister.style.display = 'block';
-        if (tabLogin) tabLogin.style.display = 'none';
+        if (isRegisteredButExpired) {
+            // L'utilisateur est DÉJÀ CONNECTÉ, mais son abonnement est expiré.
+            // On affiche son profil avec les 3 options de renouvellement Wave
+            if (viewAuth) viewAuth.style.display = 'none';
+            if (viewProfile) viewProfile.style.display = 'block';
+            if (modalTitle) {
+                modalTitle.innerHTML = '<span style="color:var(--live-red);">⏰</span> Abonnement expiré';
+            }
+            if (modalSub) {
+                modalSub.textContent = 'Renouvelez votre compte pour continuer à regarder';
+            }
+        } else {
+            // L'utilisateur N'EST PAS ENCORE CONNECTÉ.
+            // Inscription 100% GRATUITE sans aucun message ni bouton Wave !
+            if (viewAuth) viewAuth.style.display = 'block';
+            if (viewProfile) viewProfile.style.display = 'none';
+            if (tabRegister) tabRegister.style.display = 'block';
+            if (tabLogin) tabLogin.style.display = 'none';
 
-        if (modalTitle) {
-            modalTitle.innerHTML = '<span style="color:var(--live-red);">🔒</span> Durée de visionnage expirée';
-        }
-        if (modalSub) {
-            modalSub.textContent = 'Aperçu gratuit terminé';
-        }
-        if (noticeBox && noticeText) {
-            noticeBox.style.background = 'rgba(230, 57, 70, 0.12)';
-            noticeBox.style.borderColor = 'rgba(230, 57, 70, 0.35)';
-            noticeText.innerHTML = '⏱️ <strong>Durée de visionnage expirée</strong><br><br>' +
-                'Veuillez payer TerangaJob 3.000F avec Wave en cliquant sur le bouton ci-dessous. Après paiement, veuillez patienter quelques instants (2h maximum) pour l\'activation.<br><br>' +
-                '<div style="display:flex; gap:8px; margin-top:6px; flex-wrap:wrap;">' +
-                '<a href="https://pay.wave.com/m/M_sn_cop5B9UJYF8P/c/sn/?amount=3000" target="_blank" class="btn-primary" style="flex:1; height:38px; display:inline-flex; align-items:center; justify-content:center; gap:6px; font-size:0.85rem; font-weight:700; border-radius:8px; text-decoration:none; background:linear-gradient(135deg, #0070f3 0%, #00d2ff 100%);">🌊 Payer 3 000 F avec Wave</a>' +
-                '<a href="https://wa.me/221783055520?text=' + encodeURIComponent('Bonjour BOKK TV, je souhaite activer mon compte après paiement.') + '" target="_blank" class="btn-secondary" style="height:38px; display:inline-flex; align-items:center; justify-content:center; gap:6px; padding:0 14px; font-size:0.82rem; border-radius:8px; text-decoration:none; color:#25d366; border-color:rgba(37,211,102,0.35);">💬 WhatsApp</a>' +
-                '</div>';
+            if (modalTitle) {
+                modalTitle.innerHTML = '<span style="color:var(--brand);">🎁</span> Créez votre compte gratuit';
+            }
+            if (modalSub) {
+                modalSub.textContent = '30 jours offerts pour débloquer toutes les chaînes';
+            }
+            if (noticeBox && noticeText) {
+                noticeBox.style.background = 'rgba(0, 112, 243, 0.08)';
+                noticeBox.style.borderColor = 'rgba(0, 112, 243, 0.25)';
+                noticeText.innerHTML = '🎁 <strong>Inscription 100% Gratuite (30 jours offerts)</strong><br>' +
+                    'Inscrivez-vous simplement avec votre prénom ci-dessous pour débloquer immédiatement toutes les chaînes en illimité et sans interruption.';
+            }
         }
 
         if (accountModal) {

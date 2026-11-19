@@ -323,26 +323,39 @@ export default function NativeBokkApp() {
   // Déclenchement de la restriction / expiration de visionnage
   const handlePreviewLock = useCallback(() => {
     setIsAccountModalOpen(true);
-    Alert.alert(
-      'Durée de visionnage expirée',
-      'Votre période de visionnage est expirée. Pour continuer à profiter de toutes vos chaînes en direct et en illimité, renouvelez votre abonnement (3 000 F / mois) via Wave. Après paiement, patientez quelques instants (2h max) pour l\'activation de votre compte.',
-      [
-        {
-          text: 'Payer avec Wave (3 000 F)',
-          onPress: () => {
-            Linking.openURL('https://pay.wave.com/m/M_sn_cop5B9UJYF8P/c/sn/?amount=3000').catch(() => {});
-          }
-        },
-        {
-          text: 'Support WhatsApp',
-          onPress: () => {
-            Linking.openURL('https://wa.me/221783055520?text=' + encodeURIComponent('Bonjour BOKK TV, je souhaite activer mon compte après paiement.')).catch(() => {});
-          }
-        },
-        { text: 'Fermer', style: 'cancel' }
-      ]
-    );
-  }, []);
+    if (!subscriber) {
+      // Utilisateur non connecté : invitation à s'inscrire GRATUITEMENT (zéro bouton Wave)
+      Alert.alert(
+        'Créez votre compte gratuit',
+        'Inscrivez-vous gratuitement avec votre numéro de téléphone pour profiter de 30 jours offerts et débloquer toutes vos chaînes en direct.',
+        [
+          { text: 'Créer mon compte (Gratuit)', onPress: () => setIsAccountModalOpen(true) },
+          { text: 'Fermer', style: 'cancel' }
+        ]
+      );
+    } else {
+      // Utilisateur DÉJÀ connecté mais expiré : proposition de renouvellement Wave
+      Alert.alert(
+        'Abonnement expiré',
+        `Votre période d'abonnement pour le compte ${subscriber.phone || subscriber.id} est terminée. Renouvelez votre accès (3 000 F / mois) via Wave pour continuer à regarder vos chaînes.`,
+        [
+          {
+            text: 'Renouveler avec Wave (3 000 F)',
+            onPress: () => {
+              Linking.openURL('https://pay.wave.com/m/M_sn_cop5B9UJYF8P/c/sn/?amount=3000').catch(() => {});
+            }
+          },
+          {
+            text: 'Support WhatsApp',
+            onPress: () => {
+              Linking.openURL('https://wa.me/221783055520?text=' + encodeURIComponent(`Bonjour BOKK TV, je souhaite renouveler mon compte ${subscriber.phone || subscriber.id} après paiement.`)).catch(() => {});
+            }
+          },
+          { text: 'Fermer', style: 'cancel' }
+        ]
+      );
+    }
+  }, [subscriber]);
 
   // Navigation via la barre flottante du bas
   const handleNavTabPress = (tab: 'home' | 'tv' | 'sport' | 'favoris') => {
