@@ -278,6 +278,73 @@
         }
         .m3u-sample-row:last-child { border-bottom: none; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* ── Analytics Block ── */
+        #analytics-block {
+            margin-bottom: 20px;
+        }
+        .analytics-title {
+            font-family: 'Outfit', sans-serif; font-size: 0.8rem; font-weight: 800;
+            color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em;
+            margin-bottom: 10px;
+        }
+        .analytics-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 10px; margin-bottom: 14px;
+        }
+        .analytics-card {
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: 12px; padding: 14px;
+            display: flex; flex-direction: column; gap: 4px;
+        }
+        .analytics-card .a-val {
+            font-family: 'Outfit', sans-serif; font-size: 1.5rem; font-weight: 900;
+        }
+        .analytics-card .a-lbl {
+            font-size: 0.72rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase;
+        }
+        .svg-chart-wrap {
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: 12px; padding: 16px;
+        }
+        .svg-chart-title {
+            font-size: 0.78rem; color: var(--text-muted); font-weight: 700; margin-bottom: 10px;
+        }
+
+        /* ── Sub filter bar ── */
+        .sub-filter-bar {
+            display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; align-items: center;
+        }
+        .sub-filter-btn {
+            padding: 6px 14px; border-radius: 8px; font-size: 0.8rem; font-weight: 700;
+            border: 1px solid var(--border); cursor: pointer; transition: 0.15s;
+            background: rgba(255,255,255,0.05); color: var(--text-muted);
+        }
+        .sub-filter-btn:hover { color: #fff; background: rgba(255,255,255,0.1); }
+        .sub-filter-btn.active {
+            background: var(--brand); color: #fff; border-color: var(--brand);
+        }
+        .btn-export-csv {
+            margin-left: auto; padding: 6px 14px; border-radius: 8px; font-size: 0.8rem;
+            font-weight: 700; border: 1px solid rgba(16,185,129,0.4); cursor: pointer;
+            background: rgba(16,185,129,0.12); color: var(--green); transition: 0.15s;
+        }
+        .btn-export-csv:hover { background: var(--green); color: #fff; }
+
+        /* ── Logs Tab ── */
+        .log-row {
+            display: flex; align-items: center; gap: 12px; padding: 10px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 0.82rem;
+        }
+        .log-row:last-child { border-bottom: none; }
+        .log-time { color: var(--text-muted); white-space: nowrap; min-width: 80px; font-size: 0.72rem; }
+        .log-action {
+            background: rgba(0,112,243,0.12); color: #60a5fa; border: 1px solid rgba(0,112,243,0.25);
+            padding: 2px 8px; border-radius: 6px; font-size: 0.72rem; font-weight: 700;
+            white-space: nowrap;
+        }
+        .log-target { font-weight: 600; color: #fff; flex: 1; }
+        .log-note { color: var(--text-muted); font-size: 0.75rem; }
     </style>
 </head>
 <body>
@@ -331,6 +398,9 @@
             <span>📩 Messages</span>
             <span class="tab-badge" id="badge-msg-count" style="background:#a855f7;">0</span>
         </button>
+        <button class="admin-tab-btn" data-tab="logs">
+            <span>📋 Logs</span>
+        </button>
     </nav>
 
     <!-- ── Contenu ── -->
@@ -363,6 +433,37 @@
             </div>
         </div>
 
+        <!-- Analytics Block -->
+        <div id="analytics-block">
+            <p class="analytics-title">📊 Analytics Abonnés</p>
+            <div class="analytics-grid">
+                <div class="analytics-card">
+                    <span class="a-lbl">Actifs</span>
+                    <span class="a-val" id="ana-active" style="color:var(--green);">0</span>
+                </div>
+                <div class="analytics-card">
+                    <span class="a-lbl">Expirés</span>
+                    <span class="a-val" id="ana-expired" style="color:var(--red);">0</span>
+                </div>
+                <div class="analytics-card">
+                    <span class="a-lbl">Suspendus</span>
+                    <span class="a-val" id="ana-suspended" style="color:var(--gold);">0</span>
+                </div>
+                <div class="analytics-card">
+                    <span class="a-lbl">Nouveaux (7j)</span>
+                    <span class="a-val" id="ana-new-week" style="color:#a855f7;">0</span>
+                </div>
+                <div class="analytics-card">
+                    <span class="a-lbl">Revenus estimés / mois</span>
+                    <span class="a-val" id="ana-revenue" style="color:var(--gold); font-size:1.1rem;">0 F CFA</span>
+                </div>
+            </div>
+            <div class="svg-chart-wrap">
+                <p class="svg-chart-title">📅 Inscriptions sur les 7 derniers jours</p>
+                <div id="ana-chart"></div>
+            </div>
+        </div>
+
         <!-- ONGLET 1 : SIGNALEMENTS HS -->
         <section class="admin-card tab-content" id="tab-reports">
             <div class="admin-card-header">
@@ -371,6 +472,9 @@
                     <p style="font-size:0.78rem; color:var(--text-muted); margin-top:2px;">Flux remontés en temps réel via Firebase</p>
                 </div>
                 <div style="display:flex; gap:8px;">
+                    <button class="btn-action btn-action-secondary" id="btn-scan-reported">
+                        🔍 Scanner toutes les chaînes signalées
+                    </button>
                     <button class="btn-action btn-action-danger" id="btn-disable-all-reports">
                         🚫 Tout Masquer pour le public
                     </button>
@@ -434,6 +538,14 @@
                     <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
                     <input type="text" id="search-subscribers-input" placeholder="Rechercher par ID (ex: BK-4821), prénom ou téléphone...">
                 </div>
+            </div>
+            <div class="sub-filter-bar" id="sub-filter-bar">
+                <button class="sub-filter-btn active" data-filter="all">Tous</button>
+                <button class="sub-filter-btn" data-filter="active">Actifs ✅</button>
+                <button class="sub-filter-btn" data-filter="expired">Expirés ⚠️</button>
+                <button class="sub-filter-btn" data-filter="suspended">Suspendus 🚫</button>
+                <button class="sub-filter-btn" data-filter="live">En direct 📺</button>
+                <button class="btn-export-csv" id="btn-export-subs-csv">📥 Exporter CSV</button>
             </div>
             <div id="subscribers-list" style="max-height:600px; overflow-y:auto;">
                 <p style="text-align:center; color:var(--text-muted); padding:30px;">Chargement des abonnés...</p>
@@ -561,6 +673,23 @@
                 </div>
             </div>
         </section>
+
+        <!-- ONGLET 7 : LOGS D'ACTIVITÉ -->
+        <section class="admin-card tab-content" id="tab-logs" style="display:none;">
+            <div class="admin-card-header" style="flex-wrap:wrap; gap:12px;">
+                <div>
+                    <h3 class="admin-card-title">📋 Logs d'activité Admin</h3>
+                    <p style="font-size:0.78rem; color:var(--text-muted); margin-top:2px;">Historique des 50 dernières actions admin (Firestore collection admin_logs)</p>
+                </div>
+                <div style="display:flex; gap:8px;">
+                    <button class="btn-action btn-action-secondary" id="btn-refresh-logs">🔄 Actualiser</button>
+                    <button class="btn-action btn-action-danger" id="btn-clear-logs">🗑 Effacer les logs</button>
+                </div>
+            </div>
+            <div id="logs-list" style="max-height:600px; overflow-y:auto;">
+                <p style="text-align:center; color:var(--text-muted); padding:30px;">Chargement des logs...</p>
+            </div>
+        </section>
     </main>
 
     <!-- ── Player Modal de Test ── -->
@@ -635,6 +764,9 @@
                 btn.classList.add('active');
                 const target = document.getElementById(`tab-${btn.dataset.tab}`);
                 if (target) target.style.display = 'block';
+                if (btn.dataset.tab === 'logs') {
+                    renderAdminLogs();
+                }
             };
         });
 
@@ -719,24 +851,108 @@
 
             setupM3uHandlers();
             setupMessageHandlers();
+            setupSubFilterHandlers();
+            setupLogsHandlers();
+            setupReportScanHandlers();
         }
-
 
         let subscribersList = [];
         let isPaywallActive = false;
         let m3uPlaylistsList = [];
         let parsedM3uChannelsBuffer = [];
+        let currentSubFilter = 'all';
+        let scanResultsMap = new Map();
+
+        function setupSubFilterHandlers() {
+            document.querySelectorAll('.sub-filter-btn').forEach(btn => {
+                btn.onclick = () => {
+                    document.querySelectorAll('.sub-filter-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    currentSubFilter = btn.dataset.filter || 'all';
+                    const q = document.getElementById('search-subscribers-input')?.value || '';
+                    renderSubscribers(q);
+                };
+            });
+
+            const btnCsv = document.getElementById('btn-export-subs-csv');
+            if (btnCsv) {
+                btnCsv.onclick = exportSubscribersCSV;
+            }
+        }
+
+        function exportSubscribersCSV() {
+            if (!subscribersList || !subscribersList.length) {
+                showToast('Aucun abonné à exporter.');
+                return;
+            }
+            const headers = ['ID', 'Prénom', 'Téléphone', 'Statut', 'Créé le', 'Expire le', 'Appareil'];
+            const now = Date.now();
+            const rows = subscribersList.map(s => {
+                let isExpired = false;
+                if (s.expiresAt) {
+                    const exp = new Date(s.expiresAt).getTime();
+                    if (!isNaN(exp)) isExpired = exp <= now;
+                }
+                let statut = 'Actif';
+                if (s.status === 'suspended') statut = 'Suspendu';
+                else if (isExpired) statut = 'Expiré';
+
+                const created = s.createdAt ? new Date(s.createdAt).toLocaleDateString('fr-FR') : '';
+                const expires = s.expiresAt ? new Date(s.expiresAt).toLocaleDateString('fr-FR') : '';
+
+                return [
+                    s.id || '',
+                    s.prenom || '',
+                    s.phone || '',
+                    statut,
+                    created,
+                    expires,
+                    s.activeDeviceName || ''
+                ];
+            });
+
+            const csvContent = '\uFEFF' + [headers, ...rows]
+                .map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(';'))
+                .join('\r\n');
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `abonnes_bokk_tv_${new Date().toISOString().slice(0, 10)}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showToast('📥 Export CSV téléchargé !');
+        }
 
         function renderSubscribers(query = '') {
             const container = document.getElementById('subscribers-list');
             if (!container) return;
 
             const q = query.toLowerCase().trim();
-            const filtered = subscribersList.filter(s => {
+            const now = Date.now();
+
+            const filtered = subscribersList.filter(sub => {
+                let isExpired = false;
+                if (sub.expiresAt) {
+                    const exp = new Date(sub.expiresAt).getTime();
+                    if (!isNaN(exp)) isExpired = exp <= now;
+                }
+                const isSuspended = sub.status === 'suspended';
+                const isActive = (sub.status === 'active' && !isExpired);
+                const isLive = Boolean(sub.activeSessionId);
+
+                if (currentSubFilter === 'active' && !isActive) return false;
+                if (currentSubFilter === 'expired' && !isExpired) return false;
+                if (currentSubFilter === 'suspended' && !isSuspended) return false;
+                if (currentSubFilter === 'live' && !isLive) return false;
+
                 if (!q) return true;
-                return (s.id || '').toLowerCase().includes(q) ||
-                       (s.prenom || '').toLowerCase().includes(q) ||
-                       (s.phone || '').toLowerCase().includes(q);
+                return (sub.id || '').toLowerCase().includes(q) ||
+                       (sub.prenom || '').toLowerCase().includes(q) ||
+                       (sub.phone || '').toLowerCase().includes(q);
             });
 
             if (filtered.length === 0) {
@@ -753,7 +969,7 @@
 
                 if (sub.expiresAt) {
                     const exp = new Date(sub.expiresAt);
-                    daysLeft = Math.ceil((exp.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+                    daysLeft = Math.ceil((exp.getTime() - now) / (1000 * 60 * 60 * 24));
                     isExpired = daysLeft <= 0;
                     expiryDateStr = exp.toLocaleDateString('fr-FR');
                 }
@@ -781,16 +997,24 @@
                     </div>
                     <div class="ch-actions">
                         ${sub.activeSessionId ? '<button class="btn-icon btn-reset-sub-session" data-subid="' + idStr + '" style="background:rgba(245,158,11,0.15); border:1px solid rgba(245,158,11,0.35); color:#f59e0b; padding:4px 8px; font-size:0.72rem; border-radius:6px; cursor:pointer;" title="Déconnecter la session active">🔄 Libérer Écran</button>' : ''}
-                        <button class="btn-icon btn-icon-enable btn-renew-sub" data-subid="${idStr}" title="Prolonger de 30 jours">➕ +30 Jours</button>
+                        <button class="btn-icon btn-icon-enable btn-renew-sub" data-subid="${idStr}" title="Prolonger l'abonnement">➕ Prolonger</button>
                         <button class="btn-icon btn-icon-disable btn-toggle-sub" data-subid="${idStr}">${isSuspended ? '✅ Débloquer' : '🚫 Suspendre'}</button>
                         <button class="btn-icon btn-del-sub" data-subid="${idStr}" style="background:transparent; color:var(--text-muted);" title="Supprimer">✕</button>
                     </div>
                 `;
 
                 row.querySelector('.btn-renew-sub')?.addEventListener('click', async () => {
-                    const res = await window.BokkFirebase.renewSubscriber(idStr, 30);
+                    const input = prompt(`Nombre de jours de prolongation pour ${sub.prenom || idStr} (${idStr}) :`, '30');
+                    if (input === null) return;
+                    const days = parseInt(input, 10);
+                    if (isNaN(days) || days <= 0) {
+                        showToast('❌ Nombre de jours invalide');
+                        return;
+                    }
+                    const res = await window.BokkFirebase.renewSubscriber(idStr, days);
                     if (res && res.success) {
-                        showToast(`✅ Abonnement de ${sub.prenom} (${idStr}) prolongé de 30 jours !`);
+                        logAdminAction('Prolonger abonné', idStr, sub.prenom || 'Abonné', `Prolongation de ${days} jours`);
+                        showToast(`✅ Abonnement de ${sub.prenom || idStr} prolongé de ${days} jours !`);
                     } else {
                         showToast('Erreur lors du renouvellement');
                     }
@@ -799,17 +1023,25 @@
                 row.querySelector('.btn-toggle-sub')?.addEventListener('click', async () => {
                     const newStatus = isSuspended ? 'active' : 'suspended';
                     await window.BokkFirebase.updateSubscriberStatus(idStr, newStatus);
+                    logAdminAction(
+                        isSuspended ? 'Débloquer abonné' : 'Suspendre abonné',
+                        idStr,
+                        sub.prenom || 'Abonné',
+                        `Statut changé vers ${newStatus}`
+                    );
                     showToast(`Statut mis à jour pour ${idStr}`);
                 });
 
                 row.querySelector('.btn-reset-sub-session')?.addEventListener('click', async () => {
                     await window.BokkFirebase.clearActiveSession(idStr);
+                    logAdminAction('Libérer écran', idStr, sub.prenom || 'Abonné', 'Session active déconnectée');
                     showToast(`Écran libéré pour l'abonné ${idStr}`);
                 });
 
                 row.querySelector('.btn-del-sub')?.addEventListener('click', async () => {
-                    if (confirm(`Supprimer définitivement l\'abonné ${sub.prenom} (${idStr}) ?`)) {
+                    if (confirm(`Supprimer définitivement l'abonné ${sub.prenom || idStr} (${idStr}) ?`)) {
                         await window.BokkFirebase.deleteSubscriber(idStr);
+                        logAdminAction('Supprimer abonné', idStr, sub.prenom || 'Abonné', 'Abonné supprimé de la base');
                         showToast(`Abonné ${idStr} supprimé.`);
                     }
                 });
@@ -836,6 +1068,45 @@
             }
         }
 
+        function renderSubscriberChart(counts, labels) {
+            const chartContainer = document.getElementById('ana-chart');
+            if (!chartContainer) return;
+
+            const maxCount = Math.max(...counts, 1);
+            const svgWidth = 460;
+            const step = svgWidth / 7;
+            const barWidth = 32;
+
+            let barsSvg = '';
+            counts.forEach((c, idx) => {
+                const x = Math.round(idx * step + (step - barWidth) / 2);
+                const barHeight = c > 0 ? Math.max(6, Math.round((c / maxCount) * 58)) : 2;
+                const y = 74 - barHeight;
+                const label = labels[idx] || '';
+
+                barsSvg += `
+                    <g class="chart-col">
+                        <rect x="${x}" y="${y}" width="${barWidth}" height="${barHeight}" rx="4" fill="${c > 0 ? 'url(#bar-gradient)' : 'rgba(255,255,255,0.06)'}" />
+                        ${c > 0 ? `<text x="${x + barWidth / 2}" y="${y - 4}" text-anchor="middle" fill="#fff" font-size="10" font-weight="700">${c}</text>` : ''}
+                        <text x="${x + barWidth / 2}" y="92" text-anchor="middle" fill="#8b92a5" font-size="10">${label}</text>
+                    </g>
+                `;
+            });
+
+            chartContainer.innerHTML = `
+                <svg viewBox="0 0 ${svgWidth} 100" width="100%" height="100" style="overflow:visible; display:block;">
+                    <defs>
+                        <linearGradient id="bar-gradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stop-color="#00a8ff" />
+                            <stop offset="100%" stop-color="#0070f3" />
+                        </linearGradient>
+                    </defs>
+                    <line x1="10" y1="76" x2="${svgWidth - 10}" y2="76" stroke="rgba(255,255,255,0.08)" stroke-width="1" />
+                    ${barsSvg}
+                </svg>
+            `;
+        }
+
         function updateStats() {
             const m3uActiveChannels = m3uPlaylistsList
                 .filter(p => p.enabled !== false)
@@ -860,6 +1131,143 @@
             if (statM3uEl) statM3uEl.textContent = m3uPlaylistsList.length;
             const badgeM3uEl = document.getElementById('badge-m3u-count');
             if (badgeM3uEl) badgeM3uEl.textContent = m3uPlaylistsList.length;
+
+            // ── Analytics Abonnés ──
+            const now = Date.now();
+            const sevenDaysAgo = now - 7 * 24 * 60 * 60 * 1000;
+
+            let activeCount = 0;
+            let expiredCount = 0;
+            let suspendedCount = 0;
+            let newThisWeekCount = 0;
+
+            const dailyCounts = [0, 0, 0, 0, 0, 0, 0];
+            const dayLabels = [];
+            for (let i = 6; i >= 0; i--) {
+                const d = new Date(now - i * 24 * 60 * 60 * 1000);
+                dayLabels.push(d.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric' }));
+            }
+
+            subscribersList.forEach(s => {
+                const isSuspended = (s.status === 'suspended');
+                let expTime = 0;
+                let isExpired = false;
+                if (s.expiresAt) {
+                    expTime = new Date(s.expiresAt).getTime();
+                    if (!isNaN(expTime)) {
+                        isExpired = expTime <= now;
+                    }
+                }
+
+                if (isSuspended) {
+                    suspendedCount++;
+                } else if (s.status === 'active' && expTime > now) {
+                    activeCount++;
+                }
+
+                if (isExpired) {
+                    expiredCount++;
+                }
+
+                if (s.createdAt) {
+                    const cTime = new Date(s.createdAt).getTime();
+                    if (!isNaN(cTime)) {
+                        if (cTime >= sevenDaysAgo) {
+                            newThisWeekCount++;
+                        }
+                        const daysDiff = Math.floor((now - cTime) / (24 * 60 * 60 * 1000));
+                        if (daysDiff >= 0 && daysDiff < 7) {
+                            dailyCounts[6 - daysDiff]++;
+                        }
+                    }
+                }
+            });
+
+            const anaActive = document.getElementById('ana-active');
+            if (anaActive) anaActive.textContent = activeCount.toLocaleString('fr-FR');
+
+            const anaExpired = document.getElementById('ana-expired');
+            if (anaExpired) anaExpired.textContent = expiredCount.toLocaleString('fr-FR');
+
+            const anaSuspended = document.getElementById('ana-suspended');
+            if (anaSuspended) anaSuspended.textContent = suspendedCount.toLocaleString('fr-FR');
+
+            const anaNewWeek = document.getElementById('ana-new-week');
+            if (anaNewWeek) anaNewWeek.textContent = newThisWeekCount.toLocaleString('fr-FR');
+
+            const monthlyRevenue = activeCount * 3000;
+            const anaRevenue = document.getElementById('ana-revenue');
+            if (anaRevenue) anaRevenue.textContent = monthlyRevenue.toLocaleString('fr-FR') + ' F CFA';
+
+            renderSubscriberChart(dailyCounts, dayLabels);
+        }
+
+        async function checkStreamHealth(url) {
+            if (!url) return false;
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), 5000);
+            try {
+                const res = await fetch(url, { method: 'HEAD', signal: controller.signal });
+                clearTimeout(timer);
+                return res.ok || (res.status >= 200 && res.status < 400);
+            } catch (e) {
+                clearTimeout(timer);
+                try {
+                    const isLocal = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+                    const proxyBase = (isLocal && window.location.port === '8080') ? '/proxy' : '/api/proxy';
+                    const ctrl2 = new AbortController();
+                    const timer2 = setTimeout(() => ctrl2.abort(), 4000);
+                    const proxyRes = await fetch(`${proxyBase}?url=${encodeURIComponent(url)}&ua=IPTVSmartersPro`, {
+                        method: 'HEAD',
+                        signal: ctrl2.signal
+                    });
+                    clearTimeout(timer2);
+                    return proxyRes.ok || (proxyRes.status >= 200 && proxyRes.status < 400);
+                } catch (e2) {
+                    return false;
+                }
+            }
+        }
+
+        function setupReportScanHandlers() {
+            const btnScan = document.getElementById('btn-scan-reported');
+            if (!btnScan) return;
+
+            btnScan.onclick = async () => {
+                if (!reportedList || !reportedList.length) {
+                    showToast('Aucun flux signalé à scanner.');
+                    return;
+                }
+
+                btnScan.disabled = true;
+                btnScan.textContent = `⏳ Scan en cours (0/${reportedList.length})...`;
+                const allChannels = window.channels || [];
+                let done = 0;
+
+                for (const r of reportedList) {
+                    const idStr = String(r.channelId || r.id);
+                    const badgeEl = document.getElementById('scan-badge-' + idStr);
+                    if (badgeEl) badgeEl.textContent = '⏳';
+
+                    const ch = allChannels.find(c => String(c.id) === idStr);
+                    const streamUrl = (ch && ch.url) ? ch.url : r.url;
+
+                    const isOnline = await checkStreamHealth(streamUrl);
+                    scanResultsMap.set(idStr, isOnline ? 'online' : 'offline');
+
+                    if (badgeEl) {
+                        badgeEl.innerHTML = isOnline
+                            ? '<span style="color:#10b981; font-weight:800; font-size:0.75rem; margin-left:6px; background:rgba(16,185,129,0.15); padding:2px 6px; border-radius:6px;" title="Flux en ligne">✅</span>'
+                            : '<span style="color:#e63946; font-weight:800; font-size:0.75rem; margin-left:6px; background:rgba(230,57,70,0.15); padding:2px 6px; border-radius:6px;" title="Flux HS ou inaccessible">❌</span>';
+                    }
+                    done++;
+                    btnScan.textContent = `⏳ Scan en cours (${done}/${reportedList.length})...`;
+                }
+
+                btnScan.disabled = false;
+                btnScan.textContent = '🔍 Scanner toutes les chaînes signalées';
+                showToast('✅ Scan de santé terminé !');
+            };
         }
 
         // ── Rendu Signalements ──
@@ -876,6 +1284,12 @@
             reportedList.forEach(r => {
                 const idStr = String(r.channelId || r.id);
                 const isDisabled = disabledIdsSet.has(idStr);
+                const scanStatus = scanResultsMap.get(idStr);
+                const scanBadgeHtml = scanStatus === 'online'
+                    ? '<span style="color:#10b981; font-weight:800; font-size:0.75rem; margin-left:6px; background:rgba(16,185,129,0.15); padding:2px 6px; border-radius:6px;" title="Flux en ligne">✅</span>'
+                    : scanStatus === 'offline'
+                    ? '<span style="color:#e63946; font-weight:800; font-size:0.75rem; margin-left:6px; background:rgba(230,57,70,0.15); padding:2px 6px; border-radius:6px;" title="Flux HS ou inaccessible">❌</span>'
+                    : '';
 
                 const row = document.createElement('div');
                 row.className = 'channel-row' + (isDisabled ? ' is-disabled' : '');
@@ -883,7 +1297,10 @@
                     <div class="ch-info">
                         <span class="ch-id">#${idStr}</span>
                         <div>
-                            <div class="ch-name">${r.name || 'Chaîne'}</div>
+                            <div class="ch-name" style="display:flex; align-items:center; gap:6px;">
+                                <span>${r.name || 'Chaîne'}</span>
+                                <span class="scan-badge" id="scan-badge-${idStr}">${scanBadgeHtml}</span>
+                            </div>
                             <div class="ch-group">${r.group || 'Direct'} • Signalé ${r.reportCount || 1} fois</div>
                         </div>
                     </div>
@@ -1078,13 +1495,16 @@
         // ── Action : Masquer / Réactiver une chaîne ──
         async function toggleDisableChannel(channelId, channelData, disable) {
             const idStr = String(channelId);
+            const chName = channelData?.name || `Chaîne #${idStr}`;
             if (disable) {
                 disabledIdsSet.add(idStr);
                 await window.BokkFirebase.disableChannel(idStr, channelData);
+                logAdminAction('Masquer chaîne', idStr, chName, 'Chaîne masquée du catalogue');
                 showToast(`🚫 Chaîne #${idStr} masquée pour tous les utilisateurs !`);
             } else {
                 disabledIdsSet.delete(idStr);
                 await window.BokkFirebase.enableChannel(idStr);
+                logAdminAction('Réactiver chaîne', idStr, chName, 'Chaîne rétablie');
                 showToast(`✅ Chaîne #${idStr} réactivée !`);
             }
             updateStats();
@@ -1208,7 +1628,109 @@
         // ══════════════════════════════════════════
         // MESSAGERIE ADMIN — Firestore admin_messages
         // ══════════════════════════════════════════
-        const FIRESTORE_MSG = 'https://firestore.googleapis.com/v1/projects/bokk-tv/databases/(default)/documents/admin_messages';
+        const FIRESTORE_BASE = 'https://firestore.googleapis.com/v1/projects/bokk-tv/databases/(default)/documents';
+        const FIRESTORE_MSG = `${FIRESTORE_BASE}/admin_messages`;
+        const FIRESTORE_LOGS = `${FIRESTORE_BASE}/admin_logs`;
+
+        // ══════════════════════════════════════════
+        // LOGS D'ACTIVITÉ ADMIN — Firestore admin_logs
+        // ══════════════════════════════════════════
+
+        async function logAdminAction(action, targetId, targetName, note = '') {
+            try {
+                const docId = `log_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+                const nowIso = new Date().toISOString();
+                const fields = {
+                    action: { stringValue: String(action || '') },
+                    targetId: { stringValue: String(targetId || '') },
+                    targetName: { stringValue: String(targetName || '') },
+                    adminNote: { stringValue: String(note || '') },
+                    createdAt: { timestampValue: nowIso }
+                };
+                await fetch(`${FIRESTORE_LOGS}/${docId}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ fields })
+                });
+            } catch (err) {
+                console.warn('[BOKK ADMIN] Erreur logAdminAction:', err);
+            }
+        }
+
+        async function fetchAdminLogs() {
+            try {
+                const res = await fetch(`${FIRESTORE_LOGS}?pageSize=50&_t=${Date.now()}`);
+                if (!res.ok) return [];
+                const data = await res.json();
+                if (!data.documents) return [];
+                return data.documents.map(doc => {
+                    const f = doc.fields || {};
+                    const parts = doc.name.split('/');
+                    return {
+                        id: parts[parts.length - 1],
+                        name: doc.name,
+                        action: f.action?.stringValue || '',
+                        targetId: f.targetId?.stringValue || '',
+                        targetName: f.targetName?.stringValue || '',
+                        adminNote: f.adminNote?.stringValue || '',
+                        createdAt: f.createdAt?.timestampValue || ''
+                    };
+                }).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+            } catch (e) {
+                console.warn('[BOKK ADMIN] Erreur fetchAdminLogs:', e);
+                return [];
+            }
+        }
+
+        async function renderAdminLogs() {
+            const container = document.getElementById('logs-list');
+            if (!container) return;
+            container.innerHTML = '<p style="text-align:center; color:var(--text-muted); padding:30px;">Chargement des logs...</p>';
+            const logs = await fetchAdminLogs();
+            if (!logs.length) {
+                container.innerHTML = '<p style="text-align:center; color:var(--text-muted); padding:30px;">Aucun log d\'activité enregistré.</p>';
+                return;
+            }
+            container.innerHTML = logs.map(l => {
+                const timeStr = l.createdAt ? new Date(l.createdAt).toLocaleString('fr-FR', {
+                    day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit'
+                }) : '—';
+                const targetStr = l.targetName ? `${l.targetName} (${l.targetId})` : (l.targetId || '—');
+                return `
+                    <div class="log-row">
+                        <span class="log-time">🕒 ${timeStr}</span>
+                        <span class="log-action">${l.action || 'Action'}</span>
+                        <span class="log-target">🎯 ${targetStr}</span>
+                        <span class="log-note">${l.adminNote || ''}</span>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function clearAllLogs() {
+            if (!confirm('Voulez-vous vraiment effacer tous les logs d\'activité ?')) return;
+            try {
+                const res = await fetch(`${FIRESTORE_LOGS}?pageSize=100&_t=${Date.now()}`);
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                const data = await res.json();
+                if (data.documents && data.documents.length) {
+                    await Promise.all(data.documents.map(d => fetch(`https://firestore.googleapis.com/v1/${d.name}`, { method: 'DELETE' })));
+                }
+                showToast('🗑 Tous les logs ont été effacés');
+                renderAdminLogs();
+            } catch (e) {
+                console.warn('[BOKK ADMIN] Erreur clearAllLogs:', e);
+                showToast('Erreur lors de la suppression des logs');
+            }
+        }
+
+        function setupLogsHandlers() {
+            const btnRefresh = document.getElementById('btn-refresh-logs');
+            if (btnRefresh) btnRefresh.onclick = renderAdminLogs;
+
+            const btnClear = document.getElementById('btn-clear-logs');
+            if (btnClear) btnClear.onclick = clearAllLogs;
+        }
 
         async function fetchAdminMessages() {
             const res = await fetch(`${FIRESTORE_MSG}?pageSize=50&_t=${Date.now()}`);
@@ -1265,9 +1787,15 @@
         async function deleteAdminMessage(docId) {
             if (!confirm('Supprimer ce message ? Il disparaîtra des popups des abonnés.')) return;
             const res = await fetch(`${FIRESTORE_MSG}/${docId}`, { method: 'DELETE' });
-            if (res.ok) { showToast('✅ Message supprimé'); renderAdminMessages(); }
-            else showToast('❌ Erreur lors de la suppression');
+            if (res.ok) {
+                logAdminAction('Supprimer message', docId, 'Message broadcast/ciblé', 'Message supprimé');
+                showToast('✅ Message supprimé');
+                renderAdminMessages();
+            } else {
+                showToast('❌ Erreur lors de la suppression');
+            }
         }
+        window.deleteAdminMessage = deleteAdminMessage;
 
         function setupMessageHandlers() {
             renderAdminMessages();
@@ -1318,6 +1846,12 @@
                         statusEl.textContent = phone
                             ? `✅ Message envoyé à ${phone}`
                             : '✅ Message broadcast envoyé à tous les abonnés';
+                        logAdminAction(
+                            'Envoyer message',
+                            phone || 'TOUS',
+                            title,
+                            body.length > 60 ? body.substring(0, 60) + '...' : body
+                        );
                         document.getElementById('msg-input-title').value = '';
                         document.getElementById('msg-input-body').value = '';
                         document.getElementById('msg-input-phone').value = '';
