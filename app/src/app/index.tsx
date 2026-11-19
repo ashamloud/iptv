@@ -35,7 +35,7 @@ import { AccountModal } from '../components/AccountModal';
 import { MatchHeaderTicker } from '../components/MatchHeaderTicker';
 import { MatchesService, MatchItem } from '../services/matches';
 import { StorageService } from '../services/storage';
-import { FirebaseService, Subscriber } from '../services/firebase';
+import { FirebaseService, Subscriber, AdminMessage } from '../services/firebase';
 
 export default function NativeBokkApp() {
   const { width } = useWindowDimensions();
@@ -59,11 +59,16 @@ export default function NativeBokkApp() {
   const [favorites, setFavorites] = useState<string[]>([]);
   const [subscriber, setSubscriber] = useState<Subscriber | null>(null);
   const [disabledIds, setDisabledIds] = useState<string[]>([]);
+  const [disabledNames, setDisabledNames] = useState<string[]>([]);
   const [m3uChannels, setM3uChannels] = useState<Channel[]>([]);
   const [matches, setMatches] = useState<MatchItem[]>([]);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [isAccountModalOpen, setIsAccountModalOpen] = useState<boolean>(false);
   const [isInitLoaded, setIsInitLoaded] = useState<boolean>(false);
+
+  // État messagerie admin
+  const [adminMessage, setAdminMessage] = useState<AdminMessage | null>(null);
+  const seenMsgIds = useRef<Set<string>>(new Set());
 
   const flatListRef = useRef<FlatList>(null);
 
@@ -86,12 +91,27 @@ export default function NativeBokkApp() {
   // ── Synchronisation Temps Réel avec le Panneau Admin ──
   const syncAdminData = useCallback(async () => {
     try {
-      const [disabled, cloudM3u] = await Promise.all([
+      const [disabledData, cloudM3u] = await Promise.all([
         FirebaseService.getDisabledChannels(),
         FirebaseService.getM3uChannels()
       ]);
-      setDisabledIds(disabled);
+      setDisabledIds(disabledData.ids);
+      setDisabledNames(disabledData.names);
       setM3uChannels(cloudM3u);
+    } catch {}
+  }, []);
+
+  // ── Vérification des Messages Admin (popup) ──
+  const syncAdminMessages = useCallback(async (phone: string = '') => {
+    try {
+      const msgs = await FirebaseService.getAdminMessages(phone);
+      if (!msgs.length) return;
+      // Afficher le premier message non encore vu
+      const unseen = msgs.find(m => !seenMsgIds.current.has(m.id));
+      if (unseen) {
+        seenMsgIds.current.add(unseen.id);
+        setAdminMessage(unseen);
+      }
     } catch {}
   }, []);
 
@@ -118,7 +138,7 @@ export default function NativeBokkApp() {
 
     async function initApp() {
       try {
-        const [favs, sub, disabled, cloudM3u, liveMatches] = await Promise.all([
+        const [favs, sub, disabledData, cloudM3u, liveMatches] = await Promise.all([
           StorageService.getFavorites(),
           StorageService.getSubscriber(),
           FirebaseService.getDisabledChannels(),
@@ -129,7 +149,8 @@ export default function NativeBokkApp() {
         if (isMounted) {
           setFavorites(favs);
           setSubscriber(sub);
-          setDisabledIds(disabled);
+          setDisabledIds(disabledData.ids);
+          setDisabledNames(disabledData.names);
           setM3uChannels(cloudM3u);
           if (liveMatches && liveMatches.length > 0) setMatches(liveMatches);
           setIsInitLoaded(true);
@@ -144,6 +165,11 @@ export default function NativeBokkApp() {
               Alert.alert('Compte suspendu', 'Votre abonnement a été suspendu par l\'administrateur.');
             }
           }
+          // Vérifier les messages admin pour cet abonné
+          if (isMounted) syncAdminMessages(sub.id);
+        } else {
+          // Vérifier les messages broadcast (sans compte)
+          if (isMounted) syncAdminMessages('');
         }
       } catch {
         if (isMounted) setIsInitLoaded(true);
@@ -167,11 +193,17 @@ export default function NativeBokkApp() {
       syncMatches();
     }, 90000); // Rafraîchir les scores de matchs toutes les 90s
 
+    // Vérifier les messages admin toutes les 60 secondes
+    const msgInterval = setInterval(() => {
+      syncAdminMessages(subscriber?.id || '');
+    }, 60000);
+
     return () => {
       clearInterval(adminInterval);
       clearInterval(matchesInterval);
+      clearInterval(msgInterval);
     };
-  }, [syncAdminData, syncMatches]);
+  }, [syncAdminData, syncMatches, syncAdminMessages, subscriber]);
 
   // ── Re-sync dès que l'application repasse au premier plan (Foreground) ──
   useEffect(() => {
@@ -179,10 +211,11 @@ export default function NativeBokkApp() {
       if (state === 'active') {
         syncAdminData();
         syncMatches();
+        syncAdminMessages(subscriber?.id || '');
       }
     });
     return () => subApp.remove();
-  }, [syncAdminData, syncMatches]);
+  }, [syncAdminData, syncMatches, syncAdminMessages, subscriber]);
 
   // Gestion du bouton retour physique (Android / Télécommande Smart TV)
   useEffect(() => {
@@ -271,10 +304,12 @@ export default function NativeBokkApp() {
   const filteredChannels = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
     const disabledSet = new Set(disabledIds);
+    const disabledNameSet = new Set(disabledNames);
 
     return allChannels.filter((ch) => {
-      // Exclure chaînes désactivées par l'admin
+      // Exclure chaînes désactivées par l'admin (par ID ou par nom)
       if (disabledSet.has(String(ch.id))) return false;
+      if (disabledNameSet.has(ch.name.toLowerCase().trim())) return false;
 
       // Filtre catégorie
       if (selectedCategory === 'favoris') {
@@ -297,7 +332,7 @@ export default function NativeBokkApp() {
 
       return true;
     });
-  }, [allChannels, disabledIds, selectedCategory, favorites, searchQuery]);
+  }, [allChannels, disabledIds, disabledNames, selectedCategory, favorites, searchQuery]);
 
   // Chaînes similaires pour le zapping rapide quand le lecteur est ouvert
   const relatedZappingChannels = useMemo(() => {
@@ -689,6 +724,26 @@ export default function NativeBokkApp() {
         onClose={() => setIsAccountModalOpen(false)}
         onSubscriberUpdated={(sub) => setSubscriber(sub)}
       />
+
+      {/* ── POPUP MESSAGE ADMIN ── */}
+      {adminMessage && (
+        <View style={styles.msgOverlay}>
+          <View style={styles.msgBox}>
+            <View style={styles.msgHeader}>
+              <Text style={styles.msgIcon}>📢</Text>
+              <Text style={styles.msgTitle}>{adminMessage.title}</Text>
+            </View>
+            <Text style={styles.msgBody}>{adminMessage.body}</Text>
+            <TouchableOpacity
+              style={styles.msgOkBtn}
+              onPress={() => setAdminMessage(null)}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.msgOkText}>OK</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
     </SafeAreaView>
   );
 }
@@ -1004,5 +1059,57 @@ const styles = StyleSheet.create({
   bottomNavLabelActive: {
     color: '#ffffff',
     fontWeight: '800',
+  },
+  // ── Popup Message Admin ──
+  msgOverlay: {
+    position: 'absolute' as const,
+    top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.78)',
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    zIndex: 99999,
+    padding: 24,
+  },
+  msgBox: {
+    backgroundColor: '#12141c',
+    borderRadius: 20,
+    padding: 24,
+    width: '100%' as const,
+    maxWidth: 420,
+    borderWidth: 1,
+    borderColor: 'rgba(229,9,20,0.35)',
+  },
+  msgHeader: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    marginBottom: 14,
+    gap: 10,
+  },
+  msgIcon: {
+    fontSize: 26,
+  },
+  msgTitle: {
+    fontSize: 17,
+    fontWeight: '800' as const,
+    color: '#ffffff',
+    flex: 1,
+  },
+  msgBody: {
+    fontSize: 14,
+    lineHeight: 22,
+    color: '#c8cdd8',
+    marginBottom: 22,
+  },
+  msgOkBtn: {
+    backgroundColor: '#e50914',
+    borderRadius: 12,
+    paddingVertical: 13,
+    alignItems: 'center' as const,
+  },
+  msgOkText: {
+    color: '#ffffff',
+    fontSize: 15,
+    fontWeight: '800' as const,
+    letterSpacing: 0.5,
   },
 });

@@ -327,6 +327,10 @@
             <span>🔗 Playlists M3U</span>
             <span class="tab-badge" id="badge-m3u-count" style="background:#0070f3;">0</span>
         </button>
+        <button class="admin-tab-btn" data-tab="messages">
+            <span>📩 Messages</span>
+            <span class="tab-badge" id="badge-msg-count" style="background:#a855f7;">0</span>
+        </button>
     </nav>
 
     <!-- ── Contenu ── -->
@@ -500,6 +504,63 @@
                 <p style="text-align:center; color:var(--text-muted); padding:30px;">Chargement des playlists M3U...</p>
             </div>
         </section>
+
+        <!-- ONGLET 6 : MESSAGERIE ADMIN -->
+        <section class="admin-card tab-content" id="tab-messages" style="display:none;">
+            <div class="admin-card-header" style="flex-wrap:wrap; gap:12px;">
+                <div>
+                    <h3 class="admin-card-title">📩 Messages aux Abonnés</h3>
+                    <p style="font-size:0.78rem; color:var(--text-muted); margin-top:2px;">Envoyez un message broadcast (à tous) ou ciblé (par numéro de téléphone). Le message s'affiche en popup avec un bouton OK.</p>
+                </div>
+            </div>
+
+            <!-- Formulaire de composition -->
+            <div style="background:rgba(168,85,247,0.06); border:1px solid rgba(168,85,247,0.25); border-radius:14px; padding:20px; margin-bottom:24px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                    <h4 style="font-size:0.95rem; font-weight:800; color:#fff;">✍️ Nouveau Message</h4>
+                </div>
+
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:14px;">
+                    <div>
+                        <label style="font-size:0.75rem; color:var(--text-muted); display:block; margin-bottom:6px; font-weight:600;">Titre du message</label>
+                        <input type="text" id="msg-input-title" placeholder="Ex: Maintenance prévue" style="width:100%; background:rgba(0,0,0,0.4); border:1px solid var(--border); color:#fff; padding:10px 14px; border-radius:10px; font-size:0.85rem; outline:none;">
+                    </div>
+                    <div>
+                        <label style="font-size:0.75rem; color:var(--text-muted); display:block; margin-bottom:6px; font-weight:600;">Destinataire (vide = tous les abonnés)</label>
+                        <input type="text" id="msg-input-phone" placeholder="Ex: 221771234567 ou laisser vide" style="width:100%; background:rgba(0,0,0,0.4); border:1px solid var(--border); color:#fff; padding:10px 14px; border-radius:10px; font-size:0.85rem; outline:none;">
+                    </div>
+                </div>
+
+                <div style="margin-bottom:14px;">
+                    <label style="font-size:0.75rem; color:var(--text-muted); display:block; margin-bottom:6px; font-weight:600;">Contenu du message</label>
+                    <textarea id="msg-input-body" rows="4" placeholder="Rédigez votre message ici..." style="width:100%; background:rgba(0,0,0,0.4); border:1px solid var(--border); color:#fff; padding:10px 14px; border-radius:10px; font-size:0.85rem; resize:vertical; outline:none; font-family:inherit;"></textarea>
+                </div>
+
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:16px;">
+                    <div>
+                        <label style="font-size:0.75rem; color:var(--text-muted); display:block; margin-bottom:6px; font-weight:600;">Expire le (laisser vide = permanent)</label>
+                        <input type="datetime-local" id="msg-input-expires" style="width:100%; background:rgba(0,0,0,0.4); border:1px solid var(--border); color:#fff; padding:10px 14px; border-radius:10px; font-size:0.85rem; outline:none;">
+                    </div>
+                    <div style="display:flex; align-items:flex-end; padding-bottom:0;">
+                        <button id="btn-send-msg" style="width:100%; height:42px; background:linear-gradient(135deg,#a855f7,#7c3aed); border:none; border-radius:10px; color:#fff; font-weight:800; font-size:0.9rem; cursor:pointer; transition:0.15s;">
+                            📤 Envoyer le Message
+                        </button>
+                    </div>
+                </div>
+                <span id="msg-send-status" style="font-size:0.82rem; font-weight:600;"></span>
+            </div>
+
+            <!-- Liste des messages existants -->
+            <div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+                    <h4 style="font-size:0.9rem; font-weight:700; color:#fff;">📋 Messages Envoyés</h4>
+                    <button id="btn-refresh-msgs" style="background:rgba(255,255,255,0.06); border:1px solid var(--border); color:#fff; padding:6px 14px; border-radius:8px; font-size:0.78rem; cursor:pointer;">🔄 Actualiser</button>
+                </div>
+                <div id="messages-list" style="max-height:500px; overflow-y:auto;">
+                    <p style="text-align:center; color:var(--text-muted); padding:30px;">Chargement des messages...</p>
+                </div>
+            </div>
+        </section>
     </main>
 
     <!-- ── Player Modal de Test ── -->
@@ -657,6 +718,7 @@
             }
 
             setupM3uHandlers();
+            setupMessageHandlers();
         }
 
 
@@ -1141,6 +1203,134 @@
                 }
             }
             return list;
+        }
+
+        // ══════════════════════════════════════════
+        // MESSAGERIE ADMIN — Firestore admin_messages
+        // ══════════════════════════════════════════
+        const FIRESTORE_MSG = 'https://firestore.googleapis.com/v1/projects/bokk-tv/databases/(default)/documents/admin_messages';
+
+        async function fetchAdminMessages() {
+            const res = await fetch(`${FIRESTORE_MSG}?pageSize=50&_t=${Date.now()}`);
+            if (!res.ok) return [];
+            const data = await res.json();
+            if (!data.documents) return [];
+            return data.documents.map(doc => {
+                const f = doc.fields || {};
+                const parts = doc.name.split('/');
+                return {
+                    id: parts[parts.length - 1],
+                    name: doc.name,
+                    title: f.title?.stringValue || '',
+                    body: f.body?.stringValue || '',
+                    targetPhone: f.targetPhone?.stringValue || '',
+                    createdAt: f.createdAt?.timestampValue || '',
+                    expiresAt: f.expiresAt?.timestampValue || '',
+                };
+            }).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        }
+
+        async function renderAdminMessages() {
+            const container = document.getElementById('messages-list');
+            if (!container) return;
+            container.innerHTML = '<p style="text-align:center;color:var(--text-muted);padding:20px;">Chargement...</p>';
+            const msgs = await fetchAdminMessages();
+            document.getElementById('badge-msg-count').textContent = msgs.length;
+            if (!msgs.length) {
+                container.innerHTML = '<p style="text-align:center;color:var(--text-muted);padding:30px;">Aucun message envoyé pour le moment.</p>';
+                return;
+            }
+            container.innerHTML = msgs.map(m => {
+                const dateStr = m.createdAt ? new Date(m.createdAt).toLocaleString('fr-FR') : '—';
+                const expStr = m.expiresAt ? new Date(m.expiresAt).toLocaleString('fr-FR') : 'Permanent';
+                const target = m.targetPhone ? `📱 ${m.targetPhone}` : '📢 Tous les abonnés';
+                return `
+                <div style="display:flex;align-items:flex-start;gap:14px;padding:14px 0;border-bottom:1px solid rgba(255,255,255,0.06);">
+                    <div style="flex:1;min-width:0;">
+                        <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;flex-wrap:wrap;">
+                            <span style="font-weight:800;font-size:0.95rem;color:#fff;">${m.title || '(Sans titre)'}</span>
+                            <span style="font-size:0.72rem;background:rgba(168,85,247,0.15);color:#a855f7;border:1px solid rgba(168,85,247,0.3);padding:2px 8px;border-radius:8px;">${target}</span>
+                        </div>
+                        <p style="font-size:0.82rem;color:#9ba3b8;margin:4px 0;white-space:pre-wrap;">${m.body}</p>
+                        <div style="display:flex;gap:16px;font-size:0.72rem;color:var(--text-muted);margin-top:6px;">
+                            <span>📅 Envoyé le ${dateStr}</span>
+                            <span>⏰ Expire : ${expStr}</span>
+                        </div>
+                    </div>
+                    <button onclick="deleteAdminMessage('${m.id}')" style="flex-shrink:0;background:rgba(230,57,70,0.1);border:1px solid rgba(230,57,70,0.3);color:var(--red);padding:7px 14px;border-radius:8px;font-size:0.78rem;font-weight:700;cursor:pointer;">🗑 Supprimer</button>
+                </div>`;
+            }).join('');
+        }
+
+        async function deleteAdminMessage(docId) {
+            if (!confirm('Supprimer ce message ? Il disparaîtra des popups des abonnés.')) return;
+            const res = await fetch(`${FIRESTORE_MSG}/${docId}`, { method: 'DELETE' });
+            if (res.ok) { showToast('✅ Message supprimé'); renderAdminMessages(); }
+            else showToast('❌ Erreur lors de la suppression');
+        }
+
+        function setupMessageHandlers() {
+            renderAdminMessages();
+
+            const btnSend = document.getElementById('btn-send-msg');
+            const btnRefresh = document.getElementById('btn-refresh-msgs');
+            const statusEl = document.getElementById('msg-send-status');
+
+            if (btnRefresh) btnRefresh.onclick = renderAdminMessages;
+
+            if (btnSend) {
+                btnSend.onclick = async () => {
+                    const title = document.getElementById('msg-input-title').value.trim();
+                    const body = document.getElementById('msg-input-body').value.trim();
+                    const phone = document.getElementById('msg-input-phone').value.trim();
+                    const expiresVal = document.getElementById('msg-input-expires').value;
+
+                    if (!title || !body) {
+                        statusEl.style.color = 'var(--red)';
+                        statusEl.textContent = '❌ Le titre et le contenu sont obligatoires.';
+                        return;
+                    }
+
+                    btnSend.disabled = true;
+                    statusEl.style.color = 'var(--gold)';
+                    statusEl.textContent = '⏳ Envoi en cours...';
+
+                    const fields = {
+                        title: { stringValue: title },
+                        body: { stringValue: body },
+                        targetPhone: { stringValue: phone },
+                        createdAt: { timestampValue: new Date().toISOString() },
+                    };
+                    if (expiresVal) {
+                        fields.expiresAt = { timestampValue: new Date(expiresVal).toISOString() };
+                    }
+
+                    const docId = `msg_${Date.now()}`;
+                    const res = await fetch(`${FIRESTORE_MSG}/${docId}`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ fields })
+                    });
+
+                    btnSend.disabled = false;
+                    if (res.ok) {
+                        statusEl.style.color = 'var(--green)';
+                        statusEl.textContent = phone
+                            ? `✅ Message envoyé à ${phone}`
+                            : '✅ Message broadcast envoyé à tous les abonnés';
+                        document.getElementById('msg-input-title').value = '';
+                        document.getElementById('msg-input-body').value = '';
+                        document.getElementById('msg-input-phone').value = '';
+                        document.getElementById('msg-input-expires').value = '';
+                        renderAdminMessages();
+                        showToast(phone ? `📩 Message envoyé à ${phone}` : '📢 Broadcast envoyé à tous');
+                    } else {
+                        statusEl.style.color = 'var(--red)';
+                        statusEl.textContent = '❌ Erreur Firestore. Vérifiez les règles de sécurité.';
+                    }
+                    setTimeout(() => { statusEl.textContent = ''; }, 5000);
+                };
+            }
         }
 
         function setupM3uHandlers() {

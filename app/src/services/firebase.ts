@@ -32,13 +32,67 @@ export function normalizePhone(rawPhone: string): string {
   return digits;
 }
 
+export interface DisabledChannelsData {
+  ids: string[];
+  names: string[];
+}
+
+export interface AdminMessage {
+  id: string;
+  title: string;
+  body: string;
+  targetPhone: string; // '' = broadcast à tous
+  createdAt: string;
+  expiresAt?: string;  // si absent → permanent jusqu'à suppression
+}
+
 export const FirebaseService = {
-  // ── 1. Chaînes désactivées (avec pagination et anti-cache) ──
-  async getDisabledChannels(): Promise<string[]> {
+  // ── 0. Messages Admin → Utilisateurs (popup in-app) ──
+  async getAdminMessages(subscriberPhone: string = ''): Promise<AdminMessage[]> {
+    try {
+      const url = `${FIRESTORE_BASE}/admin_messages?pageSize=50&_t=${Date.now()}`;
+      const res = await fetch(url, {
+        headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate', 'Pragma': 'no-cache' }
+      });
+      if (!res.ok) return [];
+      const data = await res.json();
+      if (!data.documents) return [];
+
+      const now = new Date();
+      return data.documents
+        .map((doc: any) => {
+          const f = doc.fields || {};
+          const parts = doc.name.split('/');
+          const docId = parts[parts.length - 1];
+          return {
+            id: docId,
+            title: f.title?.stringValue || 'Message BOKK TV',
+            body: f.body?.stringValue || '',
+            targetPhone: f.targetPhone?.stringValue || '',
+            createdAt: f.createdAt?.timestampValue || '',
+            expiresAt: f.expiresAt?.timestampValue || '',
+          } as AdminMessage;
+        })
+        .filter((msg: AdminMessage) => {
+          // Filtrer les messages expirés
+          if (msg.expiresAt && new Date(msg.expiresAt) < now) return false;
+          // Filtrer : broadcast (targetPhone vide) OU ciblé vers cet abonné
+          if (msg.targetPhone && msg.targetPhone !== subscriberPhone) return false;
+          return msg.body.trim().length > 0;
+        });
+    } catch {
+      return [];
+    }
+  },
+
+  // ── 1. Chaînes désactivées ET chaînes signalées (avec pagination et anti-cache) ──
+  async getDisabledChannels(): Promise<DisabledChannelsData> {
     try {
       const allIds: string[] = [];
-      let pageToken = '';
+      const allNames: string[] = [];
 
+      // A. Chaînes masquées par l'admin (disabled_channels)
+      let pageToken = '';
       do {
         const tokenParam = pageToken ? `&pageToken=${encodeURIComponent(pageToken)}` : '';
         const url = `${FIRESTORE_BASE}/disabled_channels?pageSize=300&_t=${Date.now()}${tokenParam}`;
@@ -53,15 +107,50 @@ export const FirebaseService = {
         if (data.documents) {
           data.documents.forEach((doc: any) => {
             const parts = doc.name.split('/');
-            allIds.push(parts[parts.length - 1]);
+            const docId = parts[parts.length - 1];
+            if (docId) allIds.push(String(docId));
+            const chId = doc.fields?.channelId?.stringValue || doc.fields?.id?.stringValue;
+            if (chId) allIds.push(String(chId));
+            const name = doc.fields?.name?.stringValue;
+            if (name) allNames.push(name.toLowerCase().trim());
           });
         }
         pageToken = data.nextPageToken || '';
       } while (pageToken);
 
-      return allIds;
+      // B. Chaînes signalées comme HS (reported_channels) — Masquées pour le public
+      pageToken = '';
+      do {
+        const tokenParam = pageToken ? `&pageToken=${encodeURIComponent(pageToken)}` : '';
+        const url = `${FIRESTORE_BASE}/reported_channels?pageSize=300&_t=${Date.now()}${tokenParam}`;
+        const res = await fetch(url, {
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache'
+          }
+        });
+        if (!res.ok) break;
+        const data = await res.json();
+        if (data.documents) {
+          data.documents.forEach((doc: any) => {
+            const parts = doc.name.split('/');
+            const docId = parts[parts.length - 1];
+            if (docId) allIds.push(String(docId));
+            const chId = doc.fields?.id?.stringValue || doc.fields?.channelId?.stringValue;
+            if (chId) allIds.push(String(chId));
+            const name = doc.fields?.name?.stringValue;
+            if (name) allNames.push(name.toLowerCase().trim());
+          });
+        }
+        pageToken = data.nextPageToken || '';
+      } while (pageToken);
+
+      return {
+        ids: Array.from(new Set(allIds)),
+        names: Array.from(new Set(allNames))
+      };
     } catch {
-      return [];
+      return { ids: [], names: [] };
     }
   },
 
