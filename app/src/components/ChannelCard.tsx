@@ -1,5 +1,5 @@
 import React, { memo } from 'react';
-import { StyleSheet, Text, View, Pressable } from 'react-native';
+import { StyleSheet, Text, View, Pressable, Platform } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -12,6 +12,7 @@ interface ChannelCardProps {
   onPress: () => void;
   onToggleFavorite: () => void;
   viewMode?: 'grid' | 'list';
+  hasTVPreferredFocus?: boolean;
 }
 
 export const ChannelCard = memo(function ChannelCard({
@@ -20,7 +21,8 @@ export const ChannelCard = memo(function ChannelCard({
   isFavorite,
   onPress,
   onToggleFavorite,
-  viewMode = 'grid'
+  viewMode = 'grid',
+  hasTVPreferredFocus = false
 }: ChannelCardProps) {
   const logoUri = channel.logo && channel.logo.startsWith('http')
     ? channel.logo
@@ -31,10 +33,14 @@ export const ChannelCard = memo(function ChannelCard({
     return (
       <Pressable
         focusable={true}
+        accessible={true}
+        hasTVPreferredFocus={hasTVPreferredFocus}
+        {...(Platform.isTV ? ({ tvParallaxProperties: { enabled: true } } as any) : {})}
         style={({ pressed, focused }: any) => [
           styles.listCard,
           isPlaying && styles.listCardPlaying,
           focused && styles.cardFocused,
+          focused && styles.tvFocusStyle,
           pressed && styles.cardActive
         ]}
         onPress={onPress}
@@ -105,10 +111,14 @@ export const ChannelCard = memo(function ChannelCard({
   return (
     <Pressable
       focusable={true}
+      accessible={true}
+      hasTVPreferredFocus={hasTVPreferredFocus}
+      {...(Platform.isTV ? ({ tvParallaxProperties: { enabled: true } } as any) : {})}
       style={({ pressed, focused }: any) => [
         styles.gridCard,
         isPlaying && styles.gridCardPlaying,
         focused && styles.cardFocused,
+        focused && styles.tvFocusStyle,
         pressed && styles.cardActive
       ]}
       onPress={onPress}
@@ -225,6 +235,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.8,
     shadowRadius: 10,
     elevation: 10,
+  },
+  tvFocusStyle: {
+    borderColor: '#38bdf8',
+    borderWidth: 2,
   },
   gridVisualBox: {
     height: 84,

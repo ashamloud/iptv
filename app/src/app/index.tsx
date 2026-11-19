@@ -23,6 +23,7 @@ import {
   AppState,
   RefreshControl
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
@@ -66,6 +67,9 @@ export default function NativeBokkApp() {
   const [isAccountModalOpen, setIsAccountModalOpen] = useState<boolean>(false);
   const [isInitLoaded, setIsInitLoaded] = useState<boolean>(false);
 
+  // Historique des dernières chaînes regardées
+  const [lastWatched, setLastWatched] = useState<string[]>([]);
+
   // État messagerie admin
   const [adminMessage, setAdminMessage] = useState<AdminMessage | null>(null);
   const seenMsgIds = useRef<Set<string>>(new Set());
@@ -98,6 +102,8 @@ export default function NativeBokkApp() {
       setDisabledIds(disabledData.ids);
       setDisabledNames(disabledData.names);
       setM3uChannels(cloudM3u);
+      // Mettre à jour le cache des chaînes désactivées
+      await StorageService.setCachedDisabledIds(disabledData.ids, disabledData.names);
     } catch {}
   }, []);
 
@@ -138,22 +144,68 @@ export default function NativeBokkApp() {
 
     async function initApp() {
       try {
-        const [favs, sub, disabledData, cloudM3u, liveMatches] = await Promise.all([
+        // Essayer d'abord le cache des chaînes désactivées (< 5 min)
+        const cachedDisabled = await StorageService.getCachedDisabledIds();
+
+        const [favs, sub, lastWatchedIds, cloudM3u, liveMatches] = await Promise.all([
           StorageService.getFavorites(),
           StorageService.getSubscriber(),
-          FirebaseService.getDisabledChannels(),
+          StorageService.getLastWatched(),
           FirebaseService.getM3uChannels(),
           MatchesService.getLiveAndUpcomingMatches()
         ]);
 
+        let disabledData: { ids: string[]; names: string[] };
+        if (cachedDisabled) {
+          disabledData = { ids: cachedDisabled.ids, names: cachedDisabled.names };
+        } else {
+          disabledData = await FirebaseService.getDisabledChannels();
+          await StorageService.setCachedDisabledIds(disabledData.ids, disabledData.names);
+        }
+
         if (isMounted) {
           setFavorites(favs);
           setSubscriber(sub);
+          setLastWatched(lastWatchedIds);
           setDisabledIds(disabledData.ids);
           setDisabledNames(disabledData.names);
           setM3uChannels(cloudM3u);
           if (liveMatches && liveMatches.length > 0) setMatches(liveMatches);
           setIsInitLoaded(true);
+        }
+
+        // Alerte d'expiration proactive (une fois par jour)
+        if (sub && sub.expiresAt && isMounted) {
+          const waveUrl = 'https://pay.wave.com/m/M_sn_cop5B9UJYF8P/c/sn/?amount=3000';
+          const expMs = new Date(sub.expiresAt).getTime();
+          const msRemaining = expMs - Date.now();
+          const daysRemaining = Math.ceil(msRemaining / (1000 * 60 * 60 * 24));
+          const todayStr = new Date().toISOString().split('T')[0];
+          const alertedDate = await AsyncStorage.getItem('bokk_expiry_alerted_date');
+
+          if (alertedDate !== todayStr) {
+            if (daysRemaining <= 0) {
+              await AsyncStorage.setItem('bokk_expiry_alerted_date', todayStr);
+              Alert.alert(
+                '⏰ Abonnement expiré',
+                'Votre abonnement a expiré. Renouvelez pour continuer à profiter de BOKK TV.',
+                [
+                  { text: 'Renouveler via Wave', onPress: () => Linking.openURL(waveUrl).catch(() => {}) },
+                  { text: 'Fermer', style: 'cancel' }
+                ]
+              );
+            } else if (daysRemaining <= 3) {
+              await AsyncStorage.setItem('bokk_expiry_alerted_date', todayStr);
+              Alert.alert(
+                '⚠️ Abonnement bientôt expiré',
+                `Votre abonnement expire dans ${daysRemaining} jour(s). Renouvelez maintenant pour ne pas perdre l'accès.`,
+                [
+                  { text: 'Renouveler via Wave', onPress: () => Linking.openURL(waveUrl).catch(() => {}) },
+                  { text: 'Plus tard', style: 'cancel' }
+                ]
+              );
+            }
+          }
         }
 
         // Vérification de validité de l'abonné auprès de Firebase
@@ -256,6 +308,10 @@ export default function NativeBokkApp() {
   // Sélection d'une chaîne
   const handleSelectChannel = useCallback((channel: Channel) => {
     setActiveChannel(channel);
+    // Enregistrer dans l'historique des dernières chaînes regardées
+    StorageService.addLastWatched(String(channel.id)).then(() => {
+      StorageService.getLastWatched().then(ids => setLastWatched(ids));
+    });
   }, []);
 
   // Fermeture du lecteur
@@ -390,9 +446,26 @@ export default function NativeBokkApp() {
     [allChannels]
   );
 
+  // Chaînes récemment regardées (max 8)
+  const recentWatchedChannels = useMemo(() => {
+    if (!lastWatched.length) return [];
+    const map = new Map(allChannels.map((c) => [String(c.id), c]));
+    return lastWatched
+      .map((id) => map.get(String(id)))
+      .filter((c): c is Channel => Boolean(c))
+      .slice(0, 8);
+  }, [allChannels, lastWatched]);
+
+  const showRecentWatched =
+    lastWatched.length > 0 &&
+    activeNavTab === 'home' &&
+    selectedCategory === 'tous' &&
+    !searchQuery &&
+    recentWatchedChannels.length > 0;
+
   // Rendu de chaque carte de chaîne
   const renderChannelItem = useCallback(
-    ({ item }: { item: Channel }) => {
+    ({ item, index }: { item: Channel; index: number }) => {
       const isPlaying = activeChannel ? String(activeChannel.id) === String(item.id) : false;
       const isFav = favorites.includes(String(item.id));
 
@@ -404,10 +477,11 @@ export default function NativeBokkApp() {
           onPress={() => handleSelectChannel(item)}
           onToggleFavorite={() => handleToggleFavorite(item.id)}
           viewMode={viewMode}
+          hasTVPreferredFocus={Platform.isTV && index === 0 && !showRecentWatched}
         />
       );
     },
-    [activeChannel, favorites, handleSelectChannel, handleToggleFavorite, viewMode]
+    [activeChannel, favorites, handleSelectChannel, handleToggleFavorite, viewMode, showRecentWatched]
   );
 
   const keyExtractor = useCallback((item: Channel) => String(item.id), []);
@@ -432,6 +506,7 @@ export default function NativeBokkApp() {
         <View style={styles.headerActions}>
           {/* Bascule Grille / Liste */}
           <TouchableOpacity
+            accessible={true}
             style={styles.headerIconBtn}
             onPress={() => setViewMode((m) => (m === 'grid' ? 'list' : 'grid'))}
             accessibilityLabel="Changer de vue"
@@ -445,6 +520,7 @@ export default function NativeBokkApp() {
 
           {/* Bouton Recherche */}
           <TouchableOpacity
+            accessible={true}
             style={[styles.headerIconBtn, isSearchOpen && styles.headerIconBtnActive]}
             onPress={() => {
               setIsSearchOpen((prev) => !prev);
@@ -461,6 +537,7 @@ export default function NativeBokkApp() {
 
           {/* Bouton Mon Pass / Compte */}
           <TouchableOpacity
+            accessible={true}
             style={[styles.accountBtn, isRegisteredUser ? styles.accountBtnVip : styles.accountBtnFree]}
             onPress={() => setIsAccountModalOpen(true)}
             activeOpacity={0.8}
@@ -556,6 +633,7 @@ export default function NativeBokkApp() {
             return (
               <TouchableOpacity
                 key={cat.key}
+                accessible={true}
                 style={[
                   styles.categoryPill,
                   isSelected && styles.categoryPillActive
@@ -593,6 +671,45 @@ export default function NativeBokkApp() {
           Mode : {viewMode === 'grid' ? 'Grille' : 'Liste'}
         </Text>
       </View>
+
+      {/* ── HISTORIQUE "DERNIÈRES CHAÎNES REGARDÉES" ── */}
+      {isInitLoaded && showRecentWatched && (
+        <View style={styles.recentSection}>
+          <Text style={styles.recentTitle}>▶ Vues récemment</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.recentScroll}
+          >
+            {recentWatchedChannels.map((ch, idx) => (
+              <TouchableOpacity
+                key={`recent-${ch.id}`}
+                accessible={true}
+                hasTVPreferredFocus={Platform.isTV && idx === 0}
+                style={styles.recentCard}
+                onPress={() => handleSelectChannel(ch)}
+                activeOpacity={0.7}
+              >
+                <View style={styles.recentLogoWrap}>
+                  {ch.logo && ch.logo.startsWith('http') ? (
+                    <Image
+                      source={{ uri: ch.logo }}
+                      style={styles.recentLogo}
+                      contentFit="contain"
+                      transition={200}
+                    />
+                  ) : (
+                    <Ionicons name="tv-outline" size={18} color="#e50914" />
+                  )}
+                </View>
+                <Text style={styles.recentName} numberOfLines={1}>
+                  {ch.name}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+      )}
 
       {/* ── GRILLE / LISTE DES CHAÎNES (FLATLIST FLUIDE 60 FPS) ── */}
       {!isInitLoaded ? (
@@ -641,6 +758,7 @@ export default function NativeBokkApp() {
       <View style={styles.bottomNavContainer}>
         <View style={styles.bottomNavPill}>
           <TouchableOpacity
+            accessible={true}
             style={[styles.bottomNavItem, activeNavTab === 'home' && styles.bottomNavItemActive]}
             onPress={() => handleNavTabPress('home')}
             activeOpacity={0.8}
@@ -656,6 +774,7 @@ export default function NativeBokkApp() {
           </TouchableOpacity>
 
           <TouchableOpacity
+            accessible={true}
             style={[styles.bottomNavItem, activeNavTab === 'tv' && styles.bottomNavItemActive]}
             onPress={() => handleNavTabPress('tv')}
             activeOpacity={0.8}
@@ -671,6 +790,7 @@ export default function NativeBokkApp() {
           </TouchableOpacity>
 
           <TouchableOpacity
+            accessible={true}
             style={[styles.bottomNavItem, activeNavTab === 'sport' && styles.bottomNavItemActive]}
             onPress={() => handleNavTabPress('sport')}
             activeOpacity={0.8}
@@ -686,6 +806,7 @@ export default function NativeBokkApp() {
           </TouchableOpacity>
 
           <TouchableOpacity
+            accessible={true}
             style={[styles.bottomNavItem, activeNavTab === 'favoris' && styles.bottomNavItemActive]}
             onPress={() => handleNavTabPress('favoris')}
             activeOpacity={0.8}
@@ -701,6 +822,7 @@ export default function NativeBokkApp() {
           </TouchableOpacity>
 
           <TouchableOpacity
+            accessible={true}
             style={styles.bottomNavItem}
             onPress={() => setIsAccountModalOpen(true)}
             activeOpacity={0.8}
@@ -978,6 +1100,53 @@ const styles = StyleSheet.create({
   metaModeHint: {
     fontSize: 11,
     color: '#475569',
+  },
+  // ── Historique Vues Récemment ──
+  recentSection: {
+    paddingHorizontal: 14,
+    paddingTop: 8,
+    paddingBottom: 6,
+  },
+  recentTitle: {
+    fontSize: 12.5,
+    fontWeight: '800',
+    color: '#f8fafc',
+    marginBottom: 8,
+    letterSpacing: 0.3,
+  },
+  recentScroll: {
+    gap: 10,
+    paddingRight: 14,
+  },
+  recentCard: {
+    width: 78,
+    backgroundColor: '#111522',
+    borderRadius: 12,
+    padding: 8,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+  },
+  recentLogoWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 8,
+    backgroundColor: '#171d2c',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 5,
+    overflow: 'hidden',
+  },
+  recentLogo: {
+    width: '80%',
+    height: '80%',
+  },
+  recentName: {
+    color: '#cbd5e1',
+    fontSize: 10.5,
+    fontWeight: '600',
+    textAlign: 'center',
+    width: '100%',
   },
   gridContent: {
     paddingHorizontal: 7,

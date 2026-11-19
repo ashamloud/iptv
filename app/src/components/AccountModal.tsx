@@ -9,7 +9,8 @@ import {
   ActivityIndicator,
   Linking,
   Alert,
-  Clipboard
+  Clipboard,
+  ScrollView
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -90,10 +91,25 @@ export function AccountModal({
   };
 
   let daysRemaining = 30;
+  let formattedExpDate = '';
+  let isExpired = false;
   if (subscriber?.expiresAt) {
-    const exp = new Date(subscriber.expiresAt).getTime();
-    daysRemaining = Math.max(0, Math.ceil((exp - Date.now()) / (1000 * 60 * 60 * 24)));
+    const exp = new Date(subscriber.expiresAt);
+    const expTime = exp.getTime();
+    daysRemaining = Math.ceil((expTime - Date.now()) / (1000 * 60 * 60 * 24));
+    isExpired = daysRemaining <= 0;
+
+    const d = String(exp.getDate()).padStart(2, '0');
+    const m = String(exp.getMonth() + 1).padStart(2, '0');
+    const y = exp.getFullYear();
+    formattedExpDate = `${d}/${m}/${y}`;
   }
+
+  const initial = (subscriber?.prenom || subscriber?.phone || subscriber?.id || 'B').trim().charAt(0).toUpperCase();
+
+  const countdownText = isExpired
+    ? `⚠️ Expiré depuis ${Math.abs(daysRemaining)} jour${Math.abs(daysRemaining) > 1 ? 's' : ''}`
+    : `Expire le ${formattedExpDate || '30j'} (dans ${daysRemaining} jour${daysRemaining > 1 ? 's' : ''})`;
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
@@ -111,88 +127,162 @@ export function AccountModal({
           </View>
 
           {subscriber ? (
-            /* Profil Connecté avec Carte Membre 1 Écran */
-            <View style={styles.body}>
-              <LinearGradient
-                colors={['#1c1017', '#121626', '#0a0d16']}
-                style={styles.passCard}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-              >
-                <View style={styles.passHeader}>
-                  <View style={styles.passChip}>
-                    <Ionicons name="hardware-chip-outline" size={16} color="#e50914" />
-                    <Text style={styles.passLabel}>BOKK TV • 1 ÉCRAN</Text>
+            /* Profil Connecté avec Carte Membre 1 Écran & Profil Enrichi */
+            <ScrollView style={styles.modalScroll} showsVerticalScrollIndicator={false}>
+              <View style={styles.body}>
+                <LinearGradient
+                  colors={['#1c1017', '#121626', '#0a0d16']}
+                  style={styles.passCard}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                >
+                  <View style={styles.passHeader}>
+                    <View style={styles.passChip}>
+                      <Ionicons name="hardware-chip-outline" size={16} color="#e50914" />
+                      <Text style={styles.passLabel}>BOKK TV • 1 ÉCRAN</Text>
+                    </View>
+                    <View style={[styles.statusBadge, (subscriber.status === 'suspended' || isExpired) && styles.statusSuspended]}>
+                      <Text style={[styles.statusText, (subscriber.status === 'suspended' || isExpired) && styles.statusTextSuspended]}>
+                        {subscriber.status === 'suspended'
+                          ? '● SUSPENDU'
+                          : isExpired
+                          ? '● EXPIRÉ'
+                          : `● ACTIF (${daysRemaining}J)`}
+                      </Text>
+                    </View>
                   </View>
-                  <View style={[styles.statusBadge, subscriber.status === 'suspended' && styles.statusSuspended]}>
-                    <Text style={[styles.statusText, subscriber.status === 'suspended' && styles.statusTextSuspended]}>
-                      {subscriber.status === 'suspended' ? '● SUSPENDU' : `● ACTIF (${daysRemaining}J)`}
-                    </Text>
+
+                  {/* Avatar circulaire + Nom + Compte à rebours dynamique */}
+                  <View style={styles.profileRow}>
+                    <View style={styles.avatarCircle}>
+                      <Text style={styles.avatarText}>{initial}</Text>
+                    </View>
+                    <View style={styles.profileInfo}>
+                      <Text style={styles.passName}>{subscriber.prenom || 'Abonné'}</Text>
+                      <Text style={[styles.countdownText, isExpired && styles.countdownTextExpired]}>
+                        {countdownText}
+                      </Text>
+                    </View>
                   </View>
+
+                  <View style={styles.passFooter}>
+                    <View>
+                      <Text style={styles.idLabel}>NUMÉRO LIÉ AU COMPTE</Text>
+                      <Text style={styles.idValue}>{subscriber.phone || subscriber.id}</Text>
+                    </View>
+                    <TouchableOpacity style={styles.copyPill} onPress={handleCopyId} activeOpacity={0.8}>
+                      <Ionicons name="copy-outline" size={13} color="#fff" />
+                      <Text style={styles.copyPillText}>Copier</Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  <View style={styles.deviceRow}>
+                    <Ionicons name="phone-portrait-outline" size={12} color="#94a3b8" />
+                    <Text style={styles.deviceText}>Appareil actuel : {deviceName}</Text>
+                  </View>
+                </LinearGradient>
+
+                <View style={styles.ruleNotice}>
+                  <Ionicons name="shield-checkmark-outline" size={16} color="#22c55e" />
+                  <Text style={styles.ruleNoticeText}>
+                    Règle 1 Écran : Si vous lancez une vidéo sur un autre appareil, la lecture se mettra automatiquement en pause ici.
+                  </Text>
                 </View>
 
-                <Text style={styles.passName}>{subscriber.prenom}</Text>
-
-                <View style={styles.passFooter}>
-                  <View>
-                    <Text style={styles.idLabel}>NUMÉRO LIÉ AU COMPTE</Text>
-                    <Text style={styles.idValue}>{subscriber.phone || subscriber.id}</Text>
-                  </View>
-                  <TouchableOpacity style={styles.copyPill} onPress={handleCopyId} activeOpacity={0.8}>
-                    <Ionicons name="copy-outline" size={13} color="#fff" />
-                    <Text style={styles.copyPillText}>Copier</Text>
-                  </TouchableOpacity>
-                </View>
-
-                <View style={styles.deviceRow}>
-                  <Ionicons name="phone-portrait-outline" size={12} color="#94a3b8" />
-                  <Text style={styles.deviceText}>Appareil actuel : {deviceName}</Text>
-                </View>
-              </LinearGradient>
-
-              <View style={styles.ruleNotice}>
-                <Ionicons name="shield-checkmark-outline" size={16} color="#22c55e" />
-                <Text style={styles.ruleNoticeText}>
-                  Règle 1 Écran : Si vous lancez une vidéo sur un autre appareil, la lecture se mettra automatiquement en pause ici.
-                </Text>
-              </View>
-
-              {/* Section Prolonger / Renouveler la date d'expiration */}
-              {(daysRemaining <= 0 || showProlongInfo) ? (
-                <View style={styles.paymentBox}>
+                {/* Section Plans de renouvellement (3 options Wave) */}
+                <View style={styles.renewalPlansBox}>
                   <View style={styles.paymentHeader}>
-                    <Ionicons name="time-outline" size={16} color="#38bdf8" />
-                    <Text style={styles.paymentTitle}>Prolonger l'abonnement (3 000 F / mois)</Text>
+                    <Ionicons name="sparkles" size={16} color="#38bdf8" />
+                    <Text style={styles.paymentTitle}>Plans de renouvellement</Text>
                   </View>
                   <Text style={styles.paymentDesc}>
-                    Veuillez payer TerangaJob 3.000F avec Wave en cliquant sur le bouton ci-dessous. Après paiement, veuillez patienter quelques instants (2h max) pour l'activation.
+                    Renouvelez instantanément votre abonnement via Wave :
                   </Text>
-                  <TouchableOpacity style={styles.waveBtn} onPress={handleWavePay} activeOpacity={0.85}>
-                    <Ionicons name="card-outline" size={16} color="#fff" />
-                    <Text style={styles.waveBtnText}>Payer 3 000 F avec Wave</Text>
-                  </TouchableOpacity>
+
+                  <View style={styles.plansContainer}>
+                    {/* 1 mois – 3 000 F */}
+                    <TouchableOpacity
+                      style={styles.planCard}
+                      onPress={() =>
+                        Linking.openURL('https://pay.wave.com/m/M_sn_cop5B9UJYF8P/c/sn/?amount=3000').catch(() => {
+                          Alert.alert('Erreur', "Impossible d'ouvrir Wave.");
+                        })
+                      }
+                      activeOpacity={0.85}
+                    >
+                      <View style={styles.planInfo}>
+                        <Ionicons name="time-outline" size={16} color="#38bdf8" />
+                        <Text style={styles.planDuration}>1 mois</Text>
+                        <Text style={styles.planPrice}>3 000 F</Text>
+                      </View>
+                      <View style={styles.planWaveBadge}>
+                        <Text style={styles.planWaveText}>Wave →</Text>
+                      </View>
+                    </TouchableOpacity>
+
+                    {/* 3 mois – 7 500 F (économie 1500F) */}
+                    <TouchableOpacity
+                      style={[styles.planCard, styles.planCardPopular]}
+                      onPress={() =>
+                        Linking.openURL('https://pay.wave.com/m/M_sn_cop5B9UJYF8P/c/sn/?amount=7500').catch(() => {
+                          Alert.alert('Erreur', "Impossible d'ouvrir Wave.");
+                        })
+                      }
+                      activeOpacity={0.85}
+                    >
+                      <View style={styles.planInfo}>
+                        <Ionicons name="flame" size={16} color="#f59e0b" />
+                        <View style={styles.planRow}>
+                          <Text style={styles.planDuration}>3 mois</Text>
+                          <View style={styles.savingsPill}>
+                            <Text style={styles.savingsText}>Éco 1 500F</Text>
+                          </View>
+                        </View>
+                        <Text style={styles.planPrice}>7 500 F</Text>
+                      </View>
+                      <View style={[styles.planWaveBadge, styles.planWaveBadgePopular]}>
+                        <Text style={styles.planWaveText}>Wave →</Text>
+                      </View>
+                    </TouchableOpacity>
+
+                    {/* 12 mois – 25 000 F (économie 11000F) */}
+                    <TouchableOpacity
+                      style={styles.planCard}
+                      onPress={() =>
+                        Linking.openURL('https://pay.wave.com/m/M_sn_cop5B9UJYF8P/c/sn/?amount=25000').catch(() => {
+                          Alert.alert('Erreur', "Impossible d'ouvrir Wave.");
+                        })
+                      }
+                      activeOpacity={0.85}
+                    >
+                      <View style={styles.planInfo}>
+                        <Ionicons name="trophy" size={16} color="#22c55e" />
+                        <View style={styles.planRow}>
+                          <Text style={styles.planDuration}>12 mois</Text>
+                          <View style={styles.savingsPill}>
+                            <Text style={styles.savingsText}>Éco 11 000F</Text>
+                          </View>
+                        </View>
+                        <Text style={styles.planPrice}>25 000 F</Text>
+                      </View>
+                      <View style={styles.planWaveBadge}>
+                        <Text style={styles.planWaveText}>Wave →</Text>
+                      </View>
+                    </TouchableOpacity>
+                  </View>
                 </View>
-              ) : (
-                <TouchableOpacity
-                  style={[styles.waveBtn, { marginBottom: 12 }]}
-                  onPress={() => setShowProlongInfo(true)}
-                  activeOpacity={0.85}
-                >
-                  <Ionicons name="calendar-outline" size={16} color="#fff" />
-                  <Text style={styles.waveBtnText}>Prolonger la date d'expiration (Wave)</Text>
+
+                <TouchableOpacity style={styles.whatsappBtn} onPress={handleWhatsApp} activeOpacity={0.85}>
+                  <Ionicons name="logo-whatsapp" size={18} color="#25d366" />
+                  <Text style={styles.whatsappText}>WhatsApp Support (+221 78 305 55 20)</Text>
                 </TouchableOpacity>
-              )}
 
-              <TouchableOpacity style={styles.whatsappBtn} onPress={handleWhatsApp} activeOpacity={0.85}>
-                <Ionicons name="logo-whatsapp" size={18} color="#25d366" />
-                <Text style={styles.whatsappText}>WhatsApp Support (+221 78 305 55 20)</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout} activeOpacity={0.8}>
-                <Ionicons name="log-out-outline" size={16} color="#ef4444" />
-                <Text style={styles.logoutText}>Changer de compte / Déconnexion</Text>
-              </TouchableOpacity>
-            </View>
+                <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout} activeOpacity={0.8}>
+                  <Ionicons name="log-out-outline" size={16} color="#ef4444" />
+                  <Text style={styles.logoutText}>Changer de compte / Déconnexion</Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
           ) : (
             /* Formulaire Authentification Numéro Unique (100% Gratuit) */
             <View style={styles.body}>
@@ -304,6 +394,120 @@ const styles = StyleSheet.create({
   },
   body: {
     padding: 18,
+  },
+  modalScroll: {
+    maxHeight: 520,
+  },
+  profileRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    marginVertical: 10,
+  },
+  avatarCircle: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#e50914',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#e50914',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  avatarText: {
+    color: '#ffffff',
+    fontSize: 26,
+    fontWeight: '900',
+  },
+  profileInfo: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  countdownText: {
+    color: '#38bdf8',
+    fontSize: 11.5,
+    fontWeight: '700',
+    marginTop: 2,
+  },
+  countdownTextExpired: {
+    color: '#f87171',
+  },
+  renewalPlansBox: {
+    backgroundColor: 'rgba(56, 189, 248, 0.06)',
+    borderWidth: 1,
+    borderColor: 'rgba(56, 189, 248, 0.2)',
+    borderRadius: 14,
+    padding: 12,
+    marginBottom: 12,
+  },
+  plansContainer: {
+    gap: 8,
+    marginTop: 8,
+  },
+  planCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#111625',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+  },
+  planCardPopular: {
+    borderColor: 'rgba(56, 189, 248, 0.45)',
+    backgroundColor: 'rgba(56, 189, 248, 0.1)',
+  },
+  planInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  planRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  planDuration: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  planPrice: {
+    color: '#38bdf8',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  savingsPill: {
+    backgroundColor: 'rgba(34, 197, 94, 0.2)',
+    borderWidth: 1,
+    borderColor: 'rgba(34, 197, 94, 0.4)',
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 6,
+  },
+  savingsText: {
+    color: '#22c55e',
+    fontSize: 9.5,
+    fontWeight: '800',
+  },
+  planWaveBadge: {
+    backgroundColor: '#0284c7',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 6,
+  },
+  planWaveBadgePopular: {
+    backgroundColor: '#0284c7',
+  },
+  planWaveText: {
+    color: '#ffffff',
+    fontSize: 11,
+    fontWeight: '800',
   },
   passCard: {
     borderRadius: 16,
