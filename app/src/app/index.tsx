@@ -42,6 +42,7 @@ export default function NativeBokkApp() {
 
   // État lecteur & chaîne active
   const [activeChannel, setActiveChannel] = useState<Channel | null>(null);
+  const [isPlayerFullscreen, setIsPlayerFullscreen] = useState<boolean>(false);
 
   // Vue active de navigation (accueil, tv, sports, favoris)
   const [activeNavTab, setActiveNavTab] = useState<'home' | 'tv' | 'sport' | 'favoris'>('home');
@@ -227,6 +228,7 @@ export default function NativeBokkApp() {
   // Fermeture du lecteur
   const handleClosePlayer = useCallback(() => {
     setActiveChannel(null);
+    setIsPlayerFullscreen(false);
   }, []);
 
   // Déclenchement de la restriction / expiration de visionnage
@@ -376,8 +378,8 @@ export default function NativeBokkApp() {
   const keyExtractor = useCallback((item: Channel) => String(item.id), []);
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
-      <StatusBar style="light" />
+    <SafeAreaView style={styles.safeArea} edges={isPlayerFullscreen ? [] : ['top', 'left', 'right']}>
+      <StatusBar style="light" hidden={isPlayerFullscreen} />
 
       {/* ── HEADER PREMIUM BOKK TV ── */}
       <View style={styles.header}>
@@ -466,9 +468,9 @@ export default function NativeBokkApp() {
         </View>
       )}
 
-      {/* ── LECTEUR VIDÉO NATIF DOCKÉ ── */}
+      {/* ── LECTEUR VIDÉO NATIF (DOCKÉ / PLEIN ÉCRAN) ── */}
       {activeChannel ? (
-        <View style={styles.playerWrapper}>
+        <View style={[styles.playerWrapper, isPlayerFullscreen && styles.playerWrapperFullscreen]}>
           <NativePlayer
             channel={activeChannel}
             onClose={handleClosePlayer}
@@ -477,10 +479,14 @@ export default function NativeBokkApp() {
             subscriber={subscriber}
             onNextChannel={handleNextChannel}
             onPrevChannel={handlePrevChannel}
+            isFavorite={favorites.includes(String(activeChannel.id))}
+            onToggleFavorite={() => handleToggleFavorite(activeChannel.id)}
+            isFullscreen={isPlayerFullscreen}
+            onToggleFullscreen={(fs) => setIsPlayerFullscreen(fs)}
           />
 
-          {/* ── BANDEAU DE ZAPPING RAPIDE ── */}
-          {relatedZappingChannels.length > 0 && (
+          {/* ── BANDEAU DE ZAPPING RAPIDE (Masqué en plein écran) ── */}
+          {!isPlayerFullscreen && relatedZappingChannels.length > 0 && (
             <View style={styles.zappingStrip}>
               <Text style={styles.zappingLabel}>ZAPPING RAPIDE :</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.zappingScroll}>
@@ -815,6 +821,17 @@ const styles = StyleSheet.create({
   playerWrapper: {
     width: '100%',
     backgroundColor: '#000',
+  },
+  playerWrapperFullscreen: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: '100%',
+    height: '100%',
+    zIndex: 99999,
+    backgroundColor: '#000000',
   },
   zappingStrip: {
     flexDirection: 'row',

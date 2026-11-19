@@ -1,6 +1,6 @@
 // ═══════════════════════════════════════════════════════════════
-// BOKK TV — Lecteur Vidéo Natif (Design Inspiré de Netflix)
-// Contrôles Cinématiques, Glassmorphism, Auto-Hide, Compatible TV
+// BOKK TV — Lecteur Vidéo Natif
+// Contrôles Intégrés au Dock Inférieur, Plein Écran, Compatible TV
 // ═══════════════════════════════════════════════════════════════
 
 import React, { useEffect, useState, useRef, useCallback } from 'react';
@@ -13,7 +13,6 @@ import {
   ActivityIndicator,
   Alert,
   Dimensions,
-  Platform,
   TouchableWithoutFeedback
 } from 'react-native';
 import { useVideoPlayer, VideoView } from 'expo-video';
@@ -25,7 +24,7 @@ import { resolveStreamUrl } from '../services/stream';
 import { FirebaseService, Subscriber } from '../services/firebase';
 import { StorageService } from '../services/storage';
 
-interface NativePlayerProps {
+export interface NativePlayerProps {
   channel: Channel;
   onClose: () => void;
   onPreviewLockTriggered?: () => void;
@@ -33,6 +32,10 @@ interface NativePlayerProps {
   subscriber?: Subscriber | null;
   onNextChannel?: () => void;
   onPrevChannel?: () => void;
+  isFavorite?: boolean;
+  onToggleFavorite?: () => void;
+  isFullscreen?: boolean;
+  onToggleFullscreen?: (fullscreen: boolean) => void;
 }
 
 function buildVideoSource(channel: Channel, useProxy: boolean = false) {
@@ -55,8 +58,15 @@ export function NativePlayer({
   isRegistered = false,
   subscriber,
   onNextChannel,
-  onPrevChannel
+  onPrevChannel,
+  isFavorite = false,
+  onToggleFavorite,
+  isFullscreen,
+  onToggleFullscreen
 }: NativePlayerProps) {
+  const [internalFullscreen, setInternalFullscreen] = useState<boolean>(false);
+  const isPlayerFullscreen = isFullscreen !== undefined ? isFullscreen : internalFullscreen;
+
   const [useProxy, setUseProxy] = useState<boolean>(false);
   const [streamSource, setStreamSource] = useState(() => buildVideoSource(channel, false));
   const [isReported, setIsReported] = useState<boolean>(false);
@@ -64,7 +74,7 @@ export function NativePlayer({
   const [statusMessage, setStatusMessage] = useState<string>('');
   const [concurrencyError, setConcurrencyError] = useState<string | null>(null);
 
-  // Contrôles Netflix : affichage temporisé & lecture
+  // Contrôles : affichage temporisé & lecture
   const [showControls, setShowControls] = useState<boolean>(true);
   const [isPlaying, setIsPlaying] = useState<boolean>(true);
   const [isMuted, setIsMuted] = useState<boolean>(false);
@@ -73,13 +83,14 @@ export function NativePlayer({
   const previewTimerRef = useRef<any>(null);
   const hideControlsTimerRef = useRef<any>(null);
   const sessionIdRef = useRef<string>('');
+  const videoViewRef = useRef<any>(null);
 
   const player = useVideoPlayer(streamSource, (p) => {
     p.loop = false;
     p.play();
   });
 
-  // Réinitialiser le timer d'auto-masquage des contrôles Netflix
+  // Réinitialiser le timer d'auto-masquage des contrôles
   const resetControlsTimeout = useCallback(() => {
     if (hideControlsTimerRef.current) {
       clearTimeout(hideControlsTimerRef.current);
@@ -115,6 +126,25 @@ export function NativePlayer({
     const nextMute = !isMuted;
     setIsMuted(nextMute);
     player.muted = nextMute;
+  };
+
+  const handleToggleFullscreen = () => {
+    resetControlsTimeout();
+    const nextVal = !isPlayerFullscreen;
+    if (onToggleFullscreen) {
+      onToggleFullscreen(nextVal);
+    } else {
+      setInternalFullscreen(nextVal);
+    }
+  };
+
+  const handleTogglePiP = async () => {
+    resetControlsTimeout();
+    try {
+      if (videoViewRef.current?.startPictureInPicture) {
+        await videoViewRef.current.startPictureInPicture();
+      }
+    } catch {}
   };
 
   // ── Solution 3 : Verrouillage Session Unique (1 Écran Simultané) ──
@@ -276,11 +306,12 @@ export function NativePlayer({
   const logoUri = channel.logo && channel.logo.startsWith('http') ? channel.logo : null;
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, isPlayerFullscreen && styles.containerFullscreen]}>
       {/* ── Surface Vidéo Plein Écran (Cliquable pour afficher/masquer contrôles) ── */}
       <TouchableWithoutFeedback onPress={toggleControls}>
         <View style={StyleSheet.absoluteFill}>
           <VideoView
+            ref={videoViewRef}
             player={player}
             style={styles.video}
             nativeControls={false}
@@ -290,10 +321,10 @@ export function NativePlayer({
         </View>
       </TouchableWithoutFeedback>
 
-      {/* ── Spinner Netflix de chargement ── */}
+      {/* ── Spinner BOKK TV de chargement ── */}
       {isBuffering && !hasError && !concurrencyError && (
         <View style={styles.bufferingOverlay} pointerEvents="none">
-          <View style={styles.netflixSpinnerWrap}>
+          <View style={styles.spinnerWrap}>
             <ActivityIndicator size="large" color="#e50914" />
             <Text style={styles.spinnerText}>BOKK TV</Text>
           </View>
@@ -301,63 +332,50 @@ export function NativePlayer({
       )}
 
       {/* ═══════════════════════════════════════════════════════════════ */}
-      {/* ── OVERLAY NETFLIX : CONTRÔLES HAUT, MILIEU, BAS ── */}
+      {/* ── OVERLAY DES CONTRÔLES (DESIGN DOCK INFÉRIEUR INTÉGRÉ) ── */}
       {/* ═══════════════════════════════════════════════════════════════ */}
       {showControls && !hasError && !concurrencyError && (
         <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
-          {/* ── 1. HEADER NETFLIX (Gradient Haut) ── */}
+          {/* ── 1. HEADER SUPÉRIEUR DISCRET (Retour, Statut flux & Fermer) ── */}
           <LinearGradient
-            colors={['rgba(0,0,0,0.92)', 'rgba(0,0,0,0.6)', 'transparent']}
+            colors={['rgba(0,0,0,0.85)', 'rgba(0,0,0,0.35)', 'transparent']}
             style={styles.topGradient}
             pointerEvents="box-none"
           >
             <View style={styles.topBar}>
-              <View style={styles.titleGroup}>
+              <TouchableOpacity
+                style={styles.backCircleBtn}
+                onPress={onClose}
+                hitSlop={10}
+                focusable={true}
+                accessibilityLabel="Fermer ou quitter le lecteur"
+              >
+                <Ionicons name="chevron-back" size={22} color="#ffffff" />
+              </TouchableOpacity>
+
+              <View style={styles.topRightActions}>
+                {/* Mode Secours / Direct */}
                 <TouchableOpacity
-                  style={styles.backCircleBtn}
-                  onPress={onClose}
-                  hitSlop={8}
+                  style={styles.streamModePill}
+                  onPress={() => {
+                    resetControlsTimeout();
+                    if (useProxy) handleRetryDirect();
+                    else handleRetryWithProxy();
+                  }}
+                  activeOpacity={0.8}
                   focusable={true}
                 >
-                  <Ionicons name="chevron-back" size={20} color="#fff" />
+                  <Ionicons
+                    name={useProxy ? 'shield-checkmark' : 'flash'}
+                    size={12}
+                    color={useProxy ? '#60a5fa' : '#22c55e'}
+                  />
+                  <Text style={styles.streamModeText}>
+                    {useProxy ? 'Secours Actif' : 'Direct'}
+                  </Text>
                 </TouchableOpacity>
 
-                {logoUri ? (
-                  <Image
-                    source={{ uri: logoUri }}
-                    style={styles.channelLogoThumb}
-                    contentFit="contain"
-                  />
-                ) : (
-                  <View style={styles.logoThumbFallback}>
-                    <Ionicons name="tv" size={14} color="#e50914" />
-                  </View>
-                )}
-
-                <View style={styles.channelMeta}>
-                  <View style={styles.nameRow}>
-                    <Text style={styles.channelName} numberOfLines={1}>
-                      {channel.name}
-                    </Text>
-                    <View style={styles.liveBadge}>
-                      <View style={styles.liveDot} />
-                      <Text style={styles.liveBadgeText}>DIRECT</Text>
-                    </View>
-                    <View style={styles.qualityPill}>
-                      <Text style={styles.qualityPillText}>
-                        {channel.badge || 'HD'}
-                      </Text>
-                    </View>
-                  </View>
-                  <Text style={styles.channelCategory} numberOfLines={1}>
-                    {channel.group || channel.category || 'Direct TV'}
-                    {useProxy ? ' • Proxy Secours' : ''}
-                  </Text>
-                </View>
-              </View>
-
-              <View style={styles.topActions}>
-                {/* Bouton Signaler HS */}
+                {/* Bouton Signaler */}
                 <TouchableOpacity
                   style={[styles.reportBtn, isReported && styles.reportBtnDone]}
                   onPress={handleReport}
@@ -374,148 +392,221 @@ export function NativePlayer({
                   </Text>
                 </TouchableOpacity>
 
-                {/* Bouton Fermer Lecteur */}
+                {/* Bouton Fermer */}
                 <TouchableOpacity
                   style={styles.closeBtn}
                   onPress={onClose}
                   hitSlop={10}
                   focusable={true}
                 >
-                  <Ionicons name="close" size={18} color="#fff" />
+                  <Ionicons name="close" size={18} color="#ffffff" />
                 </TouchableOpacity>
               </View>
             </View>
           </LinearGradient>
 
-          {/* ── 2. CENTRE NETFLIX : ZAPPING & GROS BOUTON PLAY/PAUSE ── */}
-          <View style={styles.centerControls} pointerEvents="box-none">
-            {/* Chaîne Précédente */}
-            {onPrevChannel && (
-              <Pressable
-                style={({ pressed, focused }: any) => [
-                  styles.netflixNavBtn,
-                  focused && styles.tvFocused,
-                  pressed && styles.btnPressed
-                ]}
-                onPress={() => {
-                  resetControlsTimeout();
-                  onPrevChannel();
-                }}
-                focusable={true}
-                hitSlop={10}
-              >
-                <Ionicons name="play-skip-back" size={22} color="#ffffff" />
-              </Pressable>
-            )}
-
-            {/* Gros Bouton Central Play/Pause Style Netflix */}
-            <Pressable
-              style={({ pressed, focused }: any) => [
-                styles.netflixPlayPauseBtn,
-                focused && styles.tvFocused,
-                pressed && styles.playBtnPressed
-              ]}
-              onPress={handleTogglePlayPause}
-              focusable={true}
-            >
-              <Ionicons
-                name={isPlaying ? 'pause' : 'play'}
-                size={34}
-                color="#ffffff"
-                style={!isPlaying && { marginLeft: 3 }}
-              />
-            </Pressable>
-
-            {/* Chaîne Suivante */}
-            {onNextChannel && (
-              <Pressable
-                style={({ pressed, focused }: any) => [
-                  styles.netflixNavBtn,
-                  focused && styles.tvFocused,
-                  pressed && styles.btnPressed
-                ]}
-                onPress={() => {
-                  resetControlsTimeout();
-                  onNextChannel();
-                }}
-                focusable={true}
-                hitSlop={10}
-              >
-                <Ionicons name="play-skip-forward" size={22} color="#ffffff" />
-              </Pressable>
-            )}
-          </View>
-
-          {/* ── 3. BAS NETFLIX : BARRE DE PROGRESSION EN DIRECT & ACTIONS ── */}
+          {/* ── 2. DOCK INFÉRIEUR COMPLET (Style de référence avec couleurs d'origine) ── */}
           <LinearGradient
-            colors={['transparent', 'rgba(0,0,0,0.6)', 'rgba(0,0,0,0.95)']}
-            style={styles.bottomGradient}
+            colors={['transparent', 'rgba(0,0,0,0.7)', 'rgba(0,0,0,0.96)']}
+            style={styles.bottomDock}
             pointerEvents="box-none"
           >
-            {/* Ligne rouge Netflix continue pour le Live */}
-            <View style={styles.liveProgressBar}>
-              <View style={styles.liveProgressFill} />
-              <View style={styles.liveKnob} />
-            </View>
+            {/* LIGNE 1 DU DOCK : LOGO, NOM DE CHAÎNE, BADGES & ÉTOILE FAVORI */}
+            <View style={styles.dockTopRow}>
+              <View style={styles.dockMetaLeft}>
+                {logoUri ? (
+                  <Image
+                    source={{ uri: logoUri }}
+                    style={styles.dockLogo}
+                    contentFit="contain"
+                  />
+                ) : (
+                  <View style={styles.dockLogoFallback}>
+                    <Ionicons name="tv" size={16} color="#e50914" />
+                  </View>
+                )}
 
-            <View style={styles.bottomBarRow}>
-              {/* Statut du flux et bascule Secours */}
-              <TouchableOpacity
-                style={styles.streamModePill}
-                onPress={() => {
-                  resetControlsTimeout();
-                  if (useProxy) handleRetryDirect();
-                  else handleRetryWithProxy();
-                }}
-                activeOpacity={0.8}
-                focusable={true}
-              >
-                <Ionicons
-                  name={useProxy ? 'shield-checkmark' : 'flash'}
-                  size={12}
-                  color={useProxy ? '#60a5fa' : '#22c55e'}
-                />
-                <Text style={styles.streamModeText}>
-                  {useProxy ? 'Flux Secours Actif' : 'Connexion Directe'}
-                </Text>
-              </TouchableOpacity>
+                <View style={styles.dockMetaTextCol}>
+                  <Text style={styles.dockChannelName} numberOfLines={1}>
+                    {channel.name}
+                  </Text>
+                  <View style={styles.dockBadgesRow}>
+                    {/* Badge Catégorie (ex: FRANCOPHONE, SPORT, SÉNÉGAL) */}
+                    <View style={styles.badgeCategory}>
+                      <Text style={styles.badgeCategoryText}>
+                        {(channel.category || channel.group || 'GÉNÉRAL').toUpperCase()}
+                      </Text>
+                    </View>
 
-              <View style={styles.bottomRightActions}>
-                {/* Couper / Activer le son */}
+                    {/* Badge Qualité (ex: FHD, 1080p, HD) */}
+                    <View style={styles.badgeQuality}>
+                      <Text style={styles.badgeQualityText}>
+                        {channel.badge || 'FHD'}
+                      </Text>
+                    </View>
+
+                    {/* Badge Direct avec point vert */}
+                    <View style={styles.badgeLive}>
+                      <View style={styles.liveGreenDot} />
+                      <Text style={styles.badgeLiveText}>DIRECT</Text>
+                    </View>
+                  </View>
+                </View>
+              </View>
+
+              {/* Bouton Favori Étoile à droite */}
+              {onToggleFavorite && (
                 <TouchableOpacity
-                  style={styles.bottomIconBtn}
-                  onPress={handleToggleMute}
-                  hitSlop={8}
+                  style={[styles.dockFavBtn, isFavorite && styles.dockFavBtnActive]}
+                  onPress={() => {
+                    resetControlsTimeout();
+                    onToggleFavorite();
+                  }}
+                  hitSlop={10}
                   focusable={true}
+                  accessibilityLabel="Ajouter aux favoris"
                 >
                   <Ionicons
-                    name={isMuted ? 'volume-mute' : 'volume-high'}
+                    name={isFavorite ? 'star' : 'star-outline'}
                     size={20}
-                    color="#ffffff"
+                    color={isFavorite ? '#f59e0b' : '#ffffff'}
                   />
                 </TouchableOpacity>
+              )}
+            </View>
 
-                {/* Zapping rapide suivant */}
+            {/* LIGNE 2 DU DOCK : CONTRÔLES (PREV, PLAY ROUGE, NEXT, MUTE, SCRUBBER, PIP & PLEIN ÉCRAN) */}
+            <View style={styles.dockControlsRow}>
+              {/* Groupe Gauche : Zapping Prev, Play/Pause Rouge BOKK, Zapping Next, Mute */}
+              <View style={styles.dockControlsLeft}>
+                {onPrevChannel && (
+                  <Pressable
+                    style={({ pressed, focused }: any) => [
+                      styles.circleCtrlBtn,
+                      focused && styles.ctrlFocused,
+                      pressed && styles.ctrlPressed
+                    ]}
+                    onPress={() => {
+                      resetControlsTimeout();
+                      onPrevChannel();
+                    }}
+                    focusable={true}
+                    hitSlop={8}
+                    accessibilityLabel="Chaîne précédente"
+                  >
+                    <Ionicons name="play-skip-back" size={17} color="#ffffff" />
+                  </Pressable>
+                )}
+
+                {/* Bouton Play/Pause Rouge BOKK d'Origine */}
+                <Pressable
+                  style={({ pressed, focused }: any) => [
+                    styles.mainPlayPauseBtn,
+                    focused && styles.ctrlFocused,
+                    pressed && styles.playPressed
+                  ]}
+                  onPress={handleTogglePlayPause}
+                  focusable={true}
+                  accessibilityLabel={isPlaying ? 'Pause' : 'Lecture'}
+                >
+                  <Ionicons
+                    name={isPlaying ? 'pause' : 'play'}
+                    size={22}
+                    color="#ffffff"
+                    style={!isPlaying && { marginLeft: 2 }}
+                  />
+                </Pressable>
+
                 {onNextChannel && (
-                  <TouchableOpacity
-                    style={styles.bottomIconBtn}
+                  <Pressable
+                    style={({ pressed, focused }: any) => [
+                      styles.circleCtrlBtn,
+                      focused && styles.ctrlFocused,
+                      pressed && styles.ctrlPressed
+                    ]}
                     onPress={() => {
                       resetControlsTimeout();
                       onNextChannel();
                     }}
-                    hitSlop={8}
                     focusable={true}
+                    hitSlop={8}
+                    accessibilityLabel="Chaîne suivante"
                   >
-                    <Ionicons name="play-forward-outline" size={19} color="#ffffff" />
-                  </TouchableOpacity>
+                    <Ionicons name="play-skip-forward" size={17} color="#ffffff" />
+                  </Pressable>
                 )}
+
+                {/* Bouton Son Mute / Unmute */}
+                <Pressable
+                  style={({ pressed, focused }: any) => [
+                    styles.circleCtrlBtn,
+                    focused && styles.ctrlFocused,
+                    pressed && styles.ctrlPressed
+                  ]}
+                  onPress={handleToggleMute}
+                  focusable={true}
+                  hitSlop={8}
+                  accessibilityLabel={isMuted ? 'Activer le son' : 'Couper le son'}
+                >
+                  <Ionicons
+                    name={isMuted ? 'volume-mute' : 'volume-high'}
+                    size={18}
+                    color="#ffffff"
+                  />
+                </Pressable>
+              </View>
+
+              {/* Centre : Scrubber / Ligne Rouge en Direct avec Bouton Blanc */}
+              <View style={styles.dockScrubberWrap}>
+                <View style={styles.scrubberTrack}>
+                  <View style={styles.scrubberFill} />
+                  <View style={styles.scrubberThumb} />
+                </View>
+              </View>
+
+              {/* Groupe Droite : PiP & BOUTON PLEIN ÉCRAN */}
+              <View style={styles.dockControlsRight}>
+                {/* Bouton PiP (Picture-in-Picture) */}
+                <Pressable
+                  style={({ pressed, focused }: any) => [
+                    styles.circleCtrlBtn,
+                    focused && styles.ctrlFocused,
+                    pressed && styles.ctrlPressed
+                  ]}
+                  onPress={handleTogglePiP}
+                  focusable={true}
+                  hitSlop={8}
+                  accessibilityLabel="Picture in Picture"
+                >
+                  <Ionicons name="albums-outline" size={18} color="#ffffff" />
+                </Pressable>
+
+                {/* ── BOUTON PLEIN ÉCRAN (BIEN VISIBLE & PROÉMINENT) ── */}
+                <Pressable
+                  style={({ pressed, focused }: any) => [
+                    styles.fullscreenBtn,
+                    isPlayerFullscreen && styles.fullscreenBtnActive,
+                    focused && styles.ctrlFocused,
+                    pressed && styles.ctrlPressed
+                  ]}
+                  onPress={handleToggleFullscreen}
+                  focusable={true}
+                  hitSlop={10}
+                  accessibilityLabel={isPlayerFullscreen ? 'Quitter le plein écran' : 'Plein écran'}
+                >
+                  <Ionicons
+                    name={isPlayerFullscreen ? 'contract-outline' : 'expand-outline'}
+                    size={20}
+                    color="#ffffff"
+                  />
+                </Pressable>
               </View>
             </View>
           </LinearGradient>
         </View>
       )}
 
-      {/* ── 4. OVERLAY ERREUR NETFLIX STYLE ── */}
+      {/* ── OVERLAY ERREUR SIGNAL ── */}
       {hasError && !concurrencyError && (
         <View style={styles.netflixModalOverlay}>
           <View style={styles.netflixModalCard}>
@@ -561,7 +652,7 @@ export function NativePlayer({
         </View>
       )}
 
-      {/* ── 5. OVERLAY CONCURRENCE : 1 SEUL ÉCRAN SIMULTANÉ (SOLUTION 3) ── */}
+      {/* ── OVERLAY CONCURRENCE : 1 SEUL ÉCRAN SIMULTANÉ (SOLUTION 3) ── */}
       {concurrencyError && (
         <View style={styles.netflixModalOverlay}>
           <View style={styles.netflixModalCard}>
@@ -598,8 +689,8 @@ export function NativePlayer({
   );
 }
 
-const { width } = Dimensions.get('window');
-const playerHeight = Math.min(width * (9 / 16), 300);
+const { width: windowWidth } = Dimensions.get('window');
+const playerHeight = Math.min(windowWidth * (9 / 16), 300);
 
 const styles = StyleSheet.create({
   container: {
@@ -610,6 +701,18 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  containerFullscreen: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: '100%',
+    height: '100%',
+    zIndex: 99999,
+    backgroundColor: '#000000',
+    borderBottomWidth: 0,
   },
   video: {
     width: '100%',
@@ -622,7 +725,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: 'rgba(0, 0, 0, 0.35)',
   },
-  netflixSpinnerWrap: {
+  spinnerWrap: {
     alignItems: 'center',
     gap: 8,
   },
@@ -633,118 +736,62 @@ const styles = StyleSheet.create({
     letterSpacing: 1.5,
   },
 
-  // ── Gradient Haut ──
+  // ── Barre Supérieure ──
   topGradient: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     paddingTop: 10,
-    paddingBottom: 20,
+    paddingBottom: 22,
     paddingHorizontal: 14,
   },
   topBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 10,
-  },
-  titleGroup: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    flex: 1,
-    minWidth: 0,
   },
   backCircleBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(0, 0, 0, 0.55)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  channelLogoThumb: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-  },
-  logoThumbFallback: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    backgroundColor: 'rgba(229, 9, 20, 0.2)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  channelMeta: {
-    flex: 1,
-    minWidth: 0,
-  },
-  nameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  channelName: {
-    color: '#ffffff',
-    fontSize: 14,
-    fontWeight: '800',
-    flexShrink: 1,
-  },
-  liveBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: '#e50914',
-    paddingHorizontal: 6,
-    paddingVertical: 1.5,
-    borderRadius: 4,
-  },
-  liveDot: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: '#ffffff',
-  },
-  liveBadgeText: {
-    color: '#ffffff',
-    fontSize: 8.5,
-    fontWeight: '900',
-    letterSpacing: 0.5,
-  },
-  qualityPill: {
-    backgroundColor: 'rgba(255, 255, 255, 0.12)',
-    paddingHorizontal: 5,
-    paddingVertical: 1,
-    borderRadius: 4,
-  },
-  qualityPillText: {
-    color: '#94a3b8',
-    fontSize: 8.5,
-    fontWeight: '700',
-  },
-  channelCategory: {
-    color: '#94a3b8',
-    fontSize: 10.5,
-    marginTop: 1,
-  },
-  topActions: {
+  topRightActions: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+  },
+  streamModePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: 'rgba(0, 0, 0, 0.55)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    borderRadius: 14,
+  },
+  streamModeText: {
+    color: '#cbd5e1',
+    fontSize: 10.5,
+    fontWeight: '700',
   },
   reportBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    paddingHorizontal: 8,
-    paddingVertical: 5,
-    borderRadius: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.55)',
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.15)',
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    borderRadius: 14,
   },
   reportBtnDone: {
     borderColor: 'rgba(34, 197, 94, 0.4)',
@@ -759,136 +806,235 @@ const styles = StyleSheet.create({
     color: '#22c55e',
   },
   closeBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.12)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  // ── Contrôles Centraux Netflix ──
-  centerControls: {
-    ...StyleSheet.absoluteFill,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 36,
-  },
-  netflixPlayPauseBtn: {
-    width: 62,
-    height: 62,
-    borderRadius: 31,
-    backgroundColor: 'rgba(229, 9, 20, 0.95)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#e50914',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.5,
-    shadowRadius: 12,
-    elevation: 8,
-  },
-  playBtnPressed: {
-    transform: [{ scale: 0.92 }],
-    backgroundColor: '#b80710',
-  },
-  netflixNavBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(20, 24, 36, 0.8)',
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: 'rgba(0, 0, 0, 0.55)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderColor: 'rgba(255, 255, 255, 0.15)',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  btnPressed: {
-    transform: [{ scale: 0.92 }],
-    backgroundColor: 'rgba(40, 48, 68, 0.9)',
-  },
-  tvFocused: {
-    borderColor: '#00d2ff',
-    borderWidth: 2.5,
-    transform: [{ scale: 1.1 }],
-    shadowColor: '#00d2ff',
-    shadowOpacity: 0.8,
-    shadowRadius: 10,
-    elevation: 10,
-  },
 
-  // ── Gradient Bas ──
-  bottomGradient: {
+  // ── Dock Inférieur Intégré (Capture de référence) ──
+  bottomDock: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    paddingTop: 16,
-    paddingBottom: 8,
+    paddingTop: 18,
+    paddingBottom: 12,
     paddingHorizontal: 14,
+    gap: 10,
   },
-  liveProgressBar: {
-    height: 3,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    borderRadius: 2,
-    marginBottom: 8,
-    position: 'relative',
-    overflow: 'visible',
-  },
-  liveProgressFill: {
-    width: '100%',
-    height: '100%',
-    backgroundColor: '#e50914',
-    borderRadius: 2,
-  },
-  liveKnob: {
-    position: 'absolute',
-    right: 0,
-    top: -3.5,
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: '#ffffff',
-    shadowColor: '#e50914',
-    shadowRadius: 4,
-    shadowOpacity: 0.8,
-    elevation: 4,
-  },
-  bottomBarRow: {
+  dockTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: 10,
   },
-  streamModePill: {
+  dockMetaLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.15)',
-    paddingHorizontal: 8,
-    paddingVertical: 3.5,
-    borderRadius: 12,
+    gap: 10,
+    flex: 1,
+    minWidth: 0,
   },
-  streamModeText: {
-    color: '#cbd5e1',
-    fontSize: 10,
-    fontWeight: '700',
+  dockLogo: {
+    width: 38,
+    height: 38,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
   },
-  bottomRightActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  bottomIconBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+  dockLogoFallback: {
+    width: 38,
+    height: 38,
+    borderRadius: 8,
+    backgroundColor: 'rgba(229, 9, 20, 0.2)',
     alignItems: 'center',
     justifyContent: 'center',
   },
+  dockMetaTextCol: {
+    flex: 1,
+    minWidth: 0,
+    gap: 3,
+  },
+  dockChannelName: {
+    color: '#ffffff',
+    fontSize: 14.5,
+    fontWeight: '800',
+    letterSpacing: -0.2,
+  },
+  dockBadgesRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    flexWrap: 'wrap',
+  },
+  badgeCategory: {
+    backgroundColor: 'rgba(229, 9, 20, 0.22)',
+    borderWidth: 1,
+    borderColor: 'rgba(229, 9, 20, 0.5)',
+    paddingHorizontal: 6,
+    paddingVertical: 1.5,
+    borderRadius: 4,
+  },
+  badgeCategoryText: {
+    color: '#ffffff',
+    fontSize: 8.5,
+    fontWeight: '800',
+    letterSpacing: 0.3,
+  },
+  badgeQuality: {
+    backgroundColor: 'rgba(255, 255, 255, 0.14)',
+    paddingHorizontal: 6,
+    paddingVertical: 1.5,
+    borderRadius: 4,
+  },
+  badgeQualityText: {
+    color: '#cbd5e1',
+    fontSize: 8.5,
+    fontWeight: '800',
+  },
+  badgeLive: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(34, 197, 94, 0.18)',
+    borderWidth: 1,
+    borderColor: 'rgba(34, 197, 94, 0.4)',
+    paddingHorizontal: 6,
+    paddingVertical: 1.5,
+    borderRadius: 4,
+  },
+  liveGreenDot: {
+    width: 4.5,
+    height: 4.5,
+    borderRadius: 2.25,
+    backgroundColor: '#22c55e',
+  },
+  badgeLiveText: {
+    color: '#22c55e',
+    fontSize: 8.5,
+    fontWeight: '900',
+    letterSpacing: 0.4,
+  },
+  dockFavBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.18)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dockFavBtnActive: {
+    backgroundColor: 'rgba(245, 158, 11, 0.2)',
+    borderColor: '#f59e0b',
+  },
 
-  // ── Modales d'erreur & Concurrence Style Netflix ──
+  // ── Ligne 2 : Contrôles de Lecture & Plein Écran ──
+  dockControlsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  dockControlsLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+  },
+  mainPlayPauseBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#e50914',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#e50914',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.5,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  circleCtrlBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ctrlPressed: {
+    transform: [{ scale: 0.92 }],
+    backgroundColor: 'rgba(255, 255, 255, 0.22)',
+  },
+  playPressed: {
+    transform: [{ scale: 0.92 }],
+    backgroundColor: '#b80710',
+  },
+  ctrlFocused: {
+    borderColor: '#38bdf8',
+    borderWidth: 2,
+    transform: [{ scale: 1.08 }],
+    elevation: 8,
+  },
+  dockScrubberWrap: {
+    flex: 1,
+    paddingHorizontal: 8,
+    justifyContent: 'center',
+  },
+  scrubberTrack: {
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    position: 'relative',
+    justifyContent: 'center',
+  },
+  scrubberFill: {
+    width: '94%',
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#e50914',
+  },
+  scrubberThumb: {
+    position: 'absolute',
+    left: '92%',
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#ffffff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.6,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  dockControlsRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  fullscreenBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: 'rgba(255, 255, 255, 0.16)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  fullscreenBtnActive: {
+    backgroundColor: 'rgba(229, 9, 20, 0.35)',
+    borderColor: '#e50914',
+  },
+
+  // ── Modales d'erreur & Concurrence ──
   netflixModalOverlay: {
     ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(0, 0, 0, 0.92)',
