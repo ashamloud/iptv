@@ -235,27 +235,28 @@ export default function NativeBokkApp() {
     };
   }, []);
 
-  // ── Polling automatique en arrière-plan : Sync Admin toutes les 25 secondes ──
+  // ── Polling discret en arrière-plan (suspendu pendant la lecture vidéo pour 100% de fluidité) ──
   useEffect(() => {
+    if (activeChannel) return;
+
     const adminInterval = setInterval(() => {
       syncAdminData();
-    }, 25000);
+    }, 180000); // 3 minutes hors lecture
 
     const matchesInterval = setInterval(() => {
       syncMatches();
-    }, 90000); // Rafraîchir les scores de matchs toutes les 90s
+    }, 120000); // 2 minutes
 
-    // Vérifier les messages admin toutes les 60 secondes
     const msgInterval = setInterval(() => {
       syncAdminMessages(subscriber?.id || '');
-    }, 60000);
+    }, 90000);
 
     return () => {
       clearInterval(adminInterval);
       clearInterval(matchesInterval);
       clearInterval(msgInterval);
     };
-  }, [syncAdminData, syncMatches, syncAdminMessages, subscriber]);
+  }, [syncAdminData, syncMatches, syncAdminMessages, subscriber?.id, activeChannel]);
 
   // ── Re-sync dès que l'application repasse au premier plan (Foreground) ──
   useEffect(() => {
@@ -318,7 +319,10 @@ export default function NativeBokkApp() {
   const handleClosePlayer = useCallback(() => {
     setActiveChannel(null);
     setIsPlayerFullscreen(false);
-  }, []);
+    setTimeout(() => {
+      syncAdminData();
+    }, 500);
+  }, [syncAdminData]);
 
   // Déclenchement de la restriction / expiration de visionnage
   const handlePreviewLock = useCallback(() => {

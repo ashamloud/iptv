@@ -1,9 +1,57 @@
 // ═══════════════════════════════════════════════════════════════
 // BOKK TV — Résolution intelligente des flux natifs (Android / iOS / TV)
-// Connexion directe ultra-rapide + Fallback Proxy Vercel sécurisé
+// Connexion directe ultra-rapide CDN + Cache Edge + Zéro coupure
 // ═══════════════════════════════════════════════════════════════
 
-const RTS_CHANNELS = new Set(['rts1', 'rts2', 'rts3', 'rts4', 'rts5', 'sentv', '2stv', 'leraltv', 'walftv', 'walf']);
+export const RTS_IDS: Record<string, number> = {
+  rts1: 26,
+  rts2: 32,
+  rts3: 42,
+  rts4: 51,
+  rts5: 52,
+  sentv: 2,
+  '2stv': 29,
+  leraltv: 35,
+  walftv: 33,
+  walf: 33,
+};
+
+const acanCache = new Map<string, { url: string; time: number }>();
+
+/**
+ * Récupère directement l'URL native du CDN ACAN officiel
+ * (évite de passer par un proxy et élimine tout temps de chargement / coupure)
+ */
+export async function fetchAcanDirectUrl(channelKey: string): Promise<string | null> {
+  const key = channelKey.toLowerCase();
+  const cid = RTS_IDS[key];
+  if (!cid) return null;
+
+  const now = Date.now();
+  const cached = acanCache.get(key);
+  if (cached && now - cached.time < 300000) {
+    return cached.url;
+  }
+
+  try {
+    const res = await fetch(`https://tveapi.acan.group/myapiv2/directplayback/${cid}/json`, {
+      headers: {
+        Accept: 'application/json',
+        'User-Agent': 'IPTVSmartersPro'
+      }
+    });
+    if (res.ok) {
+      const data = await res.json();
+      const directUrl = data.android_url || data.direct_url || data.web_url;
+      if (directUrl) {
+        acanCache.set(key, { url: directUrl, time: now });
+        return directUrl;
+      }
+    }
+  } catch {}
+
+  return null;
+}
 
 // Pool de comptes MegaTV vérifiés pour rotation
 const MEGATV_ACCOUNTS = [
@@ -37,14 +85,29 @@ export function resolveStreamUrl(
   if (!rawUrl) return '';
 
   let finalUrl = rawUrl.trim();
-
-  // 1. Chaînes officielles RTS / ACAN : routage direct vers l'API signée
   const lowerUrl = finalUrl.toLowerCase();
-  if (RTS_CHANNELS.has(lowerUrl)) {
+
+  // 1. Chaînes officielles RTS / ACAN : vérifier le cache direct
+  if (RTS_IDS[lowerUrl]) {
+    const cached = acanCache.get(lowerUrl);
+    if (cached && Date.now() - cached.time < 300000) {
+      return cached.url;
+    }
+    // Fallback proxy uniquement si non encore résolu
     return `https://bokktv.vercel.app/api/proxy?url=${encodeURIComponent(lowerUrl)}`;
   }
 
-  // 2. Si le proxy de secours est demandé (ex: rejet direct 401/403/timeout par l'opérateur)
+  // 2. Détection et rotation des flux MegaTV
+  if (finalUrl.includes('megatv5074.com') && finalUrl.includes('/live/')) {
+    finalUrl = rewriteMegaTvUrl(finalUrl);
+  }
+
+  // 3. Contournement DNS des domaines souvent bloqués par les opérateurs mobiles
+  if (finalUrl.includes('barrelastv.ottcst.org')) {
+    finalUrl = finalUrl.replace('barrelastv.ottcst.org', '103.205.17.108');
+  }
+
+  // 4. Si proxy de secours demandé pour flux direct rejeté
   if (useProxyFallback) {
     const ua = (channel && channel.userAgent) || 'IPTVSmartersPro';
     let proxyUrl = `https://bokktv.vercel.app/api/proxy?url=${encodeURIComponent(finalUrl)}&ua=${encodeURIComponent(ua)}`;
@@ -54,15 +117,24 @@ export function resolveStreamUrl(
     return proxyUrl;
   }
 
-  // 3. Détection et rotation des flux MegaTV
-  if (finalUrl.includes('megatv5074.com') && finalUrl.includes('/live/')) {
-    finalUrl = rewriteMegaTvUrl(finalUrl);
-  }
-
-  // 4. Contournement DNS des domaines souvent bloqués par les opérateurs mobiles
-  if (finalUrl.includes('barrelastv.ottcst.org')) {
-    finalUrl = finalUrl.replace('barrelastv.ottcst.org', '103.205.17.108');
-  }
-
   return finalUrl;
+}
+
+export async function resolveStreamUrlAsync(
+  rawUrl: string,
+  channel?: any,
+  useProxyFallback: boolean = false
+): Promise<string> {
+  if (!rawUrl) return '';
+
+  const clean = rawUrl.trim();
+  const lower = clean.toLowerCase();
+
+  // Résolution directe ACAN si disponible
+  if (RTS_IDS[lower]) {
+    const directUrl = await fetchAcanDirectUrl(lower);
+    if (directUrl) return directUrl;
+  }
+
+  return resolveStreamUrl(clean, channel, useProxyFallback);
 }

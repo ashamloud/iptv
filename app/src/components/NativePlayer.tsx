@@ -20,7 +20,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { Channel } from '../data/channels';
-import { resolveStreamUrl } from '../services/stream';
+import { resolveStreamUrl, resolveStreamUrlAsync } from '../services/stream';
 import { FirebaseService, Subscriber } from '../services/firebase';
 import { StorageService } from '../services/storage';
 
@@ -40,6 +40,19 @@ export interface NativePlayerProps {
 
 function buildVideoSource(channel: Channel, useProxy: boolean = false) {
   const uri = resolveStreamUrl(channel.url, channel, useProxy);
+  const headers: Record<string, string> = {
+    'User-Agent': (channel && channel.userAgent) || 'IPTVSmartersPro',
+    'Accept': '*/*',
+    'Connection': 'keep-alive',
+  };
+  if (channel && channel.referrer) {
+    headers['Referer'] = channel.referrer;
+  }
+  return { uri, headers };
+}
+
+async function buildVideoSourceAsync(channel: Channel, useProxy: boolean = false) {
+  const uri = await resolveStreamUrlAsync(channel.url, channel, useProxy);
   const headers: Record<string, string> = {
     'User-Agent': (channel && channel.userAgent) || 'IPTVSmartersPro',
     'Accept': '*/*',
@@ -82,11 +95,22 @@ export function NativePlayer({
 
   const previewTimerRef = useRef<any>(null);
   const hideControlsTimerRef = useRef<any>(null);
+  const bufferingTimerRef = useRef<any>(null);
   const sessionIdRef = useRef<string>('');
   const videoViewRef = useRef<any>(null);
+  const isRegisteredRef = useRef<boolean>(isRegistered);
+  isRegisteredRef.current = isRegistered;
 
   const player = useVideoPlayer(streamSource, (p) => {
     p.loop = false;
+    p.staysActiveInBackground = true;
+    try {
+      p.bufferOptions = {
+        preferredForwardBufferDuration: 25,
+        minBufferForPlayback: 2,
+        waitsToMinimizeStalling: true,
+      };
+    } catch {}
     p.play();
   });
 
@@ -161,6 +185,7 @@ export function NativePlayer({
 
         await FirebaseService.claimActiveSession(subscriber.id, sessionId, deviceName);
 
+        // Espacement à 35s pour laisser 100% de la bande passante au streaming vidéo
         intervalId = setInterval(async () => {
           if (isCancelled) return;
           const res = await FirebaseService.verifyActiveSession(subscriber.id, sessionIdRef.current);
@@ -176,7 +201,7 @@ export function NativePlayer({
           } else {
             setConcurrencyError(null);
           }
-        }, 10000);
+        }, 35000);
       }
     }
 
@@ -189,7 +214,7 @@ export function NativePlayer({
         FirebaseService.releaseActiveSession(subscriber.id, sessionIdRef.current);
       }
     };
-  }, [subscriber, channel.id]);
+  }, [subscriber?.id, channel.id]);
 
   const handleReclaimSession = async () => {
     if (!subscriber || !subscriber.id) return;
@@ -204,66 +229,113 @@ export function NativePlayer({
     setIsPlaying(true);
   };
 
-  // Écouter les changements d'état du lecteur expo-video
+  // Écouter les changements d'état du lecteur expo-video (avec debouncing anti-coupure)
   useEffect(() => {
     const subStatus = player.addListener('statusChange', ({ status, error }) => {
       if (status === 'error' || error) {
+        if (bufferingTimerRef.current) {
+          clearTimeout(bufferingTimerRef.current);
+          bufferingTimerRef.current = null;
+        }
         setHasError(true);
         setIsBuffering(false);
-        if (!useProxy) {
-          setStatusMessage('Échec direct, test du flux de secours...');
+        if (!useProxy && channel.fallbackUrl && channel.fallbackUrl !== channel.url) {
+          setStatusMessage('Basculement sur flux alternatif...');
+          handleRetryDirect();
+        } else if (!useProxy) {
+          setStatusMessage('Test du flux de secours...');
           handleRetryWithProxy();
         } else {
           setStatusMessage('Signal source temporairement indisponible.');
         }
       } else if (status === 'readyToPlay') {
+        if (bufferingTimerRef.current) {
+          clearTimeout(bufferingTimerRef.current);
+          bufferingTimerRef.current = null;
+        }
         setHasError(false);
         setIsBuffering(false);
         setStatusMessage('');
       } else if (status === 'loading') {
-        setIsBuffering(true);
+        // Debounce de 1500ms : n'affiche le chargement que si le buffering est réel
+        // Évite tout clignotement ou écran noir lors des transitions de segments HLS
+        if (!bufferingTimerRef.current) {
+          bufferingTimerRef.current = setTimeout(() => {
+            setIsBuffering(true);
+          }, 1500);
+        }
       }
     });
 
     const subPlaying = player.addListener('playingChange', ({ isPlaying: playing }) => {
       setIsPlaying(playing);
+      if (playing) {
+        if (bufferingTimerRef.current) {
+          clearTimeout(bufferingTimerRef.current);
+          bufferingTimerRef.current = null;
+        }
+        setIsBuffering(false);
+      }
     });
 
     return () => {
       subStatus.remove();
       subPlaying.remove();
+      if (bufferingTimerRef.current) {
+        clearTimeout(bufferingTimerRef.current);
+        bufferingTimerRef.current = null;
+      }
     };
-  }, [player, useProxy]);
+  }, [player, useProxy, channel]);
 
-  // Recharger le flux si la chaîne change
+  // Recharger le flux UNIQUEMENT si la chaîne change (élimine le double chargement des 3 secondes)
   useEffect(() => {
+    let isCancelled = false;
     setUseProxy(false);
     setConcurrencyError(null);
-    const nextSource = buildVideoSource(channel, false);
-    setStreamSource(nextSource);
     setHasError(false);
     setIsBuffering(true);
     setIsReported(false);
     setStatusMessage('');
-    player.replace(nextSource);
-    player.play();
-    setIsPlaying(true);
-    resetControlsTimeout();
 
-    // Règle d'aperçu pour les non enregistrés
-    if (!isRegistered && onPreviewLockTriggered) {
+    async function initChannelPlayback() {
+      const nextSource = await buildVideoSourceAsync(channel, false);
+      if (isCancelled) return;
+      setStreamSource(nextSource);
+      player.replace(nextSource);
+      try {
+        player.bufferOptions = {
+          preferredForwardBufferDuration: 25,
+          minBufferForPlayback: 2,
+          waitsToMinimizeStalling: true,
+        };
+      } catch {}
+      player.play();
+      setIsPlaying(true);
+      resetControlsTimeout();
+    }
+
+    initChannelPlayback();
+
+    // Règle d'aperçu UNIQUEMENT pour les visiteurs non connectés (30 secondes continues)
+    if (!isRegisteredRef.current && onPreviewLockTriggered) {
       if (previewTimerRef.current) clearTimeout(previewTimerRef.current);
       previewTimerRef.current = setTimeout(() => {
         player.pause();
         onPreviewLockTriggered();
-      }, 4000);
+      }, 30000);
     }
 
     return () => {
+      isCancelled = true;
       if (previewTimerRef.current) clearTimeout(previewTimerRef.current);
       if (hideControlsTimerRef.current) clearTimeout(hideControlsTimerRef.current);
+      if (bufferingTimerRef.current) {
+        clearTimeout(bufferingTimerRef.current);
+        bufferingTimerRef.current = null;
+      }
     };
-  }, [channel.id, isRegistered]);
+  }, [channel.id]);
 
   const handleReport = async () => {
     if (isReported) return;
@@ -277,7 +349,7 @@ export function NativePlayer({
     }
   };
 
-  const handleRetryDirect = () => {
+  const handleRetryDirect = useCallback(async () => {
     setHasError(false);
     setUseProxy(false);
     setIsBuffering(true);
@@ -286,18 +358,18 @@ export function NativePlayer({
       ...channel,
       url: channel.fallbackUrl || channel.url
     };
-    const nextSource = buildVideoSource(retryChannel, false);
+    const nextSource = await buildVideoSourceAsync(retryChannel, false);
     setStreamSource(nextSource);
     player.replace(nextSource);
     player.play();
-  };
+  }, [channel, player]);
 
-  const handleRetryWithProxy = useCallback(() => {
+  const handleRetryWithProxy = useCallback(async () => {
     setHasError(false);
     setUseProxy(true);
     setIsBuffering(true);
-    setStatusMessage('Connexion via flux de secours...');
-    const nextSource = buildVideoSource(channel, true);
+    setStatusMessage('Connexion de secours...');
+    const nextSource = await buildVideoSourceAsync(channel, true);
     setStreamSource(nextSource);
     player.replace(nextSource);
     player.play();
