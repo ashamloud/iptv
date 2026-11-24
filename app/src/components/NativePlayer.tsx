@@ -120,6 +120,42 @@ function PlayerButton({
   );
 }
 
+interface ModalActionBtnProps {
+  onPress: () => void;
+  style?: any;
+  focusedStyle?: any;
+  hasTVPreferredFocus?: boolean;
+  children: React.ReactNode;
+}
+
+function ModalActionBtn({
+  onPress,
+  style,
+  focusedStyle,
+  hasTVPreferredFocus,
+  children
+}: ModalActionBtnProps) {
+  const [isFocused, setIsFocused] = useState(false);
+  return (
+    <Pressable
+      focusable={true}
+      accessible={true}
+      hasTVPreferredFocus={hasTVPreferredFocus}
+      onFocus={() => setIsFocused(true)}
+      onBlur={() => setIsFocused(false)}
+      onPress={onPress}
+      style={({ pressed }) => [
+        style,
+        isFocused && styles.modalBtnFocused,
+        isFocused && focusedStyle,
+        pressed && styles.ctrlPressed
+      ]}
+    >
+      {children}
+    </Pressable>
+  );
+}
+
 export function NativePlayer({
   channel,
   onClose,
@@ -244,8 +280,8 @@ export function NativePlayer({
   }, [isPlayerFullscreen, onToggleFullscreen]);
 
   // ── Interception des touches TV (CH+, CH-, Médias, D-Pad) via KeyEvent ──
-  // Fonctionne sur Android TV / TV Box via le module natif TVKeyEventHandler (Expo TV)
-  // Keycodes Android : https://developer.android.com/reference/android/view/KeyEvent
+  // Sur Android TV, lorsque les contrôles ou les modales sont visibles, le focus natif
+  // D-Pad doit naviguer librement entre les boutons sans être intercepté.
   useEffect(() => {
     if (!Platform.isTV && Platform.OS !== 'android') return;
 
@@ -255,18 +291,25 @@ export function NativePlayer({
     const KEYCODE_MEDIA_PREV = 88;  // |<<
     const KEYCODE_DPAD_RIGHT = 22;  // → (zapping rapide en lecture)
     const KEYCODE_DPAD_LEFT = 21;  // ←
-    const KEYCODE_DPAD_UP = 19;  // ↑ (volume ou zapping)
-    const KEYCODE_DPAD_DOWN = 20;  // ↓
+    const KEYCODE_DPAD_UP = 19;  // ↑ (afficher contrôles)
+    const KEYCODE_DPAD_DOWN = 20;  // ↓ (afficher contrôles)
 
     const handleKeyDown = (evt: any) => {
       const keyCode = evt?.keyCode ?? evt?.nativeEvent?.keyCode;
       if (!keyCode) return;
 
+      // RÈGLE ESSENTIELLE TV : Si les contrôles ou une boîte de dialogue sont visibles,
+      // laisser le système de focus natif Android TV déplacer le cadre bleu entre les boutons !
+      if (showControls || hasError || concurrencyError) {
+        return;
+      }
+
+      // En lecture vidéo pure (contrôles masqués) :
       switch (keyCode) {
         case KEYCODE_CHANNEL_UP:
         case KEYCODE_MEDIA_NEXT:
         case KEYCODE_DPAD_RIGHT:
-          // Chaîne suivante
+          // Chaîne suivante (zapping direct)
           if (onNextChannel) {
             onNextChannel();
             resetControlsTimeout();
@@ -282,16 +325,9 @@ export function NativePlayer({
           }
           break;
         case KEYCODE_DPAD_UP:
-          // Volume + (si muet, démuet d'abord)
-          if (isMuted) {
-            setIsMuted(false);
-            player.muted = false;
-          }
-          break;
         case KEYCODE_DPAD_DOWN:
-          // Mute
-          setIsMuted(true);
-          player.muted = true;
+          // Réveiller l'interface et afficher les contrôles avec focus
+          resetControlsTimeout();
           break;
         default:
           break;
@@ -301,7 +337,7 @@ export function NativePlayer({
     // Écouter via DeviceEventEmitter (disponible sur Expo TV natif)
     const sub = DeviceEventEmitter.addListener('onKeyDown', handleKeyDown);
     return () => sub.remove();
-  }, [onNextChannel, onPrevChannel, isMuted, player, resetControlsTimeout]);
+  }, [showControls, hasError, concurrencyError, onNextChannel, onPrevChannel, resetControlsTimeout]);
 
   const handleTogglePiP = async () => {
     resetControlsTimeout();
@@ -880,11 +916,10 @@ export function NativePlayer({
             </Text>
 
             <View style={styles.netflixModalBtnRow}>
-              <TouchableOpacity
+              <ModalActionBtn
+                hasTVPreferredFocus={true}
                 style={styles.primaryModalBtn}
                 onPress={handleSwitchBackupStream}
-                activeOpacity={0.85}
-                focusable={true}
               >
                 <Ionicons name="swap-horizontal" size={15} color="#fff" />
                 <Text style={styles.primaryModalBtnText}>
@@ -892,26 +927,22 @@ export function NativePlayer({
                     ? `Tester Secours (${candidateIndex + 1}/${candidateChannels.length})`
                     : 'Tester le Secours'}
                 </Text>
-              </TouchableOpacity>
+              </ModalActionBtn>
 
-              <TouchableOpacity
+              <ModalActionBtn
                 style={styles.secondaryModalBtn}
                 onPress={handleRetryDirect}
-                activeOpacity={0.85}
-                focusable={true}
               >
                 <Ionicons name="refresh" size={15} color="#cbd5e1" />
                 <Text style={styles.secondaryModalBtnText}>Réessayer Direct</Text>
-              </TouchableOpacity>
+              </ModalActionBtn>
 
-              <TouchableOpacity
+              <ModalActionBtn
                 style={styles.ghostModalBtn}
                 onPress={handleReport}
-                activeOpacity={0.85}
-                focusable={true}
               >
                 <Text style={styles.ghostModalBtnText}>Signaler</Text>
-              </TouchableOpacity>
+              </ModalActionBtn>
             </View>
           </View>
         </View>
@@ -928,24 +959,21 @@ export function NativePlayer({
             <Text style={styles.netflixModalDesc}>{concurrencyError}</Text>
 
             <View style={styles.netflixModalBtnRow}>
-              <TouchableOpacity
+              <ModalActionBtn
+                hasTVPreferredFocus={true}
                 style={styles.primaryModalBtn}
                 onPress={handleReclaimSession}
-                activeOpacity={0.85}
-                focusable={true}
               >
                 <Ionicons name="play" size={15} color="#fff" />
                 <Text style={styles.primaryModalBtnText}>Regarder ici (Prendre la main)</Text>
-              </TouchableOpacity>
+              </ModalActionBtn>
 
-              <TouchableOpacity
+              <ModalActionBtn
                 style={styles.secondaryModalBtn}
                 onPress={onClose}
-                activeOpacity={0.85}
-                focusable={true}
               >
                 <Text style={styles.secondaryModalBtnText}>Fermer</Text>
-              </TouchableOpacity>
+              </ModalActionBtn>
             </View>
           </View>
         </View>
@@ -1436,5 +1464,16 @@ const styles = StyleSheet.create({
   ghostModalBtnText: {
     color: '#94a3b8',
     fontSize: 11,
+  },
+  modalBtnFocused: {
+    borderColor: '#38bdf8',
+    borderWidth: 2.5,
+    backgroundColor: '#0284c7',
+    transform: [{ scale: 1.08 }],
+    shadowColor: '#38bdf8',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 1,
+    shadowRadius: 12,
+    elevation: 12,
   },
 });

@@ -109,6 +109,7 @@ export const ChannelCard = memo(function ChannelCard({
         )}
 
         <Pressable
+          focusable={false}
           hitSlop={14}
           style={styles.favBtn}
           onPress={(e) => {
@@ -198,6 +199,7 @@ export const ChannelCard = memo(function ChannelCard({
 
         {/* Bouton Favori en haut à droite avec fond circulaire verre */}
         <Pressable
+          focusable={false}
           hitSlop={12}
           style={styles.gridFavBtn}
           onPress={(e) => {

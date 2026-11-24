@@ -4475,7 +4475,7 @@ function init() {
                 }
             } else if (window.location.protocol === 'https:') {
                 window.addEventListener('load', () => {
-                    navigator.serviceWorker.register('/sw.js?v=15').then((reg) => {
+                    navigator.serviceWorker.register('/sw.js?v=16').then((reg) => {
                         reg.update();
                     }).catch(() => {});
                 });

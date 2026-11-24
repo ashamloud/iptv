@@ -1,9 +1,9 @@
 /**
  * BOKK TV — Service Worker PWA (Cache App Shell & Mode Offline)
- * v15 — Déduplication, flux secours, direct ultra-fluide & masquage matchs
+ * v16 — Network-First absolu pour la racine / et index.html, auto-refresh des mises à jour
  */
 
-const CACHE_NAME = 'bokk-tv-shell-v15';
+const CACHE_NAME = 'bokk-tv-shell-v16';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -56,22 +56,21 @@ self.addEventListener('fetch', (event) => {
     return; // Laisser passer sans intercepter
   }
 
-  // RÈGLE 2 : Les fichiers JS/CSS critiques → Network-First TOUJOURS
-  // (jamais servir une vieille version depuis le cache)
+  // RÈGLE 2 : Les fichiers critiques (racine /, index.html, JS et CSS) → Network-First TOUJOURS
+  // L'utilisateur doit TOUJOURS voir la version en ligne la plus récente instantanément
   const criticalFiles = [
-    'channels.js', 'app.js', 'epg.js', 'epg-data.js', 'epg_data.json', 'matches.js', 'style.css', 'index.html'
+    '/', 'index.html', 'channels.js', 'app.js', 'epg.js', 'epg-data.js', 'epg_data.json', 'matches.js', 'style.css'
   ];
-  const isCritical = criticalFiles.some(f => url.pathname.endsWith(f));
+  const isCritical = url.pathname === '/' || criticalFiles.some(f => url.pathname.endsWith(f));
 
   if (isCritical) {
-    // Network First — le cache n'est qu'un filet de secours
+    // Network First — le cache n'est qu'un filet de secours en cas de perte de connexion
     event.respondWith(
       fetch(event.request, { cache: 'no-cache' })
         .then((networkResponse) => {
           if (networkResponse && networkResponse.status === 200) {
             const responseToCache = networkResponse.clone();
             caches.open(CACHE_NAME).then((cache) => {
-              // Stocker la version sans query string pour éviter les doublons
               const cacheKey = new Request(url.origin + url.pathname);
               cache.put(cacheKey, responseToCache);
             });
@@ -79,19 +78,18 @@ self.addEventListener('fetch', (event) => {
           return networkResponse;
         })
         .catch(() => {
-          // Fallback cache si offline
+          // Fallback cache si totalement offline
           const cacheKey = new Request(url.origin + url.pathname);
-          return caches.match(cacheKey);
+          return caches.match(cacheKey).then(cached => cached || caches.match('/'));
         })
     );
     return;
   }
 
-  // Autres ressources statiques (images, fonts...) → Cache First
+  // Autres ressources statiques (images, fonts...) → Stale-While-Revalidate
   event.respondWith(
     caches.match(event.request).then((cached) => {
-      if (cached) return cached;
-      return fetch(event.request).then((networkResponse) => {
+      const fetchPromise = fetch(event.request).then((networkResponse) => {
         if (networkResponse && networkResponse.status === 200) {
           const responseToCache = networkResponse.clone();
           caches.open(CACHE_NAME).then((cache) => {
@@ -99,7 +97,9 @@ self.addEventListener('fetch', (event) => {
           });
         }
         return networkResponse;
-      });
+      }).catch(() => null);
+
+      return cached || fetchPromise;
     })
   );
 });

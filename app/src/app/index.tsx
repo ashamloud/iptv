@@ -116,6 +116,35 @@ function RecentWatchedItem({ channel, hasTVPreferredFocus, onPress }: RecentWatc
   );
 }
 
+function ZappingPillItem({
+  channel,
+  onSelect
+}: {
+  channel: Channel;
+  onSelect: () => void;
+}) {
+  const [isFocused, setIsFocused] = useState(false);
+  return (
+    <Pressable
+      focusable={true}
+      accessible={true}
+      onFocus={() => setIsFocused(true)}
+      onBlur={() => setIsFocused(false)}
+      onPress={onSelect}
+      style={({ pressed }) => [
+        styles.zappingPill,
+        isFocused && styles.zappingPillFocused,
+        pressed && { opacity: 0.8 }
+      ]}
+    >
+      <Ionicons name="play" size={10} color={isFocused ? '#38bdf8' : '#e50914'} />
+      <Text style={[styles.zappingPillText, isFocused && styles.zappingPillTextFocused]} numberOfLines={1}>
+        {channel.name}
+      </Text>
+    </Pressable>
+  );
+}
+
 export default function NativeBokkApp() {
   const { width, height } = useWindowDimensions();
   const isTvMode = Platform.isTV || (width >= 850 && width > height);
@@ -896,17 +925,11 @@ export default function NativeBokkApp() {
                   <Text style={styles.zappingLabel}>ZAPPING RAPIDE :</Text>
                   <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.zappingScroll}>
                     {relatedZappingChannels.map((c) => (
-                      <TouchableOpacity
+                      <ZappingPillItem
                         key={c.id}
-                        style={styles.zappingPill}
-                        onPress={() => handleSelectChannel(c)}
-                        activeOpacity={0.7}
-                      >
-                        <Ionicons name="play" size={10} color="#e50914" />
-                        <Text style={styles.zappingPillText} numberOfLines={1}>
-                          {c.name}
-                        </Text>
-                      </TouchableOpacity>
+                        channel={c}
+                        onSelect={() => handleSelectChannel(c)}
+                      />
                     ))}
                   </ScrollView>
                 </View>
@@ -1361,11 +1384,26 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     gap: 5,
   },
+  zappingPillFocused: {
+    borderColor: '#38bdf8',
+    borderWidth: 2,
+    backgroundColor: '#0c2238',
+    transform: [{ scale: 1.08 }],
+    shadowColor: '#38bdf8',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.8,
+    shadowRadius: 6,
+    elevation: 6,
+  },
   zappingPillText: {
     color: '#cbd5e1',
     fontSize: 11,
     fontWeight: '600',
     maxWidth: 120,
+  },
+  zappingPillTextFocused: {
+    color: '#ffffff',
+    fontWeight: '800',
   },
 
   // ── Catégories ──
