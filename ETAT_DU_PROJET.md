@@ -148,10 +148,10 @@
 - [x] **Suspension automatique de `syncAdminData`** (téléchargements M3U en arrière-plan) dès qu'un flux vidéo est actif.
 - [x] **Test TypeScript `npx tsc --noEmit` validé avec 0 erreur**.
 - [x] **Commit Git & Push sur GitHub (`main`)** : commit `b4d688b` validé et synchronisé.
-- [🔄] **Compilation EAS Build APK Android — Build TV (`24a3b6d`)** :
+- [✅] **Compilation EAS Build APK Android — Build TV (`24a3b6d`)** :
   - **Build précédent (anti-coupure)** : `44e6dadd-6c44-46d3-b0fe-8b0df2630ab1`
-  - **Nouveau build (Smart TV interface)** : en cours de compilation (commit `24a3b6d`)
-  - **Page de suivi** : [expo.dev/accounts/asham_loud/projects/loudstreamtv/builds](https://expo.dev/accounts/asham_loud/projects/loudstreamtv/builds)
+  - **Nouveau build Smart TV** : ID `d13259fb-913f-44b3-86ba-a7f3d6139d4b` (commit `24a3b6d`) — **EN COURS DE BUILD**
+  - **Page de suivi** : [expo.dev/.../builds/d13259fb-913f-44b3-86ba-a7f3d6139d4b](https://expo.dev/accounts/asham_loud/projects/loudstreamtv/builds/d13259fb-913f-44b3-86ba-a7f3d6139d4b)
   - **Profil** : `preview` (génère directement le fichier `.apk` prêt à installer sur mobile et Smart TV Android).
 
 ---
