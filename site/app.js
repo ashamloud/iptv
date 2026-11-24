@@ -4312,6 +4312,80 @@
                 showToast('Deconnecte.');
             };
         }
+
+        // ── Déclaration de paiement Wave (Option C) ──
+        const btnSubmitClaim = document.getElementById('btn-submit-claim');
+        const inputClaimPayerPhone = document.getElementById('input-claim-payer-phone');
+        const selectClaimPlan = document.getElementById('select-claim-plan');
+        const inputClaimRef = document.getElementById('input-claim-ref');
+        const claimFeedback = document.getElementById('claim-feedback');
+
+        if (btnSubmitClaim) {
+            btnSubmitClaim.onclick = async () => {
+                const sub = (window.BokkFirebase && typeof window.BokkFirebase.getCurrentSubscriber === 'function')
+                    ? window.BokkFirebase.getCurrentSubscriber()
+                    : null;
+                const subId = sub ? sub.id : (profileId ? profileId.textContent : '');
+                const subName = sub ? sub.prenom : (profilePrenom ? profilePrenom.textContent : '');
+
+                const payerPhone = (inputClaimPayerPhone ? inputClaimPayerPhone.value : '').trim();
+                const plan = (selectClaimPlan ? selectClaimPlan.value : '1m');
+                const waveRef = (inputClaimRef ? inputClaimRef.value : '').trim();
+
+                if (!payerPhone) {
+                    if (claimFeedback) {
+                        claimFeedback.style.display = 'block';
+                        claimFeedback.style.background = 'rgba(230,57,70,0.15)';
+                        claimFeedback.style.color = '#e63946';
+                        claimFeedback.textContent = 'Veuillez saisir le numéro Wave ayant effectué le paiement.';
+                    }
+                    if (inputClaimPayerPhone) inputClaimPayerPhone.focus();
+                    return;
+                }
+
+                btnSubmitClaim.disabled = true;
+                btnSubmitClaim.textContent = 'Envoi de la déclaration...';
+
+                const amounts = { '1m': 3000, '3m': 7500, '12m': 25000 };
+                const amount = amounts[plan] || 3000;
+
+                if (window.BokkFirebase && typeof window.BokkFirebase.submitPaymentClaim === 'function') {
+                    const res = await window.BokkFirebase.submitPaymentClaim({
+                        subscriberId: subId,
+                        subscriberName: subName,
+                        payerPhone: payerPhone,
+                        plan: plan,
+                        amount: amount,
+                        waveRef: waveRef
+                    });
+                    btnSubmitClaim.disabled = false;
+                    btnSubmitClaim.textContent = 'Valider ma déclaration';
+
+                    if (res && res.success) {
+                        if (claimFeedback) {
+                            claimFeedback.style.display = 'block';
+                            claimFeedback.style.background = 'rgba(16,185,129,0.15)';
+                            claimFeedback.style.color = '#10b981';
+                            claimFeedback.textContent = '✅ Déclaration transmise ! Votre compte sera validé dans quelques instants.';
+                        }
+                        showToast('Déclaration Wave envoyée ! Validation en cours...');
+                        if (inputClaimPayerPhone) inputClaimPayerPhone.value = '';
+                        if (inputClaimRef) inputClaimRef.value = '';
+                    } else {
+                        if (claimFeedback) {
+                            claimFeedback.style.display = 'block';
+                            claimFeedback.style.background = 'rgba(230,57,70,0.15)';
+                            claimFeedback.style.color = '#e63946';
+                            claimFeedback.textContent = 'Erreur: ' + ((res && res.error) || 'Impossible de transmettre la déclaration.');
+                        }
+                    }
+                } else {
+                    btnSubmitClaim.disabled = false;
+                    btnSubmitClaim.textContent = 'Valider ma déclaration';
+                    showToast('Service temporairement indisponible');
+                }
+            };
+        }
     }
 
     // ── Gestion Masquage / Affichage du Ticker de Matchs ──

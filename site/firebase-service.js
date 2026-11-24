@@ -626,6 +626,104 @@
         }
     }
 
+    // ── Gestion des Déclarations de Paiements Wave ──
+    async function submitPaymentClaim(claimData) {
+        if (!isInitialized || !db) return { success: false, error: 'Firebase non initialisé' };
+        try {
+            const subId = String(claimData.subscriberId || '').trim();
+            const payer = String(claimData.payerPhone || '').trim();
+            if (!subId) return { success: false, error: 'Compte BOKK TV requis' };
+            if (!payer) return { success: false, error: 'Numéro Wave payeur requis' };
+
+            const claimId = `${subId}_${Date.now()}`;
+            await db.collection('payment_claims').doc(claimId).set({
+                claimId: claimId,
+                subscriberId: subId,
+                subscriberName: claimData.subscriberName || '',
+                payerPhone: payer,
+                plan: claimData.plan || '1m',
+                amount: Number(claimData.amount) || 3000,
+                days: Number(claimData.days) || 30,
+                txId: (claimData.txId || '').trim(),
+                status: 'pending',
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+
+            return { success: true, claimId: claimId };
+        } catch (e) {
+            console.error('[BOKK TV] Erreur submitPaymentClaim:', e);
+            return { success: false, error: e.message };
+        }
+    }
+
+    function listenPaymentClaims(callback) {
+        if (!isInitialized || !db) return () => {};
+        try {
+            return db.collection('payment_claims')
+                .onSnapshot(snapshot => {
+                    const list = [];
+                    snapshot.forEach(doc => {
+                        const d = doc.data() || {};
+                        list.push({
+                            id: doc.id,
+                            claimId: d.claimId || doc.id,
+                            subscriberId: d.subscriberId || '',
+                            subscriberName: d.subscriberName || '',
+                            payerPhone: d.payerPhone || '',
+                            plan: d.plan || '1m',
+                            amount: d.amount || 3000,
+                            days: d.days || 30,
+                            txId: d.txId || '',
+                            status: d.status || 'pending',
+                            createdAt: formatFirestoreTimestamp(d.createdAt),
+                            approvedAt: formatFirestoreTimestamp(d.approvedAt),
+                            rejectedAt: formatFirestoreTimestamp(d.rejectedAt)
+                        });
+                    });
+                    // Tri par date décroissante
+                    list.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+                    if (typeof callback === 'function') callback(list);
+                }, err => console.warn('[BOKK TV] Erreur listenPaymentClaims:', err));
+        } catch (e) {
+            console.warn('[BOKK TV] Exception listenPaymentClaims:', e);
+            return () => {};
+        }
+    }
+
+    async function approvePaymentClaim(claimId, subscriberId, days = 30) {
+        if (!claimId || !isInitialized || !db) return { success: false };
+        try {
+            const renewRes = await renewSubscriber(subscriberId, days);
+            if (!renewRes.success) {
+                console.warn('[BOKK TV] Erreur renewSubscriber dans approvePaymentClaim:', renewRes.error);
+            }
+
+            await db.collection('payment_claims').doc(String(claimId)).update({
+                status: 'approved',
+                approvedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+
+            return { success: true };
+        } catch (e) {
+            console.error('[BOKK TV] Erreur approvePaymentClaim:', e);
+            return { success: false, error: e.message };
+        }
+    }
+
+    async function rejectPaymentClaim(claimId, reason = '') {
+        if (!claimId || !isInitialized || !db) return { success: false };
+        try {
+            await db.collection('payment_claims').doc(String(claimId)).update({
+                status: 'rejected',
+                rejectedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                rejectReason: reason
+            });
+            return { success: true };
+        } catch (e) {
+            return { success: false, error: e.message };
+        }
+    }
+
     window.BokkFirebase = {
         isReady: () => isInitialized,
         reportBroken: reportBrokenChannel,
@@ -652,6 +750,12 @@
         listenSubscriber: listenSubscriber,
         getPaywallConfig: getPaywallConfig,
         setPaywallConfig: setPaywallConfig,
+
+        // Gestion des réclamations de paiements Wave (Option C)
+        submitPaymentClaim: submitPaymentClaim,
+        listenPaymentClaims: listenPaymentClaims,
+        approvePaymentClaim: approvePaymentClaim,
+        rejectPaymentClaim: rejectPaymentClaim,
 
         // Gestion des playlists M3U Admin
         saveM3uPlaylist: saveM3uPlaylist,

@@ -156,11 +156,11 @@ def generate_catalogue():
         if any(k in g for k in ['SPORT', 'LALIGA', 'DAZN', 'UEFA', 'CHAMPIONS', 'F1', 'MOTOGP', 'PPV', 'EUROSPORT', 'DYN']) or \
            any(k in n for k in ['SPORT', 'BEIN', 'CANAL+ SPORT', 'FOOT', 'DAZN', 'RMC SPORT', 'EUROSPORT', 'F1', 'MOTO GP', 'LALIGA']):
             return 'sport'
-        # Francophone / TNT
-        if 'FR | GÉNÉRAL' in g or 'FRANCE' in g or any(k in n for k in ['TF1', 'FRANCE 2', 'FRANCE 3', 'FRANCE 4', 'FRANCE 5', 'M6', 'ARTE', 'W9', 'TMC', 'TFX', '6TER', 'C8', 'CSTAR', 'GULLI', 'BFM', 'LCI']):
+        # Francophone / TNT / France
+        if '|FR|' in n or 'FRANCE' in g or 'FRANCE' in n or 'FR |' in g or any(k in n for k in ['TF1', 'FRANCE 2', 'FRANCE 3', 'FRANCE 4', 'FRANCE 5', 'M6', 'ARTE', 'W9', 'TMC', 'TFX', '6TER', 'C8', 'CSTAR', 'GULLI', 'BFM', 'LCI', 'CANAL+']):
             return 'francophone'
         # Cinéma & Séries
-        if any(k in g for k in ['CINE', 'FILM', 'DISNEY', 'KINO']):
+        if any(k in g for k in ['CINE', 'FILM', 'DISNEY', 'KINO', 'THEATER', 'MOVIE']):
             return 'cinema'
         # Espagne
         if 'ES|' in g or 'ESPAÑA' in g:
@@ -171,11 +171,11 @@ def generate_catalogue():
         # Allemagne & Autriche
         if 'DE|' in g or 'DEUTSCHLAND' in g or 'ÖSTERREICH' in g or 'AT|' in g:
             return 'allemagne'
-        # Documentaire
+        # Documentaire & Nature
         if 'DOKUMENTAR' in g or 'DOCUMENTARI' in g or 'CULTURA' in g or 'RELAX' in g:
             return 'documentaire'
         # Jeunesse
-        if 'NINOS' in g or 'BAMBINI' in g or 'JUGEND' in g:
+        if 'NINOS' in g or 'BAMBINI' in g or 'JUGEND' in g or 'KIDS' in g or 'CARTOON' in g:
             return 'jeunesse'
         # Musique
         if 'MUSIK' in g or 'MUSICA' in g:
@@ -187,11 +187,13 @@ def generate_catalogue():
 
     def map_badge(name):
         n = name.upper()
+        if '8K' in n:
+            return '8K'
         if '4K' in n or 'UHD' in n:
             return '4K'
         if 'HEVC' in n or 'H265' in n:
             return 'HEVC'
-        if 'FHD' in n or '1080' in n:
+        if 'FHD' in n or '1080' in n or 'RAW' in n:
             return 'FHD'
         if 'SD' in n or '576' in n or '480' in n or 'LOW' in n:
             return 'SD'
@@ -238,28 +240,9 @@ def generate_catalogue():
         })
         current_id += 1
 
-    # Inserer File 1
-    for c in file1_channels:
-        cat = map_category(c['group'], c['name'])
-        badge = map_badge(c['name'])
-        stream_type = 'hls' if '.m3u8' in c['url'] else 'ts'
-        final_channels.append({
-            'id': current_id,
-            'stream_id': current_id,
-            'name': c['name'],
-            'category': cat,
-            'group': c['group'],
-            'badge': badge,
-            'desc': f"{c['name']} • {c['group']}",
-            'logo': c['logo'],
-            'url': c['url'],
-            'fallbackUrl': c['url'],
-            'type': stream_type,
-            'userAgent': 'IPTVSmartersPro'
-        })
-        current_id += 1
-
-    # Inserer File 2
+    # File 1 (novatv.xyz) est temporairement suspendu (compte expiré 401)
+    # File 2 (barrelastv.ottcst.org) est 100% actif avec 1968 chaînes validées
+    print("Insertion des chaînes directes actives de File 2 (MPEG-TS)...")
     for c in file2_channels:
         cat = map_category(c['group'], c['name'])
         badge = map_badge(c['name'])
@@ -315,3 +298,4 @@ def generate_catalogue():
 
 if __name__ == '__main__':
     generate_catalogue()
+

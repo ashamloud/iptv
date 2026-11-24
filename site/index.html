@@ -655,6 +655,38 @@
                     </div>
                 </div>
 
+                <!-- Déclaration de paiement Wave (Option C) -->
+                <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(0,112,243,0.25); border-radius:12px; padding:14px; margin-bottom:16px;">
+                    <div style="font-size:0.82rem; font-weight:700; color:#38bdf8; margin-bottom:8px; display:flex; align-items:center; gap:6px;">
+                        <span>📝 Déclarer un paiement Wave effectué</span>
+                    </div>
+                    <p style="font-size:0.75rem; color:var(--text-muted); margin-bottom:10px; line-height:1.4;">
+                        Vous avez payé via Wave ? Renseignez votre numéro pour activer votre compte immédiatement.
+                    </p>
+                    <div style="margin-bottom:8px;">
+                        <label style="display:block; font-size:0.75rem; color:var(--text-muted); margin-bottom:4px;">Numéro Wave ayant effectué le paiement</label>
+                        <input type="tel" id="input-claim-payer-phone" placeholder="Ex: 77 123 45 67" style="width:100%; height:38px; background:#0f1118; border:1px solid rgba(255,255,255,0.12); border-radius:8px; color:#fff; padding:0 12px; font-size:0.85rem; outline:none; box-sizing:border-box;">
+                    </div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px;">
+                        <div>
+                            <label style="display:block; font-size:0.75rem; color:var(--text-muted); margin-bottom:4px;">Plan payé</label>
+                            <select id="select-claim-plan" style="width:100%; height:38px; background:#0f1118; border:1px solid rgba(255,255,255,0.12); border-radius:8px; color:#fff; padding:0 8px; font-size:0.82rem; outline:none;">
+                                <option value="1m">1 Mois (3 000 F)</option>
+                                <option value="3m">3 Mois (7 500 F)</option>
+                                <option value="12m">12 Mois (25 000 F)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label style="display:block; font-size:0.75rem; color:var(--text-muted); margin-bottom:4px;">Réf. Wave (optionnel)</label>
+                            <input type="text" id="input-claim-ref" placeholder="Ex: W-98214" style="width:100%; height:38px; background:#0f1118; border:1px solid rgba(255,255,255,0.12); border-radius:8px; color:#fff; padding:0 10px; font-size:0.82rem; outline:none; box-sizing:border-box;">
+                        </div>
+                    </div>
+                    <button id="btn-submit-claim" class="btn-primary" style="width:100%; height:38px; font-size:0.82rem; font-weight:700; border-radius:8px; background:linear-gradient(135deg, #0284c7 0%, #0070f3 100%); display:flex; align-items:center; justify-content:center; gap:6px; cursor:pointer;">
+                        <span>Valider ma déclaration</span>
+                    </button>
+                    <div id="claim-feedback" style="display:none; margin-top:8px; font-size:0.78rem; text-align:center; padding:6px; border-radius:6px;"></div>
+                </div>
+
                 <div style="display:flex; gap:10px;">
                     <a id="btn-whatsapp-support" href="https://wa.me/221783055520?text=Bonjour%2C%20je%20vous%20contacte%20au%20sujet%20de%20mon%20compte%20BOKK%20TV" target="_blank" class="btn-secondary" style="flex:1; height:40px; font-size:0.82rem; display:flex; align-items:center; justify-content:center; gap:6px; text-decoration:none; border-color:rgba(37,211,102,0.3); color:#25d366;">
                         💬 WhatsApp (+221 78 305 55 20)

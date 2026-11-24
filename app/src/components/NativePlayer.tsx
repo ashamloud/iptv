@@ -41,9 +41,17 @@ export interface NativePlayerProps {
   onToggleFullscreen?: (fullscreen: boolean) => void;
 }
 
+function isStreamHls(uri: string, channel?: Channel): boolean {
+  if (channel?.type === 'ts') return false;
+  if (channel?.type === 'hls') return true;
+  if (uri.includes('.m3u8')) return true;
+  if (uri.includes('.ts')) return false;
+  return false;
+}
+
 function buildVideoSource(channel: Channel, useProxy: boolean = false) {
   const uri = resolveStreamUrl(channel.url, channel, useProxy);
-  const isHls = uri.includes('.m3u8') || (channel.type && channel.type.toLowerCase().includes('hls')) || !uri.includes('.ts');
+  const isHls = isStreamHls(uri, channel);
   const headers: Record<string, string> = {
     'User-Agent': (channel && channel.userAgent) || 'IPTVSmartersPro',
     'Accept': '*/*',
@@ -61,7 +69,7 @@ function buildVideoSource(channel: Channel, useProxy: boolean = false) {
 
 async function buildVideoSourceAsync(channel: Channel, useProxy: boolean = false) {
   const uri = await resolveStreamUrlAsync(channel.url, channel, useProxy);
-  const isHls = uri.includes('.m3u8') || (channel.type && channel.type.toLowerCase().includes('hls')) || !uri.includes('.ts');
+  const isHls = isStreamHls(uri, channel);
   const headers: Record<string, string> = {
     'User-Agent': (channel && channel.userAgent) || 'IPTVSmartersPro',
     'Accept': '*/*',
@@ -77,21 +85,19 @@ async function buildVideoSourceAsync(channel: Channel, useProxy: boolean = false
   };
 }
 
-// ── Configuration Équilibrée Direct & ZÉRO Calage Absolu ──
-// 1. 18s de buffer anticipé (preferredForwardBufferDuration) :
-//    Garde 4 à 5 chunks HLS d'avance en tâche de fond dans la mémoire tampon.
-//    Absorbe 100% des micro-coupures Wi-Fi/4G sans jamais geler l'image.
-// 2. 3.5s de buffer minimal (minBufferForPlayback) :
-//    Garantit qu'au moins 1 à 2 segments complets et des keyframes stables sont décodés
-//    avant d'afficher les premières trames. Démarrage quasi-instantané (< 1s) mais SANS calage.
-// 3. waitsToMinimizeStalling: true :
-//    Empêche les saccades en évitant les démarrages prématurés avec buffer vide.
-// 4. prioritizeTimeOverSizeThreshold: true :
-//    Gestion basée sur la durée temporelle pour garantir la même fluidité en HD et SD.
+// ── Configuration Pro IPTV Anti-Coupure & ZÉRO Boucle ──
+// 1. 20s de buffer anticipé (preferredForwardBufferDuration) :
+//    Télécharge en tâche de fond pour absorber les micro-variations sans caler.
+// 2. 1.0s de buffer minimal (minBufferForPlayback) :
+//    Démarrage ultra-rapide sans bloquer le moteur, idéal pour connexion 1.5 Mbps.
+// 3. waitsToMinimizeStalling: false :
+//    Empêche les gels et saccades artificielles lors des micro-variations.
+// 4. AUCUN targetOffsetFromLive :
+//    Suppression totale pour éliminer la boucle des scènes (relecture des mêmes 3-5s).
 const OPTIMAL_BUFFER_CONFIG = {
-  preferredForwardBufferDuration: 18,
-  minBufferForPlayback: 3.5,
-  waitsToMinimizeStalling: true,
+  preferredForwardBufferDuration: 20,
+  minBufferForPlayback: 1.0,
+  waitsToMinimizeStalling: false,
   prioritizeTimeOverSizeThreshold: true,
 };
 
@@ -228,9 +234,6 @@ export function NativePlayer({
       p.staysActiveInBackground = true;
       try {
         p.bufferOptions = OPTIMAL_BUFFER_CONFIG;
-        if ('targetOffsetFromLive' in p) {
-          p.targetOffsetFromLive = 5.5;
-        }
       } catch { }
       p.play();
     },

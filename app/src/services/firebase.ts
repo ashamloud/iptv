@@ -430,5 +430,51 @@ export const FirebaseService = {
     } catch {
       return [];
     }
+  },
+
+  // ── 6. Déclarations de Paiements Wave (Option C) ──
+  async submitPaymentClaim(claim: {
+    subscriberId: string;
+    subscriberName?: string;
+    payerPhone: string;
+    plan: '1m' | '3m' | '12m';
+    amount: number;
+    days: number;
+    txId?: string;
+  }): Promise<{ success: boolean; error?: string }> {
+    try {
+      const subId = claim.subscriberId.trim();
+      const payer = claim.payerPhone.trim();
+      if (!subId || !payer) {
+        return { success: false, error: 'Numéro de compte et numéro Wave requis' };
+      }
+
+      const claimId = `${subId}_${Date.now()}`;
+      const url = `${FIRESTORE_BASE}/payment_claims/${claimId}`;
+      const payload = {
+        fields: {
+          claimId: { stringValue: claimId },
+          subscriberId: { stringValue: subId },
+          subscriberName: { stringValue: claim.subscriberName || '' },
+          payerPhone: { stringValue: payer },
+          plan: { stringValue: claim.plan },
+          amount: { integerValue: String(claim.amount) },
+          days: { integerValue: String(claim.days) },
+          txId: { stringValue: claim.txId || '' },
+          status: { stringValue: 'pending' },
+          createdAt: { timestampValue: new Date().toISOString() }
+        }
+      };
+
+      const res = await fetch(url, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      return { success: res.ok };
+    } catch (e: any) {
+      return { success: false, error: e?.message || 'Erreur réseau' };
+    }
   }
 };
