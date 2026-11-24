@@ -7,8 +7,33 @@
     'use strict';
 
     // ── Proxies Cloud Haute Disponibilité & Résolution Universelle ──
+    const DIRECT_CORS_HLS_HOSTS = [
+        'stream.sen-gt.com',
+        'acangroup.org',
+        'acan.group',
+        'amagi.tv',
+        'infomaniak.com',
+        'evrideo.tv',
+        'pro-fhi.net',
+        'goccn.cloud',
+        'streamlock.net',
+        'ottera.tv',
+        'akamaized.net',
+        'secdn.net',
+        'mangomolo.com',
+    ];
+
+    function isDirectCorsHttpsHls(rawUrl) {
+        if (!rawUrl || !rawUrl.startsWith('https://')) return false;
+        const lower = rawUrl.toLowerCase();
+        return DIRECT_CORS_HLS_HOSTS.some(h => lower.includes(h));
+    }
+
     // ACAN : cache résolution URL directe (expire en 4 min)
-    const ACAN_TV_SHORTCUTS = { rts1: 26, rts2: 27, sentv: 2, '2stv': 29, tfm: 28, rdv: 30, walf: 31, c7: 32, zik: 33 };
+    const ACAN_TV_SHORTCUTS = {
+        rts1: 26, rts2: 32, rts3: 42, rts4: 51, rts5: 52,
+        sentv: 2, '2stv': 29, leraltv: 35, walftv: 33, walf: 33
+    };
     const acanTvCache = {}; // { key: { url, ts } }
 
     async function resolveAcanTvUrl(nameKey) {
@@ -18,15 +43,15 @@
         if (acanTvCache[lower] && now - acanTvCache[lower].ts < 240000) return acanTvCache[lower].url;
         try {
             const cid = ACAN_TV_SHORTCUTS[lower];
-            const r = await fetch(`https://www.acan.sn/api/channels/${cid}/stream`, { signal: AbortSignal.timeout(5000) });
+            const r = await fetch(`https://tveapi.acan.group/myapiv2/directplayback/${cid}/json`, { cache: 'no-store' });
             if (!r.ok) throw new Error('acan ' + r.status);
             const j = await r.json();
-            const url = j.streamUrl || j.url || j.stream_url || null;
+            const url = j.direct_url || j.web_url || j.android_url || null;
             if (url) { acanTvCache[lower] = { url, ts: now }; return url; }
         } catch { }
         // Fallback via proxy
         try {
-            const r2 = await fetch(`/api/proxy?resolve=1&acan_key=${encodeURIComponent(lower)}`, { signal: AbortSignal.timeout(6000) });
+            const r2 = await fetch(`/api/proxy?url=${encodeURIComponent(lower)}&resolve=1`, { signal: AbortSignal.timeout(6000) });
             if (r2.ok) { const j2 = await r2.json(); const url2 = j2.url || null; if (url2) { acanTvCache[lower] = { url: url2, ts: now }; return url2; } }
         } catch { }
         return null;
@@ -35,6 +60,11 @@
     function resolveStreamUrl(rawUrl, stage = 0) {
         if (!rawUrl) return '';
         if (rawUrl.startsWith('data:') || rawUrl.startsWith('blob:')) return rawUrl;
+
+        // Jouer en DIRECT les flux HTTPS HLS compatibles CORS (zéro proxy, zéro timeout)
+        if (stage === 0 && isDirectCorsHttpsHls(rawUrl)) {
+            return rawUrl;
+        }
 
         const isLocalHost = (
             window.location.hostname === 'localhost' ||
@@ -51,8 +81,8 @@
             return `/proxy?url=${encodeURIComponent(rawUrl)}${extraParams}`;
         }
 
-        // Stage 0 : Proxy Vercel (bypass DNS barrelastv côté serveur)
-        // Stage 1 : Direct (si CORS autorisé)
+        // Stage 0 : Proxy Vercel
+        // Stage 1 : Direct
         // Stage 2+ : Proxy de secours
         if (stage === 0) {
             return `/api/proxy?url=${encodeURIComponent(rawUrl)}${extraParams}`;

@@ -7,9 +7,64 @@
     'use strict';
 
     // ── Proxies Cloud Haute Disponibilité & Résolution Universelle ──
+    const DIRECT_CORS_HLS_HOSTS = [
+        'stream.sen-gt.com',
+        'acangroup.org',
+        'acan.group',
+        'amagi.tv',
+        'infomaniak.com',
+        'evrideo.tv',
+        'pro-fhi.net',
+        'goccn.cloud',
+        'streamlock.net',
+        'ottera.tv',
+        'akamaized.net',
+        'secdn.net',
+        'mangomolo.com',
+    ];
+
+    function isDirectCorsHttpsHls(rawUrl) {
+        if (!rawUrl || !rawUrl.startsWith('https://')) return false;
+        const lower = rawUrl.toLowerCase();
+        return DIRECT_CORS_HLS_HOSTS.some(h => lower.includes(h));
+    }
+
+    // ACAN : cache résolution URL directe (expire en 4 min)
+    const ACAN_TV_SHORTCUTS = {
+        rts1: 26, rts2: 32, rts3: 42, rts4: 51, rts5: 52,
+        sentv: 2, '2stv': 29, leraltv: 35, walftv: 33, walf: 33
+    };
+    const acanTvCache = {}; // { key: { url, ts } }
+
+    async function resolveAcanTvUrl(nameKey) {
+        const lower = nameKey.toLowerCase().replace(/\s+/g, '');
+        if (!ACAN_TV_SHORTCUTS[lower]) return null;
+        const now = Date.now();
+        if (acanTvCache[lower] && now - acanTvCache[lower].ts < 240000) return acanTvCache[lower].url;
+        try {
+            const cid = ACAN_TV_SHORTCUTS[lower];
+            const r = await fetch(`https://tveapi.acan.group/myapiv2/directplayback/${cid}/json`, { cache: 'no-store' });
+            if (!r.ok) throw new Error('acan ' + r.status);
+            const j = await r.json();
+            const url = j.direct_url || j.web_url || j.android_url || null;
+            if (url) { acanTvCache[lower] = { url, ts: now }; return url; }
+        } catch { }
+        // Fallback via proxy
+        try {
+            const r2 = await fetch(`/api/proxy?url=${encodeURIComponent(lower)}&resolve=1`, { signal: AbortSignal.timeout(6000) });
+            if (r2.ok) { const j2 = await r2.json(); const url2 = j2.url || null; if (url2) { acanTvCache[lower] = { url: url2, ts: now }; return url2; } }
+        } catch { }
+        return null;
+    }
+
     function resolveStreamUrl(rawUrl, stage = 0) {
         if (!rawUrl) return '';
         if (rawUrl.startsWith('data:') || rawUrl.startsWith('blob:')) return rawUrl;
+
+        // Jouer en DIRECT les flux HTTPS HLS compatibles CORS (zéro proxy, zéro timeout)
+        if (stage === 0 && isDirectCorsHttpsHls(rawUrl)) {
+            return rawUrl;
+        }
 
         const isLocalHost = (
             window.location.hostname === 'localhost' ||
@@ -26,11 +81,13 @@
             return `/proxy?url=${encodeURIComponent(rawUrl)}${extraParams}`;
         }
 
-        // En production : API proxy Vercel natif (zéro dépendance externe Cloudflare/Render)
+        // Stage 0 : Proxy Vercel
+        // Stage 1 : Direct
+        // Stage 2+ : Proxy de secours
         if (stage === 0) {
             return `/api/proxy?url=${encodeURIComponent(rawUrl)}${extraParams}`;
         } else if (stage === 1) {
-            return rawUrl; // Essai direct
+            return rawUrl;
         } else {
             return `/api/proxy?url=${encodeURIComponent(rawUrl)}${extraParams}`;
         }
@@ -75,6 +132,27 @@
     let overlayVisible = true;
     let focusedZone = 'grid'; // 'cat', 'bouquet', 'grid'
     let focusedIndex = 0;
+
+    // Anti-calage TV : stall watchdog + load sequence guard
+    let tvStallWatchdog = null;
+    let tvChannelLoadSeq = 0;
+
+    function clearTvStallWatchdog() {
+        if (tvStallWatchdog) { clearTimeout(tvStallWatchdog); tvStallWatchdog = null; }
+    }
+
+    function armTvStallWatchdog(channel, stage, useFallback, timeoutMs = 9000) {
+        clearTvStallWatchdog();
+        tvStallWatchdog = setTimeout(() => {
+            clearTvStallWatchdog();
+            // Essai de récupération graduée
+            if (stage < 2) {
+                playChannel(channel, stage + 1, useFallback);
+            } else if (!useFallback && channel.fallbackUrl) {
+                playChannel(channel, 0, true);
+            }
+        }, timeoutMs);
+    }
 
     // ── Éléments DOM ──
     const videoEl = document.getElementById('tv-video');
@@ -288,7 +366,10 @@
         playChannel(channel);
     }
 
-    function playChannel(channel, stage = 0, useFallback = false) {
+    // Résolution async chaîne TV : ACAN direct si Sénégal, sinon proxy
+    async function playChannel(channel, stage = 0, useFallback = false) {
+        const mySeq = ++tvChannelLoadSeq;
+        clearTvStallWatchdog();
         destroyPlayers();
 
         errorEl.classList.remove('visible');
@@ -297,7 +378,17 @@
 
         showOSD(channel);
 
-        const activeUrl = (useFallback && channel.fallbackUrl) ? channel.fallbackUrl : channel.url;
+        // Résolution ACAN directe pour chaînes sénégalaises (stage 0)
+        let activeUrl = (useFallback && channel.fallbackUrl) ? channel.fallbackUrl : channel.url;
+        if (stage === 0 && !useFallback) {
+            const nameKey = channel.name.toLowerCase().replace(/\s+/g, '').replace(/[^a-z0-9]/g, '');
+            const acanUrl = await resolveAcanTvUrl(nameKey);
+            if (mySeq !== tvChannelLoadSeq) return; // Chaîne changée entretemps
+            if (acanUrl) activeUrl = acanUrl;
+        }
+
+        if (mySeq !== tvChannelLoadSeq) return;
+
         const targetUrl = resolveStreamUrl(activeUrl, stage);
         const lowerUrl = (activeUrl || '').toLowerCase();
 
@@ -312,7 +403,34 @@
         iframeEl.style.display = 'none';
         videoEl.style.display = 'block';
 
-        const isMpegTs = (channel.type === 'ts' || lowerUrl.endsWith('.ts') || lowerUrl.endsWith('.mpegts') || (!lowerUrl.includes('.m3u8') && !lowerUrl.includes('embed')));
+        // Nettoyer les anciens listeners avant de charger
+        const newVideo = videoEl.cloneNode(false);
+        videoEl.parentNode.replaceChild(newVideo, videoEl);
+        // Note: videoEl is now stale; use newVideo
+        const vid = document.getElementById('tv-video');
+
+        function onRecoverStall() {
+            if (mySeq !== tvChannelLoadSeq) return;
+            if (stage < 2) { playChannel(channel, stage + 1, useFallback); }
+            else if (!useFallback && channel.fallbackUrl) { playChannel(channel, 0, true); }
+            else { loaderEl.classList.remove('visible'); errorEl.classList.add('visible'); }
+        }
+
+        // Stall watchdog sur waiting/stalled
+        vid.addEventListener('waiting', () => { if (mySeq === tvChannelLoadSeq) armTvStallWatchdog(channel, stage, useFallback, 9000); });
+        vid.addEventListener('stalled', () => { if (mySeq === tvChannelLoadSeq) armTvStallWatchdog(channel, stage, useFallback, 9000); });
+        vid.addEventListener('playing', () => { clearTvStallWatchdog(); loaderEl.classList.remove('visible'); });
+        vid.addEventListener('canplay', () => { clearTvStallWatchdog(); loaderEl.classList.remove('visible'); });
+
+        // Reconnexion transparente EOF (timeout Vercel 30s)
+        vid.addEventListener('ended', () => {
+            if (mySeq !== tvChannelLoadSeq) return;
+            playChannel(channel, stage, useFallback);
+        });
+
+        const isMpegTs = (channel.type === 'ts' || lowerUrl.endsWith('.ts') || lowerUrl.endsWith('.mpegts') ||
+            (!lowerUrl.includes('.m3u8') && !lowerUrl.includes('embed') && !lowerUrl.includes('youtube')));
+
         if (isMpegTs && typeof mpegts !== 'undefined' && mpegts.isSupported()) {
             mpegtsInstance = mpegts.createPlayer({
                 type: 'mse',
@@ -322,84 +440,79 @@
                 enableWorker: false,
                 lazyLoad: false,
                 liveBufferLatencyChasing: true,
-                liveBufferLatencyMaxLatency: 3.0,
-                liveBufferLatencyMinRemain: 0.6,
+                liveBufferLatencyMaxLatency: 12.0,
+                liveBufferLatencyMinRemain: 2.0,
                 enableStashBuffer: true,
-                stashInitialSize: 64,
+                stashInitialSize: 512,
                 autoCleanupSourceBuffer: true,
                 autoCleanupMaxBackwardDuration: 30,
                 autoCleanupMinBackwardDuration: 15
             });
-            mpegtsInstance.attachMediaElement(videoEl);
+            mpegtsInstance.attachMediaElement(vid);
             mpegtsInstance.load();
-            mpegtsInstance.play().then(() => {
-                loaderEl.classList.remove('visible');
-            }).catch(() => { });
+
+            // Reconnexion transparente sur fin de segment (Vercel 30s timeout)
+            mpegtsInstance.on(mpegts.Events.LOADING_COMPLETE, () => {
+                if (mySeq !== tvChannelLoadSeq) return;
+                setTimeout(() => { if (mySeq === tvChannelLoadSeq) playChannel(channel, stage, useFallback); }, 300);
+            });
 
             mpegtsInstance.on(mpegts.Events.ERROR, () => {
-                if (stage < 2) {
-                    playChannel(channel, stage + 1, useFallback);
-                } else if (!useFallback && channel.fallbackUrl) {
-                    playChannel(channel, 0, true);
-                } else {
-                    loaderEl.classList.remove('visible');
-                    errorEl.classList.add('visible');
-                }
+                if (mySeq !== tvChannelLoadSeq) return;
+                onRecoverStall();
             });
+
+            mpegtsInstance.play().then(() => {
+                loaderEl.classList.remove('visible');
+                clearTvStallWatchdog();
+            }).catch(() => { });
             return;
         }
 
         // HLS
-        if (Hls.isSupported()) {
+        if (typeof Hls !== 'undefined' && Hls.isSupported()) {
             hlsInstance = new Hls({
                 enableWorker: true,
                 lowLatencyMode: false,
-                startLevel: 0,
-                liveSyncDurationCount: 2,
-                liveMaxLatencyDurationCount: 5,
+                startLevel: -1,
+                liveSyncDurationCount: 3,
+                liveMaxLatencyDurationCount: 7,
                 startFragPrefetch: true,
-                maxBufferLength: 15,
-                maxMaxBufferLength: 30,
-                manifestLoadingTimeOut: 6000,
-                levelLoadingTimeOut: 6000,
-                fragLoadingTimeOut: 8000
+                maxBufferLength: 25,
+                maxMaxBufferLength: 45,
+                abrEwmaDefaultEstimate: 950000,
+                abrBandWidthFactor: 0.65,
+                manifestLoadingTimeOut: 8000,
+                levelLoadingTimeOut: 8000,
+                fragLoadingTimeOut: 12000
             });
             hlsInstance.loadSource(targetUrl);
-            hlsInstance.attachMedia(videoEl);
+            hlsInstance.attachMedia(vid);
 
             hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
                 loaderEl.classList.remove('visible');
-                videoEl.play().catch(() => {
-                    videoEl.muted = true;
-                    videoEl.play().catch(() => { });
-                });
+                clearTvStallWatchdog();
+                vid.play().catch(() => { vid.muted = true; vid.play().catch(() => { }); });
             });
 
             hlsInstance.on(Hls.Events.ERROR, (_, data) => {
-                if (data.fatal) {
-                    if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
-                        hlsInstance.startLoad();
-                    } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
-                        hlsInstance.recoverMediaError();
-                    } else if (stage < 2) {
-                        playChannel(channel, stage + 1, useFallback);
-                    } else if (!useFallback && channel.fallbackUrl) {
-                        playChannel(channel, 0, true);
-                    } else {
-                        loaderEl.classList.remove('visible');
-                        errorEl.classList.add('visible');
-                    }
+                if (!data.fatal || mySeq !== tvChannelLoadSeq) return;
+                if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
+                    hlsInstance.startLoad();
+                } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
+                    hlsInstance.recoverMediaError();
+                } else {
+                    onRecoverStall();
                 }
             });
-        } else if (videoEl.canPlayType('application/vnd.apple.mpegurl')) {
-            videoEl.src = targetUrl;
-            videoEl.play().then(() => {
-                loaderEl.classList.remove('visible');
-            }).catch(() => { });
+        } else if (vid.canPlayType('application/vnd.apple.mpegurl')) {
+            vid.src = targetUrl;
+            vid.play().then(() => { loaderEl.classList.remove('visible'); }).catch(() => { });
         }
     }
 
     function destroyPlayers() {
+        clearTvStallWatchdog();
         if (hlsInstance) {
             hlsInstance.destroy();
             hlsInstance = null;
@@ -408,9 +521,13 @@
             mpegtsInstance.destroy();
             mpegtsInstance = null;
         }
-        videoEl.pause();
-        videoEl.removeAttribute('src');
-        videoEl.load();
+        // Réinitialiser l'élément vidéo proprement
+        const vid = document.getElementById('tv-video');
+        if (vid) {
+            vid.pause();
+            vid.removeAttribute('src');
+            vid.load();
+        }
         iframeEl.src = 'about:blank';
     }
 

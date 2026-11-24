@@ -534,19 +534,25 @@ export function NativePlayer({
   }, [candidateChannels, candidateIndex, applySourceToPlayer, resetControlsTimeout, handleRetryWithProxy]);
 
   // Procédure graduée de récupération anti-calage / coupure
+  // ⚠️ RÈGLE NATIF : NE JAMAIS utiliser le proxy Vercel pour les live streams sur app mobile.
+  // Le proxy ajoute 200-400ms de latence ET a un timeout 30s qui cause des coupures périodiques.
+  // L'app native (Android/iOS) n'a PAS de restriction CORS → connexion directe toujours possible.
   const recoverFromFailureOrStall = useCallback(async (reason: 'error' | 'stall' | 'eof') => {
     clearBufferingTimers();
     const now = Date.now();
     if (now - lastErrorTimeRef.current < 2500) return;
     lastErrorTimeRef.current = now;
 
-    // Cas EOF sur un direct MPEG-TS (le serveur coupe proprement après un bloc) : reconnexion silencieuse
-    if (reason === 'eof' && !isVodItem && liveReconnectCountRef.current < 3) {
+    // EOF sur direct MPEG-TS : le serveur coupe proprement (Xtream envoie un segment de fin).
+    // → Reconnexion silencieuse DIRECTE (jamais via proxy pour éviter le cycle timeout 30s).
+    // Illimité pour les lives : un live ne "finit" jamais normalement, c'est toujours une coupure réseau.
+    if (reason === 'eof' && !isVodItem) {
       liveReconnectCountRef.current += 1;
       setIsBuffering(true);
-      setStatusMessage('Reconnexion continue du direct...');
+      setStatusMessage('Reconnexion directe...');
+      // Toujours en direct, jamais proxy sur EOF
       await applySourceToPlayer(activeCandidate, {
-        useProxy,
+        useProxy: false,
         bypassDns: hasTriedBypassDnsRef.current,
         forceHls: hasTriedForceHlsRef.current,
       });
@@ -556,52 +562,55 @@ export function NativePlayer({
     // Étape 1 : Bascule sur flux de secours si plusieurs sources pour la chaîne
     if (candidateChannels.length > 1 && !hasAutoSwitchedBackupRef.current) {
       hasAutoSwitchedBackupRef.current = true;
-      setStatusMessage(`Basculement vers flux plus fluide (${candidateChannels.length} dispo)...`);
+      setStatusMessage(`Basculement vers flux alternatif (${candidateChannels.length} sources)...`);
       setIsBuffering(true);
       setTimeout(() => { handleSwitchBackupStream(); }, 600);
       return;
     }
 
-    // Étape 2 : Contournement IP directe si DNS FAI instable (uniquement barrelastv)
+    // Étape 2 : Contournement IP directe (bypass DNS FAI) — uniquement barrelastv
     if (!hasTriedBypassDnsRef.current && (activeCandidate.url || '').includes('barrelastv.ottcst.org')) {
       hasTriedBypassDnsRef.current = true;
-      setStatusMessage('Optimisation route serveur...');
+      setStatusMessage('Optimisation route directe...');
       setIsBuffering(true);
       await applySourceToPlayer(activeCandidate, { useProxy: false, bypassDns: true, forceHls: hasTriedForceHlsRef.current });
       return;
     }
 
-    // Étape 3 : Si un flux sans extension redirige vers du HLS (.m3u8), forcer HLS au lieu de TS
+    // Étape 3 : Forcer HLS si flux TS redirige vers .m3u8
     if (!hasTriedForceHlsRef.current && activeCandidate.type === 'ts' && !(activeCandidate.url || '').includes('.ts')) {
       hasTriedForceHlsRef.current = true;
-      setStatusMessage('Détection format adaptatif HLS...');
+      setStatusMessage('Adaptation du format de flux...');
       setIsBuffering(true);
-      await applySourceToPlayer(activeCandidate, { useProxy, bypassDns: hasTriedBypassDnsRef.current, forceHls: true });
+      await applySourceToPlayer(activeCandidate, { useProxy: false, bypassDns: hasTriedBypassDnsRef.current, forceHls: true });
       return;
     }
 
-    // Étape 4 : Fallback URL miroir si différente
+    // Étape 4 : URL miroir (fallbackUrl)
     if (autoRetryCountRef.current < 1 && activeCandidate.fallbackUrl && activeCandidate.fallbackUrl !== activeCandidate.url) {
       autoRetryCountRef.current += 1;
-      setStatusMessage('Reconnexion sur flux miroir...');
+      setStatusMessage('Reconnexion sur serveur miroir...');
       setIsBuffering(true);
       setTimeout(() => { handleRetryDirect(); }, 800);
       return;
     }
 
-    // Étape 5 : Proxy de secours si non déjà utilisé (pas de proxy sur un flux déjà bloqué pour VOD/TS lourd, sauf ultime recours)
-    if (!useProxy && reason !== 'eof') {
-      setUseProxy(true);
-      setStatusMessage('Essai relais de secours...');
+    // Étape 5 : Dernière tentative — connexion directe fraîche (reset complet, toujours sans proxy)
+    // Sur mobile natif, le proxy Vercel est pire que la connexion directe (timeout 30s garanti).
+    if (autoRetryCountRef.current < 2) {
+      autoRetryCountRef.current += 1;
+      hasTriedBypassDnsRef.current = false;
+      hasTriedForceHlsRef.current = false;
+      setStatusMessage('Reconnexion au serveur...');
       setIsBuffering(true);
-      await applySourceToPlayer(activeCandidate, { useProxy: true });
+      await applySourceToPlayer(activeCandidate, { useProxy: false });
       return;
     }
 
     setHasError(true);
     setIsBuffering(false);
-    setStatusMessage('Flux momentanément inaccessible. Cliquez sur Réessayer ou changez de chaîne.');
-  }, [clearBufferingTimers, isVodItem, activeCandidate, useProxy, candidateChannels.length, applySourceToPlayer, handleSwitchBackupStream, handleRetryDirect]);
+    setStatusMessage('Signal indisponible. Vérifiez votre connexion ou changez de chaîne.');
+  }, [clearBufferingTimers, isVodItem, activeCandidate, candidateChannels.length, applySourceToPlayer, handleSwitchBackupStream, handleRetryDirect]);
 
   // Écouter les changements d'état du lecteur expo-video + Watchdog anti-calage 10s + Auto-reconnexion Direct
   useEffect(() => {
