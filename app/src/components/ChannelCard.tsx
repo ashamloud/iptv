@@ -13,6 +13,7 @@ interface ChannelCardProps {
   onToggleFavorite: () => void;
   viewMode?: 'grid' | 'list';
   hasTVPreferredFocus?: boolean;
+  isTvSelected?: boolean; // surbrillance forcée par navigation D-Pad index
 }
 
 export const ChannelCard = memo(function ChannelCard({
@@ -22,9 +23,13 @@ export const ChannelCard = memo(function ChannelCard({
   onPress,
   onToggleFavorite,
   viewMode = 'grid',
-  hasTVPreferredFocus = false
+  hasTVPreferredFocus = false,
+  isTvSelected = false,
 }: ChannelCardProps) {
   const [isFocused, setIsFocused] = useState(false);
+
+  // Combiner focus natif D-Pad ET sélection par index
+  const isHighlighted = isFocused || isTvSelected;
 
   const logoUri = channel.logo && channel.logo.startsWith('http')
     ? channel.logo
@@ -42,12 +47,12 @@ export const ChannelCard = memo(function ChannelCard({
         style={({ pressed }) => [
           styles.listCard,
           isPlaying && styles.listCardPlaying,
-          isFocused && styles.listCardFocused,
+          isHighlighted && styles.listCardFocused,
           pressed && styles.cardActive
         ]}
         onPress={onPress}
       >
-        <View style={[styles.listLogoWrap, isFocused && styles.listLogoWrapFocused]}>
+        <View style={[styles.listLogoWrap, isHighlighted && styles.listLogoWrapFocused]}>
           {logoUri ? (
             <Image
               source={{ uri: logoUri }}
@@ -69,7 +74,7 @@ export const ChannelCard = memo(function ChannelCard({
 
         <View style={styles.listInfo}>
           <View style={styles.titleRow}>
-            <Text style={[styles.name, isPlaying && styles.namePlaying, isFocused && styles.nameFocused]} numberOfLines={1}>
+            <Text style={[styles.name, isPlaying && styles.namePlaying, isHighlighted && styles.nameFocused]} numberOfLines={1}>
               {channel.name}
             </Text>
             {channel.badge && (
@@ -78,7 +83,7 @@ export const ChannelCard = memo(function ChannelCard({
               </View>
             )}
           </View>
-          <Text style={[styles.meta, isFocused && styles.metaFocused]} numberOfLines={1}>
+          <Text style={[styles.meta, isHighlighted && styles.metaFocused]} numberOfLines={1}>
             {channel.group || channel.category || 'Direct TV'}
           </Text>
         </View>
@@ -91,7 +96,7 @@ export const ChannelCard = memo(function ChannelCard({
           </View>
         )}
 
-        {isFocused && (
+        {isHighlighted && (
           <View style={styles.listTvOkHint}>
             <Text style={styles.listTvOkText}>OK</Text>
           </View>
@@ -126,16 +131,16 @@ export const ChannelCard = memo(function ChannelCard({
       style={({ pressed }) => [
         styles.gridCard,
         isPlaying && styles.gridCardPlaying,
-        isFocused && styles.cardFocused,
+        isHighlighted && styles.cardFocused,
         pressed && styles.cardActive
       ]}
       onPress={onPress}
     >
       {/* Zone visuelle avec Logo */}
-      <View style={[styles.gridVisualBox, isFocused && styles.gridVisualBoxFocused]}>
+      <View style={[styles.gridVisualBox, isHighlighted && styles.gridVisualBoxFocused]}>
         <LinearGradient
           colors={
-            isFocused
+            isHighlighted
               ? ['#13283c', '#0f172a']
               : isPlaying
               ? ['#281014', '#121624']
@@ -149,13 +154,13 @@ export const ChannelCard = memo(function ChannelCard({
         {logoUri ? (
           <Image
             source={{ uri: logoUri }}
-            style={[styles.gridLogo, isFocused && styles.gridLogoFocused]}
+            style={[styles.gridLogo, isHighlighted && styles.gridLogoFocused]}
             contentFit="contain"
             transition={200}
           />
         ) : (
           <View style={styles.placeholderLogo}>
-            <Ionicons name="tv-outline" size={26} color={isFocused ? '#38bdf8' : '#e50914'} />
+            <Ionicons name="tv-outline" size={26} color={isHighlighted ? '#38bdf8' : '#e50914'} />
           </View>
         )}
 
@@ -167,12 +172,12 @@ export const ChannelCard = memo(function ChannelCard({
               <Text style={styles.liveNowText}>EN COURS</Text>
             </View>
           ) : channel.badge ? (
-            <View style={[styles.qualityBadge, isFocused && styles.qualityBadgeFocused]}>
-              <Text style={[styles.qualityText, isFocused && styles.qualityTextFocused]}>{channel.badge}</Text>
+            <View style={[styles.qualityBadge, isHighlighted && styles.qualityBadgeFocused]}>
+              <Text style={[styles.qualityText, isHighlighted && styles.qualityTextFocused]}>{channel.badge}</Text>
             </View>
           ) : (
-            <View style={[styles.qualityBadge, isFocused && styles.qualityBadgeFocused]}>
-              <Text style={[styles.qualityText, isFocused && styles.qualityTextFocused]}>HD</Text>
+            <View style={[styles.qualityBadge, isHighlighted && styles.qualityBadgeFocused]}>
+              <Text style={[styles.qualityText, isHighlighted && styles.qualityTextFocused]}>HD</Text>
             </View>
           )}
         </View>
@@ -195,20 +200,20 @@ export const ChannelCard = memo(function ChannelCard({
       </View>
 
       {/* Zone texte et détails en bas */}
-      <View style={[styles.gridInfoBox, isPlaying && styles.gridInfoBoxPlaying, isFocused && styles.gridInfoBoxFocused]}>
+      <View style={[styles.gridInfoBox, isPlaying && styles.gridInfoBoxPlaying, isHighlighted && styles.gridInfoBoxFocused]}>
         <Text
-          style={[styles.gridName, isPlaying && styles.gridNamePlaying, isFocused && styles.gridNameFocused]}
+          style={[styles.gridName, isPlaying && styles.gridNamePlaying, isHighlighted && styles.gridNameFocused]}
           numberOfLines={1}
         >
           {channel.name}
         </Text>
-        <Text style={[styles.gridMeta, isFocused && styles.gridMetaFocused]} numberOfLines={1}>
+        <Text style={[styles.gridMeta, isHighlighted && styles.gridMetaFocused]} numberOfLines={1}>
           {channel.group || channel.category || 'Direct TV'}
         </Text>
       </View>
 
       {/* ── BANDEAU DE FOCUS VISUEL SUR SMART TV (Indicateur ultra-clair anti-tâtonnement) ── */}
-      {isFocused ? (
+      {isHighlighted ? (
         <View style={styles.tvFocusBar}>
           <Ionicons name="play" size={10} color="#030712" />
           <Text style={styles.tvFocusBarText}>OK POUR REGARDER</Text>

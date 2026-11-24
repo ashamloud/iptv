@@ -15,7 +15,8 @@ import {
   Dimensions,
   TouchableWithoutFeedback,
   BackHandler,
-  Platform
+  Platform,
+  DeviceEventEmitter,
 } from 'react-native';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -223,6 +224,66 @@ export function NativePlayer({
     const sub = BackHandler.addEventListener('hardwareBackPress', onBack);
     return () => sub.remove();
   }, [isPlayerFullscreen, onToggleFullscreen]);
+
+  // ── Interception des touches TV (CH+, CH-, Médias, D-Pad) via KeyEvent ──
+  // Fonctionne sur Android TV / TV Box via le module natif TVKeyEventHandler (Expo TV)
+  // Keycodes Android : https://developer.android.com/reference/android/view/KeyEvent
+  useEffect(() => {
+    if (!Platform.isTV && Platform.OS !== 'android') return;
+
+    const KEYCODE_CHANNEL_UP   = 166; // CH+ (télécommande)
+    const KEYCODE_CHANNEL_DOWN = 167; // CH-
+    const KEYCODE_MEDIA_NEXT   = 87;  // >>|
+    const KEYCODE_MEDIA_PREV   = 88;  // |<<
+    const KEYCODE_DPAD_RIGHT   = 22;  // → (zapping rapide en lecture)
+    const KEYCODE_DPAD_LEFT    = 21;  // ←
+    const KEYCODE_DPAD_UP      = 19;  // ↑ (volume ou zapping)
+    const KEYCODE_DPAD_DOWN    = 20;  // ↓
+
+    const handleKeyDown = (evt: any) => {
+      const keyCode = evt?.keyCode ?? evt?.nativeEvent?.keyCode;
+      if (!keyCode) return;
+
+      switch (keyCode) {
+        case KEYCODE_CHANNEL_UP:
+        case KEYCODE_MEDIA_NEXT:
+        case KEYCODE_DPAD_RIGHT:
+          // Chaîne suivante
+          if (onNextChannel) {
+            onNextChannel();
+            resetControlsTimeout();
+          }
+          break;
+        case KEYCODE_CHANNEL_DOWN:
+        case KEYCODE_MEDIA_PREV:
+        case KEYCODE_DPAD_LEFT:
+          // Chaîne précédente
+          if (onPrevChannel) {
+            onPrevChannel();
+            resetControlsTimeout();
+          }
+          break;
+        case KEYCODE_DPAD_UP:
+          // Volume + (si muet, démuet d'abord)
+          if (isMuted) {
+            setIsMuted(false);
+            player.muted = false;
+          }
+          break;
+        case KEYCODE_DPAD_DOWN:
+          // Mute
+          setIsMuted(true);
+          player.muted = true;
+          break;
+        default:
+          break;
+      }
+    };
+
+    // Écouter via DeviceEventEmitter (disponible sur Expo TV natif)
+    const sub = DeviceEventEmitter.addListener('onKeyDown', handleKeyDown);
+    return () => sub.remove();
+  }, [onNextChannel, onPrevChannel, isMuted, player, resetControlsTimeout]);
 
   const handleTogglePiP = async () => {
     resetControlsTimeout();

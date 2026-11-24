@@ -21,7 +21,8 @@ import {
   Pressable,
   Linking,
   AppState,
-  RefreshControl
+  RefreshControl,
+  DeviceEventEmitter,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { StatusBar } from 'expo-status-bar';
@@ -153,6 +154,11 @@ export default function NativeBokkApp() {
   const seenMsgIds = useRef<Set<string>>(new Set());
 
   const flatListRef = useRef<FlatList>(null);
+
+  // ── Index de focus TV D-Pad pour la grille des chaînes ──
+  const tvFocusIndexRef = useRef<number>(0);
+  // State pour forcer le re-render de la carte sélectionnée (surbrillance visible)
+  const [tvFocusedIndex, setTvFocusedIndex] = useState<number>(-1);
 
   // Fusion des chaînes de base et des playlists M3U Cloud ajoutées par l'admin
   const allChannels = useMemo(() => {
@@ -512,6 +518,65 @@ export default function NativeBokkApp() {
     setActiveChannel(filteredChannels[prevIdx]);
   }, [activeChannel, filteredChannels]);
 
+  // ── Navigation D-Pad & Touches Télécommande TV (CH+/CH-, médias) ──
+  // Gère la navigation dans la grille QUAND le lecteur est fermé.
+  // Quand le lecteur est ouvert, NativePlayer gère ses propres keycodes.
+  useEffect(() => {
+    if (!isTvMode) return;
+
+    const KEYCODE_CHANNEL_UP   = 166;
+    const KEYCODE_CHANNEL_DOWN = 167;
+    const KEYCODE_MEDIA_NEXT   = 87;
+    const KEYCODE_MEDIA_PREV   = 88;
+    const KEYCODE_DPAD_CENTER  = 23;
+    const KEYCODE_ENTER        = 66;
+
+    const handleKeyDown = (evt: any) => {
+      const keyCode = evt?.keyCode ?? evt?.nativeEvent?.keyCode;
+      if (!keyCode) return;
+
+      // Si le lecteur est ouvert : NativePlayer gère déjà le zapping
+      if (activeChannel) return;
+
+      const total = filteredChannels.length;
+      if (total === 0) return;
+
+      let idx = tvFocusIndexRef.current;
+
+      switch (keyCode) {
+        case KEYCODE_CHANNEL_UP:
+        case KEYCODE_MEDIA_PREV:
+          idx = (idx - 1 + total) % total;
+          tvFocusIndexRef.current = idx;
+          setTvFocusedIndex(idx);
+          flatListRef.current?.scrollToIndex({ index: idx, animated: true, viewPosition: 0.3 });
+          break;
+
+        case KEYCODE_CHANNEL_DOWN:
+        case KEYCODE_MEDIA_NEXT:
+          idx = (idx + 1) % total;
+          tvFocusIndexRef.current = idx;
+          setTvFocusedIndex(idx);
+          flatListRef.current?.scrollToIndex({ index: idx, animated: true, viewPosition: 0.3 });
+          break;
+
+        case KEYCODE_DPAD_CENTER:
+        case KEYCODE_ENTER:
+          if (filteredChannels[idx]) {
+            setTvFocusedIndex(-1);
+            handleSelectChannel(filteredChannels[idx]);
+          }
+          break;
+
+        default:
+          break;
+      }
+    };
+
+    const sub = DeviceEventEmitter.addListener('onKeyDown', handleKeyDown);
+    return () => sub.remove();
+  }, [isTvMode, activeChannel, filteredChannels, handleSelectChannel]);
+
   // Utilisateur enregistré et actif ?
   const isRegisteredUser = Boolean(subscriber && subscriber.status === 'active');
 
@@ -576,10 +641,11 @@ export default function NativeBokkApp() {
           onToggleFavorite={() => handleToggleFavorite(item.id)}
           viewMode={viewMode}
           hasTVPreferredFocus={Platform.isTV && index === 0 && !showRecentWatched}
+          isTvSelected={isTvMode && index === tvFocusedIndex}
         />
       );
     },
-    [activeChannel, favorites, handleSelectChannel, handleToggleFavorite, viewMode, showRecentWatched]
+    [activeChannel, favorites, handleSelectChannel, handleToggleFavorite, viewMode, showRecentWatched, tvFocusedIndex, isTvMode]
   );
 
   const keyExtractor = useCallback((item: Channel) => String(item.id), []);
@@ -817,24 +883,34 @@ export default function NativeBokkApp() {
           ) : (
             <FlatList
               ref={flatListRef}
-              key={`${viewMode}-${numColumns}`} // Re-render propre si l'on change entre Grille et Liste
+              key={`${viewMode}-${numColumns}`}
               data={filteredChannels}
               renderItem={renderChannelItem}
               keyExtractor={keyExtractor}
               numColumns={numColumns}
               contentContainerStyle={[styles.gridContent, { paddingBottom: isTvMode ? 30 : 100 }]}
-              initialNumToRender={18}
-              maxToRenderPerBatch={24}
-              windowSize={7}
-              removeClippedSubviews={Platform.OS === 'android'}
+              initialNumToRender={isTvMode ? 25 : 18}
+              maxToRenderPerBatch={isTvMode ? 30 : 24}
+              windowSize={isTvMode ? 10 : 7}
+              // Sur Android TV : NE PAS clip les sous-vues (sinon le focus D-Pad saute)
+              removeClippedSubviews={!isTvMode && Platform.OS === 'android'}
               showsVerticalScrollIndicator={false}
+              // Fallback sécurisé si scrollToIndex échoue (item pas encore rendu)
+              onScrollToIndexFailed={({ index }) => {
+                flatListRef.current?.scrollToOffset({
+                  offset: index * 160,
+                  animated: true,
+                });
+              }}
               refreshControl={
-                <RefreshControl
-                  refreshing={isRefreshing}
-                  onRefresh={handleRefresh}
-                  tintColor="#e50914"
-                  colors={['#e50914', '#0070f3']}
-                />
+                isTvMode ? undefined : (
+                  <RefreshControl
+                    refreshing={isRefreshing}
+                    onRefresh={handleRefresh}
+                    tintColor="#e50914"
+                    colors={['#e50914', '#0070f3']}
+                  />
+                )
               }
             />
           )}
