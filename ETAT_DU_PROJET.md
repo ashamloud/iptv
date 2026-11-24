@@ -155,11 +155,14 @@
   - Build Latence & Secours : `b8c2213e` (commit `0a3cad2`)
   - Build Audit Global : `3ad7d4c3` (commit `e4c9df5`)
   - Build Calibrage Direct & Zéro Calage : `4fbfab53` (commit `cbe76d8`)
-  - **Build Final Site & App Intégrés (Expo-Doctor 20/20, Toggle Matchs, Secours) : `1fd534f8` (commit `d46f885`) — EN COURS**
-    - Bannière Android TV native Leanback + Cleartext Traffic via plugin Expo
-    - Validation `expo-doctor` : 20/20 vérifications réussies
-    - Buffer direct 12s, commutation secours dynamique, masquage des matchs
-  - 📺 **Suivi en direct** : [expo.dev/.../builds/1fd534f8-2960-4d3e-b0cf-85cd0f860f6a](https://expo.dev/accounts/asham_loud/projects/loudstreamtv/builds/1fd534f8-2960-4d3e-b0cf-85cd0f860f6a)
+  - Build Final Site & App Intégrés : `1fd534f8` (commit `d46f885`) — [Télécharger APK](https://expo.dev/artifacts/eas/o7kyrLXcO2jAamtVV59Lfm4CIhXSACjtVBrwC_Y4B2s.apk)
+  - **Build UX Android TV Ultime (Focus Partout, QR Centré, Anti-Boucle, Scroll Récents) : EN COURS**
+    - Cadre bleu lumineux D-Pad `#38bdf8` sur 100% des éléments (cartes matchs, header, recherche, pass VIP)
+    - Code QR Wave affiché immédiatement au centre sans aucun scroll
+    - Recherche fluide sans réinitialisation de curseur (debounce 200ms)
+    - Chaînes récentes défilables dans la liste au lieu de bloquer le haut
+    - Barre de progression masquée dans le lecteur direct (badge épuré EN DIRECT)
+    - Élimination définitive de la boucle de rechargement de 2 secondes
   - **Profil** : `preview` → fichier `.apk` direct, prêt à installer sur mobile et Smart TV Android.
 
 ### E. Navigation Télécommande TV — Commit `7609962` (24 Nov 2026) ✅

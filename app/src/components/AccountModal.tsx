@@ -14,6 +14,7 @@ import {
   Image,
   Platform,
   useWindowDimensions,
+  Pressable,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -38,6 +39,8 @@ export function AccountModal({
   const [isLoading, setIsLoading] = useState(false);
   const [showProlongInfo, setShowProlongInfo] = useState(false);
   const [tvQrPlan, setTvQrPlan] = useState<null | { url: string; label: string }>(null);
+  const [focusedPlan, setFocusedPlan] = useState<string | null>(null);
+  const [focusedActionBtn, setFocusedActionBtn] = useState<string | null>(null);
 
   // Détection Smart TV & TV Box (Android TV ou grand écran paysage)
   const { width, height } = useWindowDimensions();
@@ -129,9 +132,21 @@ export function AccountModal({
               <Ionicons name="tv-outline" size={20} color="#e50914" />
               <Text style={styles.headerTitle}>Pass 1 Écran & Abonnement</Text>
             </View>
-            <TouchableOpacity onPress={onClose} style={styles.closeBtn} hitSlop={10}>
-              <Ionicons name="close" size={20} color="#94a3b8" />
-            </TouchableOpacity>
+            <Pressable
+              focusable={true}
+              accessible={true}
+              onFocus={() => setFocusedActionBtn('close')}
+              onBlur={() => setFocusedActionBtn((p) => (p === 'close' ? null : p))}
+              onPress={onClose}
+              style={({ pressed }) => [
+                styles.closeBtn,
+                focusedActionBtn === 'close' && styles.closeBtnFocused,
+                pressed && { opacity: 0.7 }
+              ]}
+              hitSlop={10}
+            >
+              <Ionicons name="close" size={20} color={focusedActionBtn === 'close' ? '#38bdf8' : '#94a3b8'} />
+            </Pressable>
           </View>
 
           {subscriber ? (
@@ -209,115 +224,139 @@ export function AccountModal({
 
                   <View style={styles.plansContainer}>
                     {/* 1 mois – 3 000 F */}
-                    <TouchableOpacity
-                      style={styles.planCard}
+                    <Pressable
+                      focusable={true}
+                      accessible={true}
+                      onFocus={() => setFocusedPlan('1m')}
+                      onBlur={() => setFocusedPlan((p) => (p === '1m' ? null : p))}
+                      style={({ pressed }) => [
+                        styles.planCard,
+                        focusedPlan === '1m' && styles.planCardFocused,
+                        pressed && { opacity: 0.85 }
+                      ]}
                       onPress={() => {
                         const url = 'https://pay.wave.com/m/M_sn_cop5B9UJYF8P/c/sn/?amount=3000';
                         if (isTvDevice) {
-                          setTvQrPlan(tvQrPlan?.url === url ? null : { url, label: '1 mois – 3 000 F' });
+                          setTvQrPlan({ url, label: '1 mois – 3 000 F' });
                         } else {
                           Linking.openURL(url).catch(() => Alert.alert('Erreur', "Impossible d'ouvrir Wave."));
                         }
                       }}
-                      activeOpacity={0.85}
                     >
                       <View style={styles.planInfo}>
-                        <Ionicons name="time-outline" size={16} color="#38bdf8" />
-                        <Text style={styles.planDuration}>1 mois</Text>
+                        <Ionicons name="time-outline" size={16} color={focusedPlan === '1m' ? '#38bdf8' : '#94a3b8'} />
+                        <Text style={[styles.planDuration, focusedPlan === '1m' && { color: '#ffffff' }]}>1 mois</Text>
                         <Text style={styles.planPrice}>3 000 F</Text>
                       </View>
-                      <View style={styles.planWaveBadge}>
+                      <View style={[styles.planWaveBadge, focusedPlan === '1m' && styles.planWaveBadgeFocused]}>
                         <Text style={styles.planWaveText}>{isTvDevice ? 'QR Code' : 'Wave →'}</Text>
                       </View>
-                    </TouchableOpacity>
+                    </Pressable>
 
                     {/* 3 mois – 7 500 F (économie 1500F) */}
-                    <TouchableOpacity
-                      style={[styles.planCard, styles.planCardPopular]}
+                    <Pressable
+                      focusable={true}
+                      accessible={true}
+                      onFocus={() => setFocusedPlan('3m')}
+                      onBlur={() => setFocusedPlan((p) => (p === '3m' ? null : p))}
+                      style={({ pressed }) => [
+                        styles.planCard,
+                        styles.planCardPopular,
+                        focusedPlan === '3m' && styles.planCardFocused,
+                        pressed && { opacity: 0.85 }
+                      ]}
                       onPress={() => {
                         const url = 'https://pay.wave.com/m/M_sn_cop5B9UJYF8P/c/sn/?amount=7500';
                         if (isTvDevice) {
-                          setTvQrPlan(tvQrPlan?.url === url ? null : { url, label: '3 mois – 7 500 F' });
+                          setTvQrPlan({ url, label: '3 mois – 7 500 F' });
                         } else {
                           Linking.openURL(url).catch(() => Alert.alert('Erreur', "Impossible d'ouvrir Wave."));
                         }
                       }}
-                      activeOpacity={0.85}
                     >
                       <View style={styles.planInfo}>
-                        <Ionicons name="flame" size={16} color="#f59e0b" />
+                        <Ionicons name="flame" size={16} color={focusedPlan === '3m' ? '#38bdf8' : '#f59e0b'} />
                         <View style={styles.planRow}>
-                          <Text style={styles.planDuration}>3 mois</Text>
+                          <Text style={[styles.planDuration, focusedPlan === '3m' && { color: '#ffffff' }]}>3 mois</Text>
                           <View style={styles.savingsPill}>
                             <Text style={styles.savingsText}>Éco 1 500F</Text>
                           </View>
                         </View>
                         <Text style={styles.planPrice}>7 500 F</Text>
                       </View>
-                      <View style={[styles.planWaveBadge, styles.planWaveBadgePopular]}>
+                      <View style={[styles.planWaveBadge, styles.planWaveBadgePopular, focusedPlan === '3m' && styles.planWaveBadgeFocused]}>
                         <Text style={styles.planWaveText}>{isTvDevice ? 'QR Code' : 'Wave →'}</Text>
                       </View>
-                    </TouchableOpacity>
+                    </Pressable>
 
                     {/* 12 mois – 25 000 F (économie 11000F) */}
-                    <TouchableOpacity
-                      style={styles.planCard}
+                    <Pressable
+                      focusable={true}
+                      accessible={true}
+                      onFocus={() => setFocusedPlan('12m')}
+                      onBlur={() => setFocusedPlan((p) => (p === '12m' ? null : p))}
+                      style={({ pressed }) => [
+                        styles.planCard,
+                        focusedPlan === '12m' && styles.planCardFocused,
+                        pressed && { opacity: 0.85 }
+                      ]}
                       onPress={() => {
                         const url = 'https://pay.wave.com/m/M_sn_cop5B9UJYF8P/c/sn/?amount=25000';
                         if (isTvDevice) {
-                          setTvQrPlan(tvQrPlan?.url === url ? null : { url, label: '12 mois – 25 000 F' });
+                          setTvQrPlan({ url, label: '12 mois – 25 000 F' });
                         } else {
                           Linking.openURL(url).catch(() => Alert.alert('Erreur', "Impossible d'ouvrir Wave."));
                         }
                       }}
-                      activeOpacity={0.85}
                     >
                       <View style={styles.planInfo}>
-                        <Ionicons name="trophy" size={16} color="#22c55e" />
+                        <Ionicons name="trophy" size={16} color={focusedPlan === '12m' ? '#38bdf8' : '#22c55e'} />
                         <View style={styles.planRow}>
-                          <Text style={styles.planDuration}>12 mois</Text>
+                          <Text style={[styles.planDuration, focusedPlan === '12m' && { color: '#ffffff' }]}>12 mois</Text>
                           <View style={styles.savingsPill}>
                             <Text style={styles.savingsText}>Éco 11 000F</Text>
                           </View>
                         </View>
                         <Text style={styles.planPrice}>25 000 F</Text>
                       </View>
-                      <View style={styles.planWaveBadge}>
+                      <View style={[styles.planWaveBadge, focusedPlan === '12m' && styles.planWaveBadgeFocused]}>
                         <Text style={styles.planWaveText}>{isTvDevice ? 'QR Code' : 'Wave →'}</Text>
                       </View>
-                    </TouchableOpacity>
-
-                    {/* QR Code affiché sur TV après sélection d'un plan */}
-                    {isTvDevice && tvQrPlan && (
-                      <View style={styles.tvQrBox}>
-                        <Text style={styles.tvQrTitle}>📱 Scannez avec votre téléphone</Text>
-                        <Text style={styles.tvQrPlan}>{tvQrPlan.label}</Text>
-                        <Image
-                          source={{
-                            uri: `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(tvQrPlan.url)}&bgcolor=ffffff&color=000000&margin=10`,
-                          }}
-                          style={styles.tvQrImage}
-                        />
-                        <Text style={styles.tvQrInstruction}>
-                          Ouvrez l'appareil photo de votre téléphone et pointez-le vers ce QR code pour payer avec Wave.
-                        </Text>
-                        <TouchableOpacity focusable={true} style={styles.tvQrClose} onPress={() => setTvQrPlan(null)}>
-                          <Text style={styles.tvQrCloseText}>✕ Fermer le QR Code</Text>
-                        </TouchableOpacity>
-                      </View>
-                    )}
+                    </Pressable>
                   </View>
                 </View>
 
-                <TouchableOpacity style={styles.whatsappBtn} onPress={handleWhatsApp} activeOpacity={0.85}>
+                <Pressable
+                  focusable={true}
+                  accessible={true}
+                  onFocus={() => setFocusedActionBtn('wa')}
+                  onBlur={() => setFocusedActionBtn((p) => (p === 'wa' ? null : p))}
+                  style={({ pressed }) => [
+                    styles.whatsappBtn,
+                    focusedActionBtn === 'wa' && styles.actionBtnFocused,
+                    pressed && { opacity: 0.85 }
+                  ]}
+                  onPress={handleWhatsApp}
+                >
                   <Ionicons name="logo-whatsapp" size={18} color="#25d366" />
                   <Text style={styles.whatsappText}>WhatsApp Support (+221 78 305 55 20)</Text>
-                </TouchableOpacity>
+                </Pressable>
 
-                <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout} activeOpacity={0.8}>
+                <Pressable
+                  focusable={true}
+                  accessible={true}
+                  onFocus={() => setFocusedActionBtn('logout')}
+                  onBlur={() => setFocusedActionBtn((p) => (p === 'logout' ? null : p))}
+                  style={({ pressed }) => [
+                    styles.logoutBtn,
+                    focusedActionBtn === 'logout' && styles.actionBtnFocused,
+                    pressed && { opacity: 0.8 }
+                  ]}
+                  onPress={handleLogout}
+                >
                   <Ionicons name="log-out-outline" size={16} color="#ef4444" />
                   <Text style={styles.logoutText}>Changer de compte / Déconnexion</Text>
-                </TouchableOpacity>
+                </Pressable>
               </View>
             </ScrollView>
           ) : (
@@ -357,11 +396,19 @@ export function AccountModal({
                   />
                 </View>
 
-                <TouchableOpacity
-                  style={[styles.primaryBtn, isLoading && styles.btnDisabled]}
+                <Pressable
+                  focusable={true}
+                  accessible={true}
+                  onFocus={() => setFocusedActionBtn('submit')}
+                  onBlur={() => setFocusedActionBtn((p) => (p === 'submit' ? null : p))}
+                  style={({ pressed }) => [
+                    styles.primaryBtn,
+                    isLoading && styles.btnDisabled,
+                    focusedActionBtn === 'submit' && styles.actionBtnFocused,
+                    pressed && { opacity: 0.85 }
+                  ]}
                   onPress={handleAuth}
                   disabled={isLoading}
-                  activeOpacity={0.85}
                 >
                   {isLoading ? (
                     <ActivityIndicator color="#fff" size="small" />
@@ -371,12 +418,50 @@ export function AccountModal({
                       <Text style={styles.primaryBtnText}>Activer mon Accès Gratuit</Text>
                     </>
                   )}
-                </TouchableOpacity>
+                </Pressable>
               </View>
 
               <Text style={styles.helperFooter}>
                 Si vous avez déjà un compte avec ce numéro, votre abonnement sera automatiquement restauré sur cet appareil.
               </Text>
+            </View>
+          )}
+
+          {/* POPUP PLEIN ÉCRAN QR CODE DIRECT SANS AUCUN SCROLL SUR TV ET MOBILE */}
+          {tvQrPlan && (
+            <View style={styles.tvQrModalOverlay}>
+              <View style={styles.tvQrModalCard}>
+                <View style={styles.tvQrHeaderRow}>
+                  <Ionicons name="qr-code" size={24} color="#38bdf8" />
+                  <Text style={styles.tvQrTitle}>Paiement Direct Wave</Text>
+                </View>
+                <Text style={styles.tvQrPlan}>{tvQrPlan.label}</Text>
+                <View style={styles.tvQrImageWrap}>
+                  <Image
+                    source={{
+                      uri: `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(tvQrPlan.url)}&bgcolor=ffffff&color=000000&margin=8`,
+                    }}
+                    style={styles.tvQrImage}
+                  />
+                </View>
+                <Text style={styles.tvQrInstruction}>
+                  Pointez l'appareil photo ou l'application Wave de votre smartphone vers ce QR code pour valider votre Pass.
+                </Text>
+                <Pressable
+                  focusable={true}
+                  hasTVPreferredFocus={true}
+                  onFocus={() => setFocusedActionBtn('qrClose')}
+                  onBlur={() => setFocusedActionBtn((p) => (p === 'qrClose' ? null : p))}
+                  style={({ pressed }) => [
+                    styles.tvQrCloseBtn,
+                    focusedActionBtn === 'qrClose' && styles.tvQrCloseBtnFocused,
+                    pressed && { opacity: 0.8 }
+                  ]}
+                  onPress={() => setTvQrPlan(null)}
+                >
+                  <Text style={styles.tvQrCloseBtnText}>✕ Fermer le QR Code</Text>
+                </Pressable>
+              </View>
             </View>
           )}
         </View>
@@ -859,5 +944,97 @@ const styles = StyleSheet.create({
     color: '#94a3b8',
     fontSize: 12,
     fontWeight: '600',
+  },
+  // ── Focus & Overlay QR Code ──
+  planCardFocused: {
+    borderColor: '#38bdf8',
+    borderWidth: 2.5,
+    backgroundColor: '#13283c',
+    transform: [{ scale: 1.04 }],
+    shadowColor: '#38bdf8',
+    shadowOpacity: 0.9,
+    shadowRadius: 10,
+    elevation: 8,
+  },
+  planWaveBadgeFocused: {
+    backgroundColor: '#38bdf8',
+  },
+  closeBtnFocused: {
+    borderColor: '#38bdf8',
+    borderWidth: 2,
+    borderRadius: 14,
+    backgroundColor: 'rgba(56, 189, 248, 0.2)',
+  },
+  actionBtnFocused: {
+    borderColor: '#38bdf8',
+    borderWidth: 2.5,
+    backgroundColor: '#13283c',
+    transform: [{ scale: 1.03 }],
+    shadowColor: '#38bdf8',
+    shadowOpacity: 0.8,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  tvQrModalOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(7, 9, 14, 0.96)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+    zIndex: 100,
+  },
+  tvQrModalCard: {
+    backgroundColor: '#0f172a',
+    borderRadius: 20,
+    borderWidth: 2,
+    borderColor: '#38bdf8',
+    padding: 22,
+    alignItems: 'center',
+    maxWidth: 380,
+    width: '100%',
+    shadowColor: '#38bdf8',
+    shadowOpacity: 0.8,
+    shadowRadius: 20,
+    elevation: 16,
+  },
+  tvQrHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 4,
+  },
+  tvQrImageWrap: {
+    padding: 10,
+    backgroundColor: '#ffffff',
+    borderRadius: 14,
+    marginBottom: 12,
+  },
+  tvQrCloseBtn: {
+    marginTop: 16,
+    paddingHorizontal: 28,
+    paddingVertical: 10,
+    borderRadius: 25,
+    backgroundColor: '#1e293b',
+    borderWidth: 1.5,
+    borderColor: '#334155',
+  },
+  tvQrCloseBtnFocused: {
+    borderColor: '#38bdf8',
+    borderWidth: 2.5,
+    backgroundColor: '#0284c7',
+    transform: [{ scale: 1.05 }],
+    shadowColor: '#38bdf8',
+    shadowOpacity: 0.9,
+    shadowRadius: 10,
+    elevation: 8,
+  },
+  tvQrCloseBtnText: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: '700',
   },
 });

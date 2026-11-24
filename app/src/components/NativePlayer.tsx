@@ -160,6 +160,9 @@ export function NativePlayer({
   const previewTimerRef = useRef<any>(null);
   const hideControlsTimerRef = useRef<any>(null);
   const bufferingTimerRef = useRef<any>(null);
+  const autoRetryCountRef = useRef<number>(0);
+  const hasAutoSwitchedBackupRef = useRef<boolean>(false);
+  const lastErrorTimeRef = useRef<number>(0);
   const sessionIdRef = useRef<string>('');
   const videoViewRef = useRef<any>(null);
   const isRegisteredRef = useRef<boolean>(isRegistered);
@@ -426,7 +429,7 @@ export function NativePlayer({
     }
   }, [candidateChannels, candidateIndex, player, resetControlsTimeout, handleRetryWithProxy]);
 
-  // Écouter les changements d'état du lecteur expo-video (avec debouncing anti-coupure)
+  // Écouter les changements d'état du lecteur expo-video (avec protection anti-boucle 2 secondes)
   useEffect(() => {
     const subStatus = player.addListener('statusChange', ({ status, error }) => {
       if (status === 'error' || error) {
@@ -434,36 +437,50 @@ export function NativePlayer({
           clearTimeout(bufferingTimerRef.current);
           bufferingTimerRef.current = null;
         }
-        setHasError(true);
-        setIsBuffering(false);
 
-        // Si une chaîne de secours avec le même nom existe et n'a pas encore été essayée : basculer automatiquement
-        if (candidateChannels.length > 1 && candidateIndex < candidateChannels.length - 1) {
-          const nextIdx = candidateIndex + 1;
-          setStatusMessage(`Flux principal indisponible, basculement sur le flux de secours (${nextIdx + 1}/${candidateChannels.length})...`);
+        // Anti-boucle : ignorer les rafales d'erreurs consécutives rapides (< 2500ms)
+        const now = Date.now();
+        if (now - lastErrorTimeRef.current < 2500) {
+          return;
+        }
+        lastErrorTimeRef.current = now;
+
+        // ÉTAPE 1 : Si un flux de secours (même nom) est disponible et non testé, basculer UNE SEULE FOIS
+        if (candidateChannels.length > 1 && !hasAutoSwitchedBackupRef.current) {
+          hasAutoSwitchedBackupRef.current = true;
+          setStatusMessage(`Flux principal indisponible, basculement vers flux de secours (${candidateChannels.length} disponibles)...`);
+          setIsBuffering(true);
           setTimeout(() => {
             handleSwitchBackupStream();
-          }, 800);
-        } else if (!useProxy && channel.fallbackUrl && channel.fallbackUrl !== channel.url) {
-          setStatusMessage('Basculement sur flux alternatif...');
-          handleRetryDirect();
-        } else if (!useProxy) {
-          setStatusMessage('Test du flux de secours...');
-          handleRetryWithProxy();
-        } else {
-          setStatusMessage('Signal source temporairement indisponible.');
+          }, 1200);
+          return;
         }
+
+        // ÉTAPE 2 : Si fallbackUrl direct existe et pas encore retenté
+        if (autoRetryCountRef.current < 1 && channel.fallbackUrl && channel.fallbackUrl !== channel.url) {
+          autoRetryCountRef.current += 1;
+          setStatusMessage('Reconnexion directe sur flux miroir...');
+          setIsBuffering(true);
+          setTimeout(() => {
+            handleRetryDirect();
+          }, 1500);
+          return;
+        }
+
+        // ÉTAPE 3 : Arrêt définitif des tentatives automatiques (Élimine totalement le rechargement toutes les 2s)
+        setHasError(true);
+        setIsBuffering(false);
+        setStatusMessage('Flux momentanément inaccessible. Cliquez sur Réessayer ou changez de chaîne.');
       } else if (status === 'readyToPlay') {
         if (bufferingTimerRef.current) {
           clearTimeout(bufferingTimerRef.current);
           bufferingTimerRef.current = null;
         }
+        autoRetryCountRef.current = 0;
         setHasError(false);
         setIsBuffering(false);
         setStatusMessage('');
       } else if (status === 'loading') {
-        // Debounce de 1500ms : n'affiche le chargement que si le buffering est réel
-        // Évite tout clignotement ou écran noir lors des transitions de segments HLS
         if (!bufferingTimerRef.current) {
           bufferingTimerRef.current = setTimeout(() => {
             setIsBuffering(true);
@@ -479,6 +496,7 @@ export function NativePlayer({
           clearTimeout(bufferingTimerRef.current);
           bufferingTimerRef.current = null;
         }
+        autoRetryCountRef.current = 0;
         setIsBuffering(false);
       }
     });
@@ -496,6 +514,9 @@ export function NativePlayer({
   // Recharger le flux UNIQUEMENT si la chaîne change (élimine le double chargement des 3 secondes)
   useEffect(() => {
     let isCancelled = false;
+    autoRetryCountRef.current = 0;
+    hasAutoSwitchedBackupRef.current = false;
+    lastErrorTimeRef.current = 0;
     setUseProxy(false);
     setConcurrencyError(null);
     setHasError(false);
@@ -799,12 +820,15 @@ export function NativePlayer({
                 </PlayerButton>
               </View>
 
-              {/* Centre : Scrubber / Ligne Rouge en Direct avec Bouton Blanc */}
-              <View style={styles.dockScrubberWrap}>
-                <View style={styles.scrubberTrack}>
-                  <View style={styles.scrubberFill} />
-                  <View style={styles.scrubberThumb} />
+              {/* Centre : Direct TV — Pas de barre de progression trompeuse */}
+              <View style={styles.dockLiveCenterWrap}>
+                <View style={styles.dockLiveBadge}>
+                  <View style={styles.dockLiveDot} />
+                  <Text style={styles.dockLiveText}>EN DIRECT</Text>
                 </View>
+                <Text style={styles.dockChannelNameText} numberOfLines={1}>
+                  {activeCandidate.name}
+                </Text>
               </View>
 
               {/* Groupe Droite : PiP & BOUTON PLEIN ÉCRAN */}
@@ -1246,36 +1270,42 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 10,
   },
-  dockScrubberWrap: {
+  dockLiveCenterWrap: {
     flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
     paddingHorizontal: 8,
-    justifyContent: 'center',
   },
-  scrubberTrack: {
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    position: 'relative',
-    justifyContent: 'center',
+  dockLiveBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: 'rgba(229, 9, 20, 0.25)',
+    borderWidth: 1,
+    borderColor: '#e50914',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
   },
-  scrubberFill: {
-    width: '94%',
-    height: 4,
-    borderRadius: 2,
+  dockLiveDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
     backgroundColor: '#e50914',
   },
-  scrubberThumb: {
-    position: 'absolute',
-    left: '92%',
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: '#ffffff',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.6,
-    shadowRadius: 3,
-    elevation: 3,
+  dockLiveText: {
+    color: '#ffffff',
+    fontSize: 10,
+    fontWeight: '900',
+    letterSpacing: 0.5,
+  },
+  dockChannelNameText: {
+    color: '#cbd5e1',
+    fontSize: 12,
+    fontWeight: '700',
+    maxWidth: 220,
   },
   dockControlsRight: {
     flexDirection: 'row',

@@ -3,7 +3,7 @@
 // Design Natif Mobile & Android TV (Focusable avec télécommande)
 // ═══════════════════════════════════════════════════════════════
 
-import React, { memo } from 'react';
+import React, { memo, useState } from 'react';
 import {
   StyleSheet,
   View,
@@ -26,6 +26,8 @@ export const MatchHeaderTicker = memo(function MatchHeaderTicker({
   matches,
   onSelectMatch
 }: MatchHeaderTickerProps) {
+  const [focusedId, setFocusedId] = useState<string | null>(null);
+
   if (!matches || matches.length === 0) return null;
 
   const hasLive = matches.some((m) => m.isLive);
@@ -51,28 +53,33 @@ export const MatchHeaderTicker = memo(function MatchHeaderTicker({
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        {matches.map((item) => (
-          <Pressable
-            key={item.id}
-            focusable={true}
-            style={({ pressed, focused }: any) => [
-              styles.matchCard,
-              item.isLive && styles.matchCardLive,
-              focused && styles.cardFocused,
-              pressed && styles.cardPressed
-            ]}
-            onPress={() => onSelectMatch(item)}
-          >
-            <LinearGradient
-              colors={
-                item.isLive
-                  ? ['rgba(229, 9, 20, 0.22)', 'rgba(15, 23, 42, 0.85)']
-                  : ['rgba(30, 41, 59, 0.7)', 'rgba(15, 23, 42, 0.9)']
-              }
-              style={StyleSheet.absoluteFill}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-            />
+        {matches.map((item) => {
+          const isCardFocused = focusedId === item.id;
+          return (
+            <Pressable
+              key={item.id}
+              focusable={true}
+              accessible={true}
+              onFocus={() => setFocusedId(item.id)}
+              onBlur={() => setFocusedId((prev) => (prev === item.id ? null : prev))}
+              style={({ pressed }) => [
+                styles.matchCard,
+                item.isLive && styles.matchCardLive,
+                isCardFocused && styles.cardFocused,
+                pressed && styles.cardPressed
+              ]}
+              onPress={() => onSelectMatch(item)}
+            >
+              <LinearGradient
+                colors={
+                  item.isLive
+                    ? ['rgba(229, 9, 20, 0.22)', 'rgba(15, 23, 42, 0.85)']
+                    : ['rgba(30, 41, 59, 0.7)', 'rgba(15, 23, 42, 0.9)']
+                }
+                style={StyleSheet.absoluteFill}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+              />
 
             {/* Top Bar : Compétition & Statut (Live / Heure) */}
             <View style={styles.cardTopRow}>
@@ -140,7 +147,8 @@ export const MatchHeaderTicker = memo(function MatchHeaderTicker({
               </Text>
             </View>
           </Pressable>
-        ))}
+        );
+      })}
       </ScrollView>
     </View>
   );
@@ -215,13 +223,14 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(229, 9, 20, 0.45)',
   },
   cardFocused: {
-    borderColor: '#00d2ff',
-    borderWidth: 2,
-    transform: [{ scale: 1.05 }],
-    shadowColor: '#00d2ff',
-    shadowOpacity: 0.8,
-    shadowRadius: 10,
-    elevation: 8,
+    borderColor: '#38bdf8',
+    borderWidth: 3,
+    transform: [{ scale: 1.06 }],
+    shadowColor: '#38bdf8',
+    shadowOpacity: 0.9,
+    shadowRadius: 14,
+    elevation: 12,
+    backgroundColor: '#0f172a',
   },
   cardPressed: {
     opacity: 0.85,

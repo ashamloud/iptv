@@ -134,6 +134,18 @@ export default function NativeBokkApp() {
   const [selectedCategory, setSelectedCategory] = useState<string>('tous');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [isSearchOpen, setIsSearchOpen] = useState<boolean>(false);
+  const [searchInputText, setSearchInputText] = useState<string>('');
+  const [isSearchInputFocused, setIsSearchInputFocused] = useState<boolean>(false);
+  const [focusedHeaderBtn, setFocusedHeaderBtn] = useState<'view' | 'search' | 'account' | 'ticker' | null>(null);
+  const searchDebounceRef = useRef<any>(null);
+
+  const handleSearchTextChange = useCallback((text: string) => {
+    setSearchInputText(text);
+    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+    searchDebounceRef.current = setTimeout(() => {
+      setSearchQuery(text);
+    }, 200);
+  }, []);
 
   // Données utilisateur, favoris, synchronisation admin & matchs
   const [favorites, setFavorites] = useState<string[]>([]);
@@ -724,53 +736,78 @@ export default function NativeBokkApp() {
             </View>
 
             <View style={styles.headerActions}>
-              {/* Bascule Grille / Liste */}
-              <TouchableOpacity
+              {/* Bascule Grille / Liste (Compatible D-Pad TV & Mobile) */}
+              <Pressable
+                focusable={true}
                 accessible={true}
-                style={styles.headerIconBtn}
+                onFocus={() => setFocusedHeaderBtn('view')}
+                onBlur={() => setFocusedHeaderBtn((p) => (p === 'view' ? null : p))}
+                style={({ pressed }) => [
+                  styles.headerIconBtn,
+                  focusedHeaderBtn === 'view' && styles.headerIconBtnFocused,
+                  pressed && { opacity: 0.7 }
+                ]}
                 onPress={() => setViewMode((m) => (m === 'grid' ? 'list' : 'grid'))}
                 accessibilityLabel="Changer de vue"
               >
                 <Ionicons
                   name={viewMode === 'grid' ? 'list' : 'grid'}
                   size={18}
-                  color="#cbd5e1"
+                  color={focusedHeaderBtn === 'view' ? '#38bdf8' : '#cbd5e1'}
                 />
-              </TouchableOpacity>
+              </Pressable>
 
               {/* Bouton Recherche */}
-              <TouchableOpacity
+              <Pressable
+                focusable={true}
                 accessible={true}
-                style={[styles.headerIconBtn, isSearchOpen && styles.headerIconBtnActive]}
+                onFocus={() => setFocusedHeaderBtn('search')}
+                onBlur={() => setFocusedHeaderBtn((p) => (p === 'search' ? null : p))}
+                style={({ pressed }) => [
+                  styles.headerIconBtn,
+                  isSearchOpen && styles.headerIconBtnActive,
+                  focusedHeaderBtn === 'search' && styles.headerIconBtnFocused,
+                  pressed && { opacity: 0.7 }
+                ]}
                 onPress={() => {
                   setIsSearchOpen((prev) => !prev);
-                  if (isSearchOpen) setSearchQuery('');
+                  if (isSearchOpen) {
+                    setSearchQuery('');
+                    setSearchInputText('');
+                  }
                 }}
                 accessibilityLabel="Recherche"
               >
                 <Ionicons
                   name={isSearchOpen ? 'close' : 'search'}
                   size={18}
-                  color={isSearchOpen ? '#e50914' : '#cbd5e1'}
+                  color={focusedHeaderBtn === 'search' ? '#38bdf8' : isSearchOpen ? '#e50914' : '#cbd5e1'}
                 />
-              </TouchableOpacity>
+              </Pressable>
 
               {/* Bouton Mon Pass / Compte */}
-              <TouchableOpacity
+              <Pressable
+                focusable={true}
                 accessible={true}
-                style={[styles.accountBtn, isRegisteredUser ? styles.accountBtnVip : styles.accountBtnFree]}
+                onFocus={() => setFocusedHeaderBtn('account')}
+                onBlur={() => setFocusedHeaderBtn((p) => (p === 'account' ? null : p))}
+                style={({ pressed }) => [
+                  styles.accountBtn,
+                  isRegisteredUser ? styles.accountBtnVip : styles.accountBtnFree,
+                  focusedHeaderBtn === 'account' && styles.accountBtnFocused,
+                  pressed && { opacity: 0.8 }
+                ]}
                 onPress={() => setIsAccountModalOpen(true)}
-                activeOpacity={0.8}
               >
                 <Ionicons
                   name={isRegisteredUser ? 'ribbon' : 'person-circle-outline'}
                   size={16}
-                  color={isRegisteredUser ? '#22c55e' : '#f59e0b'}
+                  color={focusedHeaderBtn === 'account' ? '#38bdf8' : isRegisteredUser ? '#22c55e' : '#f59e0b'}
                 />
-                <Text style={[styles.accountBtnText, isRegisteredUser && styles.accountBtnTextVip]}>
+                <Text style={[styles.accountBtnText, isRegisteredUser && styles.accountBtnTextVip, focusedHeaderBtn === 'account' && { color: '#ffffff' }]}>
                   {subscriber ? subscriber.prenom || subscriber.id : 'Pass VIP'}
                 </Text>
-              </TouchableOpacity>
+              </Pressable>
             </View>
           </View>
 
@@ -784,8 +821,11 @@ export default function NativeBokkApp() {
               <Pressable
                 focusable={true}
                 accessible={true}
+                onFocus={() => setFocusedHeaderBtn('ticker')}
+                onBlur={() => setFocusedHeaderBtn((p) => (p === 'ticker' ? null : p))}
                 style={({ pressed }) => [
                   styles.tickerToggleBtn,
+                  focusedHeaderBtn === 'ticker' && styles.tickerToggleBtnFocused,
                   pressed && { opacity: 0.7 }
                 ]}
                 onPress={() => setShowMatchTicker((v) => !v)}
@@ -795,9 +835,9 @@ export default function NativeBokkApp() {
                 <Ionicons
                   name={showMatchTicker ? 'eye-off-outline' : 'football-outline'}
                   size={13}
-                  color={showMatchTicker ? '#94a3b8' : '#f59e0b'}
+                  color={focusedHeaderBtn === 'ticker' ? '#38bdf8' : showMatchTicker ? '#94a3b8' : '#f59e0b'}
                 />
-                <Text style={[styles.tickerToggleText, !showMatchTicker && styles.tickerToggleTextOn]}>
+                <Text style={[styles.tickerToggleText, !showMatchTicker && styles.tickerToggleTextOn, focusedHeaderBtn === 'ticker' && { color: '#38bdf8' }]}>
                   {showMatchTicker ? 'Masquer les matchs' : `Afficher les matchs (${matches.length})`}
                 </Text>
               </Pressable>
@@ -806,21 +846,29 @@ export default function NativeBokkApp() {
 
           {/* ── BARRE DE RECHERCHE FLOTTANTE DÉPLIABLE ── */}
           {isSearchOpen && (
-            <View style={styles.searchBarContainer}>
-              <Ionicons name="search" size={18} color="#64748b" style={styles.searchIcon} />
+            <View style={[styles.searchBarContainer, isSearchInputFocused && styles.searchBarContainerFocused]}>
+              <Ionicons name="search" size={18} color={isSearchInputFocused ? '#38bdf8' : '#64748b'} style={styles.searchIcon} />
               <TextInput
                 style={styles.searchInput}
                 placeholder="Rechercher une chaîne (Canal+, beIN, RTS, TF1...)"
                 placeholderTextColor="#64748b"
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-                autoFocus
+                value={searchInputText}
+                onChangeText={handleSearchTextChange}
                 returnKeyType="search"
+                onFocus={() => setIsSearchInputFocused(true)}
+                onBlur={() => setIsSearchInputFocused(false)}
               />
-              {searchQuery.length > 0 && (
-                <TouchableOpacity onPress={() => setSearchQuery('')} hitSlop={10}>
+              {searchInputText.length > 0 && (
+                <Pressable
+                  focusable={true}
+                  onPress={() => {
+                    setSearchInputText('');
+                    setSearchQuery('');
+                  }}
+                  hitSlop={10}
+                >
                   <Ionicons name="close-circle" size={18} color="#94a3b8" />
-                </TouchableOpacity>
+                </Pressable>
               )}
             </View>
           )}
@@ -903,27 +951,6 @@ export default function NativeBokkApp() {
             </Text>
           </View>
 
-          {/* ── HISTORIQUE "DERNIÈRES CHAÎNES REGARDÉES" ── */}
-          {isInitLoaded && showRecentWatched && (
-            <View style={styles.recentSection}>
-              <Text style={styles.recentTitle}>▶ Vues récemment</Text>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.recentScroll}
-              >
-                {recentWatchedChannels.map((ch, idx) => (
-                  <RecentWatchedItem
-                    key={`recent-${ch.id}`}
-                    channel={ch}
-                    hasTVPreferredFocus={Platform.isTV && idx === 0}
-                    onPress={() => handleSelectChannel(ch)}
-                  />
-                ))}
-              </ScrollView>
-            </View>
-          )}
-
           {/* ── GRILLE / LISTE DES CHAÎNES (FLATLIST FLUIDE 60 FPS) ── */}
           {!isInitLoaded ? (
             <View style={styles.centerContainer}>
@@ -950,6 +977,26 @@ export default function NativeBokkApp() {
               renderItem={renderChannelItem}
               keyExtractor={keyExtractor}
               numColumns={numColumns}
+              ListHeaderComponent={
+                isInitLoaded && showRecentWatched ? (
+                  <View style={styles.recentSection}>
+                    <Text style={styles.recentTitle}>▶ Vues récemment</Text>
+                    <ScrollView
+                      horizontal
+                      showsHorizontalScrollIndicator={false}
+                      contentContainerStyle={styles.recentScroll}
+                    >
+                      {recentWatchedChannels.map((ch, idx) => (
+                        <RecentWatchedItem
+                          key={`recent-${ch.id}`}
+                          channel={ch}
+                          onPress={() => handleSelectChannel(ch)}
+                        />
+                      ))}
+                    </ScrollView>
+                  </View>
+                ) : undefined
+              }
               contentContainerStyle={[styles.gridContent, { paddingBottom: isTvMode ? 30 : 100 }]}
               initialNumToRender={isTvMode ? 25 : 18}
               maxToRenderPerBatch={isTvMode ? 30 : 24}
@@ -1193,6 +1240,16 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(229, 9, 20, 0.2)',
     borderColor: '#e50914',
   },
+  headerIconBtnFocused: {
+    borderColor: '#38bdf8',
+    borderWidth: 2.5,
+    backgroundColor: 'rgba(56, 189, 248, 0.25)',
+    transform: [{ scale: 1.12 }],
+    shadowColor: '#38bdf8',
+    shadowOpacity: 0.9,
+    shadowRadius: 8,
+    elevation: 8,
+  },
   accountBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1210,6 +1267,16 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(34, 197, 94, 0.14)',
     borderWidth: 1,
     borderColor: 'rgba(34, 197, 94, 0.4)',
+  },
+  accountBtnFocused: {
+    borderColor: '#38bdf8',
+    borderWidth: 2.5,
+    backgroundColor: 'rgba(56, 189, 248, 0.25)',
+    transform: [{ scale: 1.06 }],
+    shadowColor: '#38bdf8',
+    shadowOpacity: 0.9,
+    shadowRadius: 10,
+    elevation: 8,
   },
   accountBtnText: {
     fontSize: 11.5,
@@ -1230,6 +1297,15 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  searchBarContainerFocused: {
+    borderColor: '#38bdf8',
+    borderWidth: 2.5,
+    backgroundColor: '#0f172a',
+    shadowColor: '#38bdf8',
+    shadowOpacity: 0.8,
+    shadowRadius: 8,
+    elevation: 6,
   },
   searchIcon: {
     marginRight: 8,
@@ -1582,6 +1658,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(100, 116, 139, 0.3)',
     gap: 5,
+  },
+  tickerToggleBtnFocused: {
+    borderColor: '#38bdf8',
+    borderWidth: 2,
+    backgroundColor: 'rgba(56, 189, 248, 0.25)',
+    transform: [{ scale: 1.05 }],
   },
   tickerToggleText: {
     color: '#64748b',
