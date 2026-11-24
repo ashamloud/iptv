@@ -1,7 +1,7 @@
 # 📺 BOKK TV — JOURNAL DE BORD & ÉTAT D'AVANCEMENT DU PROJET
 
 > **Document de référence pour le développement et la reprise de session.**  
-> *Dernière mise à jour : 24 Novembre 2026*
+> *Dernière mise à jour : 24 Novembre 2026 — Commit `24a3b6d`*
 
 ---
 
@@ -70,6 +70,58 @@
 - **Cache local intelligent** :
   - Mise en cache locale des chaînes masquées pour un démarrage instantané de l'application sans temps d'attente.
 
+### D. Interface Smart TV / Android TV — Commit `24a3b6d` (24 Nov 2026) ✅
+
+> **Problème remonté** : Sur TV, navigation avec télécommande sans indicateur de position, bottom nav inaccessible (scroll infini), interface = simple appli Android étirée. Paiement Wave essayait d'ouvrir l'appli Wave inexistante sur TV.
+
+#### Fichiers modifiés :
+
+| Fichier | Rôle |
+|---|---|
+| `app/src/components/TvSidebar.tsx` | **NOUVEAU** — Sidebar vertical gauche pour Smart TV |
+| `app/src/components/ChannelCard.tsx` | Focus D-Pad (glow bleu, bandeau "OK POUR REGARDER") |
+| `app/src/components/NativePlayer.tsx` | BackHandler TV, boutons focusables télécommande |
+| `app/src/components/AccountModal.tsx` | QR code Wave sur TV (scan depuis téléphone) |
+| `app/src/app/index.tsx` | Détection TV, layout sidebar + 5 colonnes, fullscreen auto |
+
+#### Ce qui a été implémenté :
+
+- **`TvSidebar.tsx`** (nouveau fichier) :
+  - Sidebar vertical fixe à gauche, 5 onglets : Accueil, Direct TV, Sports, Favoris, Recherche
+  - Focus glow `#38bdf8` avec barre indicatrice bleue à gauche, animation scale
+  - Navigation D-Pad (télécommande) avec `Pressable focusable={true}` + `onFocus/onBlur`
+  - `hasTVPreferredFocus={true}` sur l'item actif pour ancrer le focus TV
+
+- **Détection TV `isTvMode`** :
+  - `Platform.isTV || (width >= 850 && width > height)` — couvre Android TV natif et box IPTV landscape
+
+- **Layout TV** :
+  - `tvRootRow` : flex-row avec sidebar à gauche + contenu à droite
+  - Bottom nav masquée sur TV → remplacée par la sidebar
+  - Grille en **5 colonnes** sur TV pour maximiser l'affichage
+
+- **Focus D-Pad sur `ChannelCard`** :
+  - Glow bleu `#38bdf8` (border 3px, elevation 16)
+  - Bandeau bas bleu "▶ OK POUR REGARDER" visible uniquement sur focus TV
+  - Badge qualité devient bleu au focus
+
+- **Boutons lecteur (`NativePlayer.tsx`)** :
+  - `PlayerButton` helper avec `onFocus/onBlur` pour cibler chaque bouton avec la télécommande
+  - `BackHandler` : bouton retour télécommande quitte le fullscreen sans fermer l'appli
+  - `hasTVPreferredFocus={true}` sur la surface vidéo pour capturer OK→Play/Pause
+
+- **Plein écran automatique sur TV** :
+  - `handleSelectChannel` → `setIsPlayerFullscreen(true)` automatiquement si `isTvMode`
+
+- **QR Code Wave sur TV (`AccountModal.tsx`)** :
+  - Sur `Platform.isTV`, les 3 plans (1 mois / 3 mois / 12 mois) affichent un QR code au lieu d'ouvrir le lien Wave
+  - QR code généré en temps réel via `api.qrserver.com` avec l'URL Wave encodée
+  - L'utilisateur scanne le QR code depuis son téléphone pour payer
+  - Design : boîte foncée `#0f172a` avec bordure bleue, instructuctions claires
+  - `tvQrPlan` state : toggle — cliquer 2x sur le même plan ferme le QR
+
+---
+
 ---
 
 ## ⚡ 4. Tâche Prioritaire En Cours : Fluidité Maximale du Streaming (Zéro Coupure)
@@ -96,9 +148,10 @@
 - [x] **Suspension automatique de `syncAdminData`** (téléchargements M3U en arrière-plan) dès qu'un flux vidéo est actif.
 - [x] **Test TypeScript `npx tsc --noEmit` validé avec 0 erreur**.
 - [x] **Commit Git & Push sur GitHub (`main`)** : commit `b4d688b` validé et synchronisé.
-- [🔄] **Compilation EAS Build APK Android en cours** :
-  - **ID du Build** : `44e6dadd-6c44-46d3-b0fe-8b0df2630ab1`
-  - **Page de suivi en direct & Téléchargement APK** : [expo.dev/.../builds/44e6dadd-6c44-46d3-b0fe-8b0df2630ab1](https://expo.dev/accounts/asham_loud/projects/loudstreamtv/builds/44e6dadd-6c44-46d3-b0fe-8b0df2630ab1)
+- [🔄] **Compilation EAS Build APK Android — Build TV (`24a3b6d`)** :
+  - **Build précédent (anti-coupure)** : `44e6dadd-6c44-46d3-b0fe-8b0df2630ab1`
+  - **Nouveau build (Smart TV interface)** : en cours de compilation (commit `24a3b6d`)
+  - **Page de suivi** : [expo.dev/accounts/asham_loud/projects/loudstreamtv/builds](https://expo.dev/accounts/asham_loud/projects/loudstreamtv/builds)
   - **Profil** : `preview` (génère directement le fichier `.apk` prêt à installer sur mobile et Smart TV Android).
 
 ---
