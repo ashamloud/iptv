@@ -151,9 +151,10 @@
 - [✅] **Builds EAS APK Android — Historique** :
   - Build anti-coupure : `44e6dadd` (commit `b4d688b`)
   - Build Smart TV interface : `d13259fb` (commit `24a3b6d`) — sidebar, QR code, focus glow
-  - **Build Navigation Télécommande : `cb6b32b2` (commit `7609962`) — EN COURS DE BUILD**
-    - CH+/CH- zapping direct, D-Pad grille, surbrillance index, FlatList TV optimisée
-  - 📺 **Suivi en direct** : [expo.dev/.../builds/cb6b32b2-ee59-4bd3-9d98-1dff07dcf5fa](https://expo.dev/accounts/asham_loud/projects/loudstreamtv/builds/cb6b32b2-ee59-4bd3-9d98-1dff07dcf5fa)
+  - Build Navigation Télécommande : `cb6b32b2` (commit `7609962`)
+  - **Build Latence Réduite, Secours & Bannière TV : `b8c2213e` (commit `0a3cad2`) — EN COURS DE BUILD**
+    - Faible latence <0.8s, 853 doublons fusionnés en flux de secours, bouton masquer matchs, bannière Android TV
+  - 📺 **Suivi en direct** : [expo.dev/.../builds/b8c2213e-9fed-42d6-abe6-3a47d326bd84](https://expo.dev/accounts/asham_loud/projects/loudstreamtv/builds/b8c2213e-9fed-42d6-abe6-3a47d326bd84)
   - **Profil** : `preview` → fichier `.apk` direct, prêt à installer sur mobile et Smart TV Android.
 
 ### E. Navigation Télécommande TV — Commit `7609962` (24 Nov 2026) ✅
