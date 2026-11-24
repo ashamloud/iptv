@@ -156,7 +156,8 @@
   - Build Audit Global : `3ad7d4c3` (commit `e4c9df5`)
   - Build Calibrage Direct & Zéro Calage : `4fbfab53` (commit `cbe76d8`)
   - Build Final Site & App Intégrés : `1fd534f8` (commit `d46f885`) — [Télécharger APK](https://expo.dev/artifacts/eas/o7kyrLXcO2jAamtVV59Lfm4CIhXSACjtVBrwC_Y4B2s.apk)
-  - **Build UX Android TV Ultime (Focus Partout, QR Centré, Anti-Boucle, Scroll Récents) : EN COURS**
+  - **Build UX Android TV Ultime (Focus Partout, QR Centré, Anti-Boucle, Scroll Récents) : `98084c32` (commit `f44f188`) — EN COURS**
+    - 📺 **Suivi en direct** : [expo.dev/.../builds/98084c32-670a-422f-b49e-9693b60f2857](https://expo.dev/accounts/asham_loud/projects/loudstreamtv/builds/98084c32-670a-422f-b49e-9693b60f2857)
     - Cadre bleu lumineux D-Pad `#38bdf8` sur 100% des éléments (cartes matchs, header, recherche, pass VIP)
     - Code QR Wave affiché immédiatement au centre sans aucun scroll
     - Recherche fluide sans réinitialisation de curseur (debounce 200ms)
