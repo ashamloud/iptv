@@ -36,6 +36,8 @@ import { NativePlayer } from '../components/NativePlayer';
 import { AccountModal } from '../components/AccountModal';
 import { TvSidebar } from '../components/TvSidebar';
 import { MatchHeaderTicker } from '../components/MatchHeaderTicker';
+import { VodSection } from '../components/VodSection';
+import { VodItem } from '../data/vod';
 import { MatchesService, MatchItem } from '../services/matches';
 import { StorageService } from '../services/storage';
 import { FirebaseService, Subscriber, AdminMessage } from '../services/firebase';
@@ -480,6 +482,24 @@ export default function NativeBokkApp() {
     });
   }, [isTvMode]);
 
+  // Lecture d'un film ou série VOD
+  const handlePlayVod = useCallback((vod: VodItem) => {
+    const vodChannel: Channel = {
+      id: vod.id,
+      name: vod.title,
+      url: vod.url,
+      fallbackUrl: vod.url,
+      type: 'auto',
+      category: 'cinema',
+      group: vod.categoryLabel,
+      badge: vod.quality || '4K',
+      desc: `${vod.categoryLabel} • ${vod.year} • ★ ${vod.rating}`,
+      logo: vod.poster,
+    };
+    setActiveChannel(vodChannel);
+    setIsPlayerFullscreen(true);
+  }, []);
+
   // Fermeture du lecteur
   const handleClosePlayer = useCallback(() => {
     setActiveChannel(null);
@@ -841,7 +861,7 @@ export default function NativeBokkApp() {
           </View>
 
           {/* ── TICKER MATCHS & CHOCS DU JOUR (STYLE SPORT NATIF) ── */}
-          {!activeChannel && matches.length > 0 && !searchQuery && (
+          {!activeChannel && matches.length > 0 && !searchQuery && activeNavTab !== 'home' && (
             <View style={styles.tickerWrapper}>
               {showMatchTicker && (
                 <MatchHeaderTicker matches={matches} onSelectMatch={handleSelectMatch} />
@@ -937,114 +957,127 @@ export default function NativeBokkApp() {
             </View>
           ) : null}
 
-          {/* ── BARRE DE CATÉGORIES ── */}
-          <View style={styles.categoryBarWrap}>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.categoryScroll}
-            >
-              {CATEGORIES.map((cat) => {
-                const isSelected = selectedCategory === cat.key;
-                return (
-                  <CategoryPillItem
-                    key={cat.key}
-                    cat={cat}
-                    isSelected={isSelected}
-                    onSelect={() => {
-                      setSelectedCategory(cat.key);
-                      if (activeNavTab !== 'tv' && activeNavTab !== 'home') {
-                        setActiveNavTab('tv');
-                      }
-                    }}
-                  />
-                );
-              })}
-            </ScrollView>
-          </View>
-
-          {/* ── SOUS-TITRE / COMPTEUR DE CHAÎNES ── */}
-          <View style={styles.metaRow}>
-            <Text style={styles.metaText}>
-              {filteredChannels.length} {filteredChannels.length > 1 ? 'chaînes disponibles' : 'chaîne disponible'}
-              {selectedCategory !== 'tous' ? ` • ${selectedCategory.toUpperCase()}` : ''}
-            </Text>
-            <Text style={styles.metaModeHint}>
-              Mode : {viewMode === 'grid' ? 'Grille' : 'Liste'}
-            </Text>
-          </View>
-
-          {/* ── GRILLE / LISTE DES CHAÎNES (FLATLIST FLUIDE 60 FPS) ── */}
-          {!isInitLoaded ? (
-            <View style={styles.centerContainer}>
-              <ActivityIndicator size="large" color="#e50914" />
-              <Text style={styles.loadingText}>Chargement des flux BOKK TV...</Text>
-            </View>
-          ) : filteredChannels.length === 0 ? (
-            <View style={styles.emptyContainer}>
-              <Ionicons name="tv-outline" size={48} color="#334155" />
-              <Text style={styles.emptyTitle}>Aucune chaîne trouvée</Text>
-              <Text style={styles.emptyDesc}>
-                {searchQuery
-                  ? `Aucun résultat pour « ${searchQuery} »`
-                  : selectedCategory === 'favoris'
-                  ? 'Aucune chaîne dans vos favoris. Touchez l’étoile ⭐ sur une chaîne pour l’ajouter ici.'
-                  : 'Aucune chaîne disponible dans cette sélection.'}
-              </Text>
-            </View>
-          ) : (
-            <FlatList
-              ref={flatListRef}
-              key={`${viewMode}-${numColumns}`}
-              data={filteredChannels}
-              renderItem={renderChannelItem}
-              keyExtractor={keyExtractor}
-              numColumns={numColumns}
-              ListHeaderComponent={
-                isInitLoaded && showRecentWatched ? (
-                  <View style={styles.recentSection}>
-                    <Text style={styles.recentTitle}>▶ Vues récemment</Text>
-                    <ScrollView
-                      horizontal
-                      showsHorizontalScrollIndicator={false}
-                      contentContainerStyle={styles.recentScroll}
-                    >
-                      {recentWatchedChannels.map((ch, idx) => (
-                        <RecentWatchedItem
-                          key={`recent-${ch.id}`}
-                          channel={ch}
-                          onPress={() => handleSelectChannel(ch)}
-                        />
-                      ))}
-                    </ScrollView>
-                  </View>
-                ) : undefined
-              }
-              contentContainerStyle={[styles.gridContent, { paddingBottom: isTvMode ? 30 : 100 }]}
-              initialNumToRender={isTvMode ? 25 : 18}
-              maxToRenderPerBatch={isTvMode ? 30 : 24}
-              windowSize={isTvMode ? 10 : 7}
-              // Sur Android TV : NE PAS clip les sous-vues (sinon le focus D-Pad saute)
-              removeClippedSubviews={!isTvMode && Platform.OS === 'android'}
-              showsVerticalScrollIndicator={false}
-              // Fallback sécurisé si scrollToIndex échoue (item pas encore rendu)
-              onScrollToIndexFailed={({ index }) => {
-                flatListRef.current?.scrollToOffset({
-                  offset: index * 160,
-                  animated: true,
-                });
-              }}
-              refreshControl={
-                isTvMode ? undefined : (
-                  <RefreshControl
-                    refreshing={isRefreshing}
-                    onRefresh={handleRefresh}
-                    tintColor="#e50914"
-                    colors={['#e50914', '#0070f3']}
-                  />
-                )
-              }
+          {/* ── SECTION PRINCIPALE : VOD CINÉMA OU DIRECT TV ── */}
+          {activeNavTab === 'home' && !searchQuery ? (
+            <VodSection
+              channels={allChannels}
+              onPlayChannel={handleSelectChannel}
+              onPlayVod={handlePlayVod}
+              onNavigateToTv={() => handleNavTabPress('tv')}
+              isTvMode={isTvMode}
             />
+          ) : (
+            <>
+              {/* ── BARRE DE CATÉGORIES ── */}
+              <View style={styles.categoryBarWrap}>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.categoryScroll}
+                >
+                  {CATEGORIES.map((cat) => {
+                    const isSelected = selectedCategory === cat.key;
+                    return (
+                      <CategoryPillItem
+                        key={cat.key}
+                        cat={cat}
+                        isSelected={isSelected}
+                        onSelect={() => {
+                          setSelectedCategory(cat.key);
+                          if (activeNavTab !== 'tv' && activeNavTab !== 'home') {
+                            setActiveNavTab('tv');
+                          }
+                        }}
+                      />
+                    );
+                  })}
+                </ScrollView>
+              </View>
+
+              {/* ── SOUS-TITRE / COMPTEUR DE CHAÎNES ── */}
+              <View style={styles.metaRow}>
+                <Text style={styles.metaText}>
+                  {filteredChannels.length} {filteredChannels.length > 1 ? 'chaînes disponibles' : 'chaîne disponible'}
+                  {selectedCategory !== 'tous' ? ` • ${selectedCategory.toUpperCase()}` : ''}
+                </Text>
+                <Text style={styles.metaModeHint}>
+                  Mode : {viewMode === 'grid' ? 'Grille' : 'Liste'}
+                </Text>
+              </View>
+
+              {/* ── GRILLE / LISTE DES CHAÎNES (FLATLIST FLUIDE 60 FPS) ── */}
+              {!isInitLoaded ? (
+                <View style={styles.centerContainer}>
+                  <ActivityIndicator size="large" color="#e50914" />
+                  <Text style={styles.loadingText}>Chargement des flux BOKK TV...</Text>
+                </View>
+              ) : filteredChannels.length === 0 ? (
+                <View style={styles.emptyContainer}>
+                  <Ionicons name="tv-outline" size={48} color="#334155" />
+                  <Text style={styles.emptyTitle}>Aucune chaîne trouvée</Text>
+                  <Text style={styles.emptyDesc}>
+                    {searchQuery
+                      ? `Aucun résultat pour « ${searchQuery} »`
+                      : selectedCategory === 'favoris'
+                      ? 'Aucune chaîne dans vos favoris. Touchez l’étoile ⭐ sur une chaîne pour l’ajouter ici.'
+                      : 'Aucune chaîne disponible dans cette sélection.'}
+                  </Text>
+                </View>
+              ) : (
+                <FlatList
+                  ref={flatListRef}
+                  key={`${viewMode}-${numColumns}`}
+                  data={filteredChannels}
+                  renderItem={renderChannelItem}
+                  keyExtractor={keyExtractor}
+                  numColumns={numColumns}
+                  ListHeaderComponent={
+                    isInitLoaded && showRecentWatched ? (
+                      <View style={styles.recentSection}>
+                        <Text style={styles.recentTitle}>▶ Vues récemment</Text>
+                        <ScrollView
+                          horizontal
+                          showsHorizontalScrollIndicator={false}
+                          contentContainerStyle={styles.recentScroll}
+                        >
+                          {recentWatchedChannels.map((ch, idx) => (
+                            <RecentWatchedItem
+                              key={`recent-${ch.id}`}
+                              channel={ch}
+                              onPress={() => handleSelectChannel(ch)}
+                            />
+                          ))}
+                        </ScrollView>
+                      </View>
+                    ) : undefined
+                  }
+                  contentContainerStyle={[styles.gridContent, { paddingBottom: isTvMode ? 30 : 100 }]}
+                  initialNumToRender={isTvMode ? 25 : 18}
+                  maxToRenderPerBatch={isTvMode ? 30 : 24}
+                  windowSize={isTvMode ? 10 : 7}
+                  // Sur Android TV : NE PAS clip les sous-vues (sinon le focus D-Pad saute)
+                  removeClippedSubviews={!isTvMode && Platform.OS === 'android'}
+                  showsVerticalScrollIndicator={false}
+                  // Fallback sécurisé si scrollToIndex échoue (item pas encore rendu)
+                  onScrollToIndexFailed={({ index }) => {
+                    flatListRef.current?.scrollToOffset({
+                      offset: index * 160,
+                      animated: true,
+                    });
+                  }}
+                  refreshControl={
+                    isTvMode ? undefined : (
+                      <RefreshControl
+                        refreshing={isRefreshing}
+                        onRefresh={handleRefresh}
+                        tintColor="#e50914"
+                        colors={['#e50914', '#0070f3']}
+                      />
+                    )
+                  }
+                />
+              )}
+            </>
           )}
         </View>
       </View>
@@ -1060,12 +1093,12 @@ export default function NativeBokkApp() {
               activeOpacity={0.8}
             >
               <Ionicons
-                name={activeNavTab === 'home' ? 'home' : 'home-outline'}
+                name={activeNavTab === 'home' ? 'film' : 'film-outline'}
                 size={19}
                 color={activeNavTab === 'home' ? '#ffffff' : '#64748b'}
               />
               <Text style={[styles.bottomNavLabel, activeNavTab === 'home' && styles.bottomNavLabelActive]}>
-                Accueil
+                Films & Séries
               </Text>
             </TouchableOpacity>
 

@@ -112,9 +112,9 @@ export const TvSidebar = memo(function TvSidebar({
       {/* ── LISTE DES ÉLÉMENTS DE NAVIGATION VERTICALE ── */}
       <View style={styles.navGroup}>
         <SidebarItem
-          icon="home-outline"
-          iconActive="home"
-          label="Accueil"
+          icon="film-outline"
+          iconActive="film"
+          label="Films & Séries"
           isActive={activeTab === 'home' && !isSearchOpen}
           onPress={() => onSelectTab('home')}
         />
