@@ -148,17 +148,50 @@
 - [x] **Suspension automatique de `syncAdminData`** (téléchargements M3U en arrière-plan) dès qu'un flux vidéo est actif.
 - [x] **Test TypeScript `npx tsc --noEmit` validé avec 0 erreur**.
 - [x] **Commit Git & Push sur GitHub (`main`)** : commit `b4d688b` validé et synchronisé.
-- [✅] **Compilation EAS Build APK Android — Build TV (`24a3b6d`)** :
-  - **Build précédent (anti-coupure)** : `44e6dadd-6c44-46d3-b0fe-8b0df2630ab1`
-  - **Nouveau build Smart TV** : ID `d13259fb-913f-44b3-86ba-a7f3d6139d4b` (commit `24a3b6d`) — **EN COURS DE BUILD**
-  - **Page de suivi** : [expo.dev/.../builds/d13259fb-913f-44b3-86ba-a7f3d6139d4b](https://expo.dev/accounts/asham_loud/projects/loudstreamtv/builds/d13259fb-913f-44b3-86ba-a7f3d6139d4b)
-  - **Profil** : `preview` (génère directement le fichier `.apk` prêt à installer sur mobile et Smart TV Android).
+- [✅] **Builds EAS APK Android — Historique** :
+  - Build anti-coupure : `44e6dadd` (commit `b4d688b`)
+  - Build Smart TV interface : `d13259fb` (commit `24a3b6d`) — sidebar, QR code, focus glow
+  - **Build Navigation Télécommande : `cb6b32b2` (commit `7609962`) — EN COURS DE BUILD**
+    - CH+/CH- zapping direct, D-Pad grille, surbrillance index, FlatList TV optimisée
+  - 📺 **Suivi en direct** : [expo.dev/.../builds/cb6b32b2-ee59-4bd3-9d98-1dff07dcf5fa](https://expo.dev/accounts/asham_loud/projects/loudstreamtv/builds/cb6b32b2-ee59-4bd3-9d98-1dff07dcf5fa)
+  - **Profil** : `preview` → fichier `.apk` direct, prêt à installer sur mobile et Smart TV Android.
+
+### E. Navigation Télécommande TV — Commit `7609962` (24 Nov 2026) ✅
+
+> **Problème** : Navigation D-Pad peu fiable, boutons CH+/CH- et touches médias non fonctionnels. L'utilisateur devait tâtonner avec les flèches directionnelles + OK.
+
+#### Fichiers modifiés :
+
+| Fichier | Changement |
+|---|---|
+| `app/src/components/NativePlayer.tsx` | Interception keycodes TV en lecture (CH+, CH-, médias) |
+| `app/src/app/index.tsx` | Navigation D-Pad grille + `useEffect` TV + `tvFocusedIndex` state |
+| `app/src/components/ChannelCard.tsx` | Prop `isTvSelected` → surbrillance forcée par index D-Pad |
+
+#### Ce qui fonctionne maintenant :
+
+**En cours de lecture (NativePlayer)** :
+- `CH+` / `⏭ Media Next` / `→ D-Pad` → Chaîne suivante
+- `CH-` / `⏮ Media Prev` / `← D-Pad` → Chaîne précédente
+- `↑ D-Pad` → Désactiver le son (unmute)
+- `↓ D-Pad` → Couper le son (mute)
+
+**Dans la grille (index.tsx, lecteur fermé)** :
+- `CH+` / `⏭` → Item suivant dans la grille avec scroll automatique
+- `CH-` / `⏮` → Item précédent dans la grille avec scroll automatique
+- `OK` / `Entrée` → Lancer la chaîne sélectionnée en surbrillance
+
+**FlatList optimisée pour Android TV** :
+- `removeClippedSubviews={false}` sur TV → le focus D-Pad ne "saute" plus les items non rendus
+- `onScrollToIndexFailed` → fallback offset si l'item n'est pas encore rendu
+- `initialNumToRender={25}` sur TV → plus d'items pré-rendus dès le départ
+- `windowSize={10}` sur TV → plus de mémoire tampon pour le scroll fluide
 
 ---
 
 ## 📋 5. Ce qu'il Reste à Faire (Roadmap Future)
 
-1. **Validation & Test de l'APK Anti-Coupure** : Vérifier sur smartphone avec connexion mobile (Orange/Free Sénégal) la fluidité absolue de la lecture.
+1. **Validation & Test APK TV** : Tester la navigation CH+/CH- sur la télévision physique.
 2. **Guide des Programmes (EPG) dans le dock du lecteur** : Afficher la barre de progression et le titre de l'émission en cours.
 3. **Multi-profils famille** : Permettre à un compte de créer des profils (Adulte, Enfants) sans changer de numéro.
 4. **Contrôle Parental** : Code PIN pour certaines catégories sensibles.
