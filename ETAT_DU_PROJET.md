@@ -153,9 +153,10 @@
   - Build Smart TV interface : `d13259fb` (commit `24a3b6d`) — sidebar, QR code, focus glow
   - Build Navigation Télécommande : `cb6b32b2` (commit `7609962`)
   - Build Latence & Secours : `b8c2213e` (commit `0a3cad2`)
-  - **Build Final & Audit Global : `3ad7d4c3` (commit `e4c9df5`) — EN COURS DE BUILD**
-    - Audit complet validé, PIN Admin 1234/2010, QR code tout boîtier TV, déduplication web & app, latence <0.8s
-  - 📺 **Suivi en direct** : [expo.dev/.../builds/3ad7d4c3-7902-433a-b0e5-deb7b8347437](https://expo.dev/accounts/asham_loud/projects/loudstreamtv/builds/3ad7d4c3-7902-433a-b0e5-deb7b8347437)
+  - Build Audit Global : `3ad7d4c3` (commit `e4c9df5`)
+  - **Build Calibrage Direct & Zéro Calage : `4fbfab53` (commit `cbe76d8`) — EN COURS DE BUILD**
+    - Buffer 12s (2x plus près du direct réel), démarrage 1.5s, priorité temps, zéro calage garanti
+  - 📺 **Suivi en direct** : [expo.dev/.../builds/4fbfab53-cd93-41c5-9f1d-856ed72162fc](https://expo.dev/accounts/asham_loud/projects/loudstreamtv/builds/4fbfab53-cd93-41c5-9f1d-856ed72162fc)
   - **Profil** : `preview` → fichier `.apk` direct, prêt à installer sur mobile et Smart TV Android.
 
 ### E. Navigation Télécommande TV — Commit `7609962` (24 Nov 2026) ✅
