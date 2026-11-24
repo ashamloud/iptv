@@ -40,42 +40,44 @@ POSTERS = {
 
 CHANNELS_MAP = {
     'UEFA Champions League': [
-        {'id': 3713, 'name': 'Canal+ Foot HD',     'badge': 'FHD', 'quality': '1080p'},
-        {'id': 3724, 'name': 'beIN Sports 1 AR',   'badge': 'FHD', 'quality': '1080p'},
-        {'id': 3704, 'name': 'M+ Liga Campeones',  'badge': 'FHD', 'quality': '1080p'},
-        {'id': 3712, 'name': 'Canal+ 360',         'badge': 'HD',  'quality': '720p'}
+        {'id': 98,  'name': 'Canal+ Foot HD',        'badge': 'FHD', 'quality': '1080p'},
+        {'id': 109, 'name': 'beIN Sports 1 HD',      'badge': 'FHD', 'quality': '1080p'},
+        {'id': 89,  'name': 'M+ Liga de Campeones',  'badge': 'HD',  'quality': '1080p'},
+        {'id': 97,  'name': 'Canal+ 360 HD',         'badge': 'FHD', 'quality': '1080p'}
     ],
     'UEFA Europa League': [
-        {'id': 3713, 'name': 'Canal+ Foot HD',     'badge': 'FHD', 'quality': '1080p'},
-        {'id': 3725, 'name': 'beIN Sports 2 HD AR','badge': 'FHD', 'quality': '1080p'}
+        {'id': 97,  'name': 'Canal+ 360 HD',         'badge': 'FHD', 'quality': '1080p'},
+        {'id': 110, 'name': 'beIN Sports 2 HD',      'badge': 'FHD', 'quality': '1080p'}
     ],
     'LaLiga': [
-        {'id': 5293, 'name': 'DAZN LaLiga 4K',     'badge': '4K UHD', 'quality': '4K'},
-        {'id': 3724, 'name': 'beIN Sports 1 AR',   'badge': 'FHD', 'quality': '1080p'},
-        {'id': 5245, 'name': 'M+ LaLiga 4K',       'badge': '4K UHD', 'quality': '4K'},
-        {'id': 3713, 'name': 'Canal+ Foot HD',     'badge': 'FHD', 'quality': '1080p'}
+        {'id': 1559, 'name': 'M+ LaLiga 4K',         'badge': '4K UHD', 'quality': '4K'},
+        {'id': 1607, 'name': 'DAZN LaLiga 4K',       'badge': '4K UHD', 'quality': '4K'},
+        {'id': 109,  'name': 'beIN Sports 1 HD',      'badge': 'FHD',    'quality': '1080p'},
+        {'id': 1560, 'name': 'M+ LaLiga HD',         'badge': 'FHD',    'quality': '1080p'}
     ],
     'Ligue 1': [
-        {'id': 3713, 'name': 'Canal+ Foot HD',     'badge': 'FHD', 'quality': '1080p'},
-        {'id': 3724, 'name': 'beIN Sports 1 AR',   'badge': 'FHD', 'quality': '1080p'},
-        {'id': 148,  'name': 'Canal+ Sport 360',   'badge': 'HD',  'quality': '720p'}
+        {'id': 98,  'name': 'Canal+ Foot HD',        'badge': 'FHD', 'quality': '1080p'},
+        {'id': 97,  'name': 'Canal+ 360 HD',         'badge': 'FHD', 'quality': '1080p'},
+        {'id': 109, 'name': 'beIN Sports 1 HD',      'badge': 'FHD', 'quality': '1080p'}
     ],
     'Premier League': [
-        {'id': 2774, 'name': 'Canal+ Premier League','badge': 'FHD', 'quality': '1080p'},
-        {'id': 3724, 'name': 'beIN Sports 1 HD AR',  'badge': 'FHD', 'quality': '1080p'},
-        {'id': 3713, 'name': 'Canal+ Foot HD',       'badge': 'FHD', 'quality': '1080p'}
+        {'id': 97,  'name': 'Canal+ 360 HD',         'badge': 'FHD', 'quality': '1080p'},
+        {'id': 109, 'name': 'beIN Sports 1 HD',      'badge': 'FHD', 'quality': '1080p'},
+        {'id': 120, 'name': 'Sky Sport Football',    'badge': 'FHD', 'quality': '1080p'}
     ],
     'Serie A': [
-        {'id': 3724, 'name': 'beIN Sports 1 HD AR', 'badge': 'FHD', 'quality': '1080p'},
-        {'id': 3725, 'name': 'beIN Sports 2 HD AR', 'badge': 'FHD', 'quality': '1080p'}
+        {'id': 119, 'name': 'Sky Sport Uno',         'badge': 'FHD', 'quality': '1080p'},
+        {'id': 110, 'name': 'beIN Sports 2 HD',      'badge': 'FHD', 'quality': '1080p'},
+        {'id': 120, 'name': 'Sky Sport Football',    'badge': 'FHD', 'quality': '1080p'}
     ],
     'Bundesliga': [
-        {'id': 3725, 'name': 'beIN Sports 2 HD AR', 'badge': 'FHD', 'quality': '1080p'},
-        {'id': 3713, 'name': 'Canal+ Foot HD',      'badge': 'FHD', 'quality': '1080p'}
+        {'id': 110, 'name': 'beIN Sports 2 HD',      'badge': 'FHD', 'quality': '1080p'},
+        {'id': 97,  'name': 'Canal+ 360 HD',         'badge': 'FHD', 'quality': '1080p'},
+        {'id': 118, 'name': 'Sky Sport Action',      'badge': 'FHD', 'quality': '1080p'}
     ],
     'default': [
-        {'id': 3713, 'name': 'Canal+ Foot HD',     'badge': 'FHD', 'quality': '1080p'},
-        {'id': 3724, 'name': 'beIN Sports 1 AR',   'badge': 'FHD', 'quality': '1080p'}
+        {'id': 98,  'name': 'Canal+ Foot HD',        'badge': 'FHD', 'quality': '1080p'},
+        {'id': 109, 'name': 'beIN Sports 1 HD',      'badge': 'FHD', 'quality': '1080p'}
     ]
 }
 
@@ -257,14 +259,94 @@ CURATED_EVENTS = [
     }
 ]
 
+def get_dynamic_channels(league_name, match_index, team_a, team_b):
+    t_upper = f"{team_a} {team_b}".upper()
+    if league_name == 'UEFA Champions League':
+        ucl = [
+            [
+                {'id': 98,  'name': 'Canal+ Foot HD',        'badge': 'FHD', 'quality': '1080p'},
+                {'id': 109, 'name': 'beIN Sports 1 HD',      'badge': 'FHD', 'quality': '1080p'},
+                {'id': 89,  'name': 'M+ Liga de Campeones',  'badge': 'HD',  'quality': '1080p'},
+                {'id': 136, 'name': 'beIN Sports 8K',        'badge': '4K',  'quality': '4K'}
+            ],
+            [
+                {'id': 97,  'name': 'Canal+ 360 HD',         'badge': 'FHD', 'quality': '1080p'},
+                {'id': 110, 'name': 'beIN Sports 2 HD',      'badge': 'FHD', 'quality': '1080p'},
+                {'id': 90,  'name': 'M+ Liga Campeones 2',   'badge': 'HD',  'quality': '1080p'},
+                {'id': 137, 'name': 'Canal+ 8K',             'badge': '4K',  'quality': '4K'}
+            ],
+            [
+                {'id': 99,  'name': 'Canal+ Live 1',         'badge': 'HD',  'quality': '1080p'},
+                {'id': 111, 'name': 'beIN Sports 3 HD',      'badge': 'FHD', 'quality': '1080p'},
+                {'id': 91,  'name': 'M+ Liga Campeones 3',   'badge': 'HD',  'quality': '1080p'}
+            ],
+            [
+                {'id': 100, 'name': 'Canal+ Live 2',         'badge': 'HD',  'quality': '1080p'},
+                {'id': 112, 'name': 'beIN Sports 4 HD',      'badge': 'FHD', 'quality': '1080p'},
+                {'id': 92,  'name': 'M+ Liga Campeones 4',   'badge': 'HD',  'quality': '1080p'}
+            ],
+            [
+                {'id': 101, 'name': 'Canal+ Live 3',         'badge': 'HD',  'quality': '1080p'},
+                {'id': 113, 'name': 'beIN Sports 5 HD',      'badge': 'FHD', 'quality': '1080p'},
+                {'id': 93,  'name': 'M+ Liga Campeones 5',   'badge': 'HD',  'quality': '1080p'}
+            ],
+            [
+                {'id': 102, 'name': 'Canal+ Live 4',         'badge': 'HD',  'quality': '1080p'},
+                {'id': 114, 'name': 'beIN Sports 6 HD',      'badge': 'FHD', 'quality': '1080p'},
+                {'id': 94,  'name': 'M+ Liga Campeones 6',   'badge': 'HD',  'quality': '1080p'}
+            ],
+            [
+                {'id': 103, 'name': 'Canal+ Live 5',         'badge': 'HD',  'quality': '1080p'},
+                {'id': 115, 'name': 'beIN Sports 7 HD',      'badge': 'FHD', 'quality': '1080p'},
+                {'id': 95,  'name': 'M+ Liga Campeones 7',   'badge': 'HD',  'quality': '1080p'}
+            ],
+            [
+                {'id': 104, 'name': 'Canal+ Live 6',         'badge': 'HD',  'quality': '1080p'},
+                {'id': 116, 'name': 'beIN Sports 8 HD',      'badge': 'FHD', 'quality': '1080p'},
+                {'id': 96,  'name': 'M+ Liga Campeones 8',   'badge': 'HD',  'quality': '1080p'}
+            ]
+        ]
+        if any(k in t_upper for k in ['PSG', 'PARIS', 'LENS', 'BREST', 'MONACO', 'LILLE', 'MARSEILLE', 'LYON']):
+            return [
+                {'id': 98,  'name': 'Canal+ Foot HD',        'badge': 'FHD', 'quality': '1080p'},
+                {'id': 97,  'name': 'Canal+ 360 HD',         'badge': 'FHD', 'quality': '1080p'},
+                {'id': 109, 'name': 'beIN Sports 1 HD',      'badge': 'FHD', 'quality': '1080p'},
+                {'id': 89,  'name': 'M+ Liga de Campeones',  'badge': 'HD',  'quality': '1080p'}
+            ]
+        return ucl[match_index % len(ucl)]
+    if league_name == 'LaLiga':
+        laliga = [
+            [
+                {'id': 1559, 'name': 'M+ LaLiga 4K',    'badge': '4K UHD', 'quality': '4K'},
+                {'id': 1607, 'name': 'DAZN LaLiga 4K',  'badge': '4K UHD', 'quality': '4K'},
+                {'id': 109,  'name': 'beIN Sports 1 HD', 'badge': 'FHD',    'quality': '1080p'}
+            ],
+            [
+                {'id': 1560, 'name': 'M+ LaLiga HD',    'badge': 'FHD',    'quality': '1080p'},
+                {'id': 1608, 'name': 'DAZN LaLiga HD',  'badge': 'HD',     'quality': '720p'},
+                {'id': 110,  'name': 'beIN Sports 2 HD', 'badge': 'FHD',    'quality': '1080p'}
+            ],
+            [
+                {'id': 1564, 'name': 'M+ LaLiga 2 4K',  'badge': '4K UHD', 'quality': '4K'},
+                {'id': 1610, 'name': 'DAZN LaLiga 2 4K','badge': '4K UHD', 'quality': '4K'},
+                {'id': 111,  'name': 'beIN Sports 3 HD', 'badge': 'FHD',    'quality': '1080p'}
+            ],
+            [
+                {'id': 1566, 'name': 'M+ LaLiga 3 4K',  'badge': '4K UHD', 'quality': '4K'},
+                {'id': 1612, 'name': 'DAZN 1 4K',       'badge': '4K UHD', 'quality': '4K'}
+            ]
+        ]
+        return laliga[match_index % len(laliga)]
+    return CHANNELS_MAP.get(league_name, CHANNELS_MAP['default'])
+
 def fetch_espn_matches():
     matches = []
     headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
-    now_date = datetime.date(2026, 11, 10)
+    now_date = datetime.date.today()
     now_ts = int(time.time())
 
-    # Dates cibles à scanner pour les prochaines journées de championnat et coupes
-    target_dates = [(now_date + datetime.timedelta(days=i)).strftime('%Y%m%d') for i in [1, 2, 3, 4, 5, 11, 12]]
+    # Dates cibles à scanner pour les prochaines journées de championnat et coupes (aujourd'hui + 7 jours)
+    target_dates = [(now_date + datetime.timedelta(days=i)).strftime('%Y%m%d') for i in [0, 1, 2, 3, 4, 5, 6, 7]]
 
     tasks = []
     for d_str in target_dates:
@@ -289,7 +371,7 @@ def fetch_espn_matches():
     mois = ['Jan.', 'Fév.', 'Mar.', 'Avr.', 'Mai', 'Juin', 'Juil.', 'Août', 'Sep.', 'Oct.', 'Nov.', 'Déc.']
 
     for lg, events in results:
-        for ev in events:
+        for ev_idx, ev in enumerate(events):
             comps = ev.get('competitions', [])
             if not comps: continue
             comp = comps[0]
@@ -330,7 +412,7 @@ def fetch_espn_matches():
             if is_finished or (raw_ts > 0 and raw_ts < now_ts - 7200 and not is_live):
                 continue
 
-            channels = CHANNELS_MAP.get(lg['name'], CHANNELS_MAP['default'])
+            channels = get_dynamic_channels(lg['name'], ev_idx, home.get('team', {}).get('displayName', ''), away.get('team', {}).get('displayName', ''))
 
             matches.append({
                 "id": f"espn-{ev.get('id')}",

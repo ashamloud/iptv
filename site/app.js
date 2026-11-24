@@ -3601,40 +3601,170 @@
     // Source : API Officielle ESPN Sports (Mondial, Fiable, Temps Réel)
     // ═══════════════════════════════════════════════════════════════
 
-    // Mapping chaînes BOKK TV pour les grandes compétitions
-    const COMPETITION_CHANNELS = {
-        'UEFA Champions League': [
-            { id: 2770, name: 'Canal+ Foot HD', badge: 'FHD' },
-            { id: 3724, name: 'beIN Sports 1',  badge: '4K' },
-            { id: 3704, name: 'M+ Liga Campeones', badge: 'HD' }
-        ],
-        'LaLiga': [
-            { id: 5245, name: 'M+ LaLiga 4K',   badge: '4K' },
-            { id: 5293, name: 'DAZN LaLiga',    badge: 'HD' },
-            { id: 3724, name: 'beIN Sports 1',  badge: 'HD' }
-        ],
-        'Ligue 1': [
-            { id: 2770, name: 'Canal+ Foot HD', badge: 'FHD' },
-            { id: 2767, name: 'Canal+ Sport',   badge: 'FHD' },
-            { id: 3724, name: 'beIN Sports 1',  badge: 'HD' }
-        ],
-        'Premier League': [
-            { id: 2774, name: 'Canal+ Premier League', badge: 'FHD' },
-            { id: 3724, name: 'beIN Sports 1',         badge: 'HD' }
-        ],
-        'Serie A': [
-            { id: 3724, name: 'beIN Sports 1',  badge: 'HD' },
-            { id: 2767, name: 'Canal+ Sport',   badge: 'FHD' }
-        ],
-        'Bundesliga': [
-            { id: 3724, name: 'beIN Sports 1',  badge: 'HD' },
-            { id: 2767, name: 'Canal+ Sport',   badge: 'FHD' }
-        ],
-        'default': [
-            { id: 2770, name: 'Canal+ Foot HD', badge: 'FHD' },
-            { id: 3724, name: 'beIN Sports 1',  badge: 'HD' }
-        ]
-    };
+    // ── Mapping dynamique et intelligent des chaînes BOKK TV ──
+    // Synchronisé avec les IDs réels du catalogue 2 056 chaînes actives
+    function getDynamicMatchChannels(leagueName, matchIndex = 0, teamA = '', teamB = '') {
+        const tUpper = `${teamA} ${teamB}`.toUpperCase();
+
+        if (leagueName === 'UEFA Champions League') {
+            const uclChannels = [
+                // Match 0 (Choc 1 : Arsenal vs Dortmund, etc.)
+                [
+                    { id: 98,  name: 'Canal+ Foot HD',        badge: 'FHD' },
+                    { id: 109, name: 'beIN Sports 1 HD',     badge: 'FHD' },
+                    { id: 89,  name: 'M+ Liga de Campeones', badge: 'HD'  },
+                    { id: 136, name: 'beIN Sports 8K',       badge: '4K'  }
+                ],
+                // Match 1 (Choc 2 : Man City vs Napoli, etc.)
+                [
+                    { id: 97,  name: 'Canal+ 360 HD',        badge: 'FHD' },
+                    { id: 110, name: 'beIN Sports 2 HD',     badge: 'FHD' },
+                    { id: 90,  name: 'M+ Liga Campeones 2',  badge: 'HD'  },
+                    { id: 137, name: 'Canal+ 8K',            badge: '4K'  }
+                ],
+                // Match 2 (Feyenoord vs Porto, etc.)
+                [
+                    { id: 99,  name: 'Canal+ Live 1',        badge: 'HD'  },
+                    { id: 111, name: 'beIN Sports 3 HD',     badge: 'FHD' },
+                    { id: 91,  name: 'M+ Liga Campeones 3',  badge: 'HD'  }
+                ],
+                // Match 3 (RB Leipzig vs Lens, etc.)
+                [
+                    { id: 100, name: 'Canal+ Live 2',        badge: 'HD'  },
+                    { id: 112, name: 'beIN Sports 4 HD',     badge: 'FHD' },
+                    { id: 92,  name: 'M+ Liga Campeones 4',  badge: 'HD'  }
+                ],
+                // Match 4 (Como vs AEK Athens, etc.)
+                [
+                    { id: 101, name: 'Canal+ Live 3',        badge: 'HD'  },
+                    { id: 113, name: 'beIN Sports 5 HD',     badge: 'FHD' },
+                    { id: 93,  name: 'M+ Liga Campeones 5',  badge: 'HD'  }
+                ],
+                // Match 5 (Galatasaray vs Aston Villa, etc.)
+                [
+                    { id: 102, name: 'Canal+ Live 4',        badge: 'HD'  },
+                    { id: 114, name: 'beIN Sports 6 HD',     badge: 'FHD' },
+                    { id: 94,  name: 'M+ Liga Campeones 6',  badge: 'HD'  }
+                ],
+                // Match 6
+                [
+                    { id: 103, name: 'Canal+ Live 5',        badge: 'HD'  },
+                    { id: 115, name: 'beIN Sports 7 HD',     badge: 'FHD' },
+                    { id: 95,  name: 'M+ Liga Campeones 7',  badge: 'HD'  }
+                ],
+                // Match 7
+                [
+                    { id: 104, name: 'Canal+ Live 6',        badge: 'HD'  },
+                    { id: 116, name: 'beIN Sports 8 HD',     badge: 'FHD' },
+                    { id: 96,  name: 'M+ Liga Campeones 8',  badge: 'HD'  }
+                ]
+            ];
+            // Priorité absolue sur Canal+ Foot / Canal+ 360 si club français engagé
+            if (/PSG|PARIS|LENS|BREST|MONACO|LILLE|MARSEILLE|LYON/.test(tUpper)) {
+                return [
+                    { id: 98,  name: 'Canal+ Foot HD',        badge: 'FHD' },
+                    { id: 97,  name: 'Canal+ 360 HD',        badge: 'FHD' },
+                    { id: 109, name: 'beIN Sports 1 HD',     badge: 'FHD' },
+                    { id: 89,  name: 'M+ Liga de Campeones', badge: 'HD'  }
+                ];
+            }
+            return uclChannels[matchIndex % uclChannels.length];
+        }
+
+        if (leagueName === 'LaLiga') {
+            const laligaChannels = [
+                // Match 0 (Clasico, Real Madrid, Barça, Atletico)
+                [
+                    { id: 1559, name: 'M+ LaLiga 4K',    badge: '4K'  },
+                    { id: 1607, name: 'DAZN LaLiga 4K',  badge: '4K'  },
+                    { id: 109,  name: 'beIN Sports 1 HD', badge: 'FHD' }
+                ],
+                // Match 1
+                [
+                    { id: 1560, name: 'M+ LaLiga HD',    badge: 'FHD' },
+                    { id: 1608, name: 'DAZN LaLiga HD',  badge: 'HD'  },
+                    { id: 110,  name: 'beIN Sports 2 HD', badge: 'FHD' }
+                ],
+                // Match 2
+                [
+                    { id: 1564, name: 'M+ LaLiga 2 4K',  badge: '4K'  },
+                    { id: 1610, name: 'DAZN LaLiga 2 4K', badge: '4K' },
+                    { id: 111,  name: 'beIN Sports 3 HD', badge: 'FHD' }
+                ],
+                // Match 3
+                [
+                    { id: 1566, name: 'M+ LaLiga 3 4K',  badge: '4K'  },
+                    { id: 1612, name: 'DAZN 1 4K',       badge: '4K'  }
+                ]
+            ];
+            return laligaChannels[matchIndex % laligaChannels.length];
+        }
+
+        if (leagueName === 'Premier League') {
+            const plChannels = [
+                [
+                    { id: 97,  name: 'Canal+ 360 HD',      badge: 'FHD' },
+                    { id: 109, name: 'beIN Sports 1 HD',   badge: 'FHD' },
+                    { id: 120, name: 'Sky Sport Football', badge: 'FHD' }
+                ],
+                [
+                    { id: 98,  name: 'Canal+ Foot HD',      badge: 'FHD' },
+                    { id: 110, name: 'beIN Sports 2 HD',   badge: 'FHD' },
+                    { id: 119, name: 'Sky Sport Uno',      badge: 'FHD' }
+                ],
+                [
+                    { id: 99,  name: 'Canal+ Live 1',      badge: 'HD'  },
+                    { id: 111, name: 'beIN Sports 3 HD',   badge: 'FHD' }
+                ]
+            ];
+            return plChannels[matchIndex % plChannels.length];
+        }
+
+        if (leagueName === 'Serie A') {
+            const saChannels = [
+                [
+                    { id: 119, name: 'Sky Sport Uno',      badge: 'FHD' },
+                    { id: 110, name: 'beIN Sports 2 HD',   badge: 'FHD' },
+                    { id: 97,  name: 'Canal+ 360 HD',      badge: 'FHD' }
+                ],
+                [
+                    { id: 120, name: 'Sky Sport Football', badge: 'FHD' },
+                    { id: 111, name: 'beIN Sports 3 HD',   badge: 'FHD' },
+                    { id: 98,  name: 'Canal+ Foot HD',      badge: 'FHD' }
+                ]
+            ];
+            return saChannels[matchIndex % saChannels.length];
+        }
+
+        if (leagueName === 'Bundesliga') {
+            const blChannels = [
+                [
+                    { id: 110, name: 'beIN Sports 2 HD',   badge: 'FHD' },
+                    { id: 97,  name: 'Canal+ 360 HD',      badge: 'FHD' },
+                    { id: 118, name: 'Sky Sport Action',   badge: 'FHD' }
+                ],
+                [
+                    { id: 111, name: 'beIN Sports 3 HD',   badge: 'FHD' },
+                    { id: 98,  name: 'Canal+ Foot HD',      badge: 'FHD' }
+                ]
+            ];
+            return blChannels[matchIndex % blChannels.length];
+        }
+
+        if (leagueName === 'Ligue 1') {
+            return [
+                { id: 98,  name: 'Canal+ Foot HD',   badge: 'FHD' },
+                { id: 97,  name: 'Canal+ 360 HD',   badge: 'FHD' },
+                { id: 109, name: 'beIN Sports 1 HD', badge: 'FHD' }
+            ];
+        }
+
+        return [
+            { id: 98,  name: 'Canal+ Foot HD',   badge: 'FHD' },
+            { id: 109, name: 'beIN Sports 1 HD', badge: 'FHD' },
+            { id: 97,  name: 'Canal+ 360 HD',   badge: 'FHD' }
+        ];
+    }
 
     // Poster de match cinématique par compétition
     function getMatchPoster(competition) {
@@ -3688,7 +3818,7 @@
                     const data = await res.json();
                     const events = data.events || [];
 
-                    events.forEach(ev => {
+                    events.forEach((ev, evIdx) => {
                         const comp = (ev.competitions && ev.competitions[0]) ? ev.competitions[0] : null;
                         if (!comp || !comp.competitors || comp.competitors.length < 2) return;
 
@@ -3710,7 +3840,7 @@
                             scoreText = `${home.score} - ${away.score}`;
                         }
 
-                        const channels = COMPETITION_CHANNELS[league.name] || COMPETITION_CHANNELS['default'];
+                        const channels = getDynamicMatchChannels(league.name, evIdx, home.team.displayName, away.team.displayName);
 
                         // Calcul précis Aujourd'hui / Demain / Date
                         const isEvToday = (evDate.getDate() === now.getDate() && evDate.getMonth() === now.getMonth() && evDate.getFullYear() === now.getFullYear());
