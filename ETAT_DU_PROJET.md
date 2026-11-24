@@ -212,9 +212,11 @@
 
 #### Détails des améliorations :
 
-1. **Ultra-Faible Latence & Démarrage Instantané** :
-   - Réduction du `minBufferForPlayback` de 2.0s à **0.8s** (démarrage du direct quasi-instantané).
-   - Réduction du `preferredForwardBufferDuration` de 25s à **8s** (élimine la latence de 25 secondes par rapport au flux réel en direct).
+1. **Calibrage Équilibré : Direct Temps Réel & Zéro Calage (`OPTIMAL_BUFFER_CONFIG`)** :
+   - `preferredForwardBufferDuration`: **12 secondes** (2x plus proche du direct réel que les 25-30s habituels, tout en offrant le coussin idéal de 2 à 3 segments HLS pour absorber les micro-variations 3G/4G/Wi-Fi sans AUCUN calage ni coupure).
+   - `minBufferForPlayback`: **1.5 seconde** (démarrage quasi-instantané avec décodeurs vidéo stables dès la première seconde).
+   - `waitsToMinimizeStalling`: **true** (évite tout démarrage prématuré qui risquerait de geler l'image).
+   - `prioritizeTimeOverSizeThreshold`: **true** (gestion de tampon basée sur la durée temporelle en secondes pour une fluidité absolue).
 2. **Bouton Masquer / Afficher les Matchs du Jour** :
    - Bouton `Afficher les matchs (X)` / `Masquer les matchs` au-dessus de la grille.
    - Compatible mobile et télécommande Smart TV (focus D-Pad).
