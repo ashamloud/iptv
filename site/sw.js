@@ -3,7 +3,7 @@
  * v16 — Network-First absolu pour la racine / et index.html, auto-refresh des mises à jour
  */
 
-const CACHE_NAME = 'bokk-tv-shell-v17';
+const CACHE_NAME = 'bokk-tv-shell-v18';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
