@@ -210,6 +210,11 @@
 | `app/src/app/index.tsx` | Déduplication intelligente des chaînes de même nom + bouton toggle masquer/afficher le ticker de matchs |
 | `app/src/components/ChannelCard.tsx` | Badge `X flux` / `Secours` affiché sur les cartes ayant des flux alternatifs |
 | `app/src/components/NativePlayer.tsx` | Buffer ultra-faible latence (< 0.8s), basculement auto sur flux alternatif en cas d'erreur + bouton dock `Flux 1/X (Tester secours)` |
+| `app/plugins/withAndroidTvBanner.js` | Config plugin Expo pour injecter `android:banner` et `usesCleartextTraffic` (Résout `expo-doctor` à 20/20) |
+| `site/index.html` | Bouton toggle Masquer/Afficher les matchs + bouton `Tester le secours` + sélecteur de flux `Flux 1/2` |
+| `site/style.css` | Styles du toggle matchs, sélecteur de flux et bouton secours |
+| `site/app.js` | Commutation dynamique des flux de secours, persistance masquage matchs, calibrage HLS direct |
+| `site/sw.js` | Cache Service Worker versionné `v15` avec auto-rafraîchissement |
 
 #### Détails des améliorations :
 
@@ -218,18 +223,25 @@
    - `minBufferForPlayback`: **1.5 seconde** (démarrage quasi-instantané avec décodeurs vidéo stables dès la première seconde).
    - `waitsToMinimizeStalling`: **true** (évite tout démarrage prématuré qui risquerait de geler l'image).
    - `prioritizeTimeOverSizeThreshold`: **true** (gestion de tampon basée sur la durée temporelle en secondes pour une fluidité absolue).
-2. **Bouton Masquer / Afficher les Matchs du Jour** :
-   - Bouton `Afficher les matchs (X)` / `Masquer les matchs` au-dessus de la grille.
-   - Compatible mobile et télécommande Smart TV (focus D-Pad).
-   - Libère immédiatement toute la hauteur d'écran pour visualiser les chaînes sans masquage.
-3. **Bannière Android TV Officielle** :
-   - Image 320×180 au format Android TV Leanback (`tv-banner.png`) intégrée à `app.json`.
-   - L'application dispose désormais de son logo officiel haute résolution dans le launcher d'applications de toutes les Smart TV Android / Google TV.
-4. **Déduplication & Chaînes de Secours Automatiques** :
-   - Les 853 doublons de chaînes (ex: serveurs miroirs, versions HD/FHD d'une même chaîne) sont fusionnés en une seule carte propre.
+   - Appliqué de manière identique sur l'application native et le lecteur web (`Hls.js`).
+2. **Bouton Masquer / Afficher les Matchs du Jour (App & Web)** :
+   - Bouton `Afficher les matchs` / `Masquer les matchs` au niveau de la section des matchs en haut.
+   - Compatible mobile, PC et télécommande Smart TV (focus D-Pad).
+   - Libère immédiatement toute la hauteur d'écran pour visualiser les chaînes sans scroll gênant.
+   - Préférence sauvegardée automatiquement dans le `localStorage`.
+3. **Bannière Android TV Officielle & Correction Expo Doctor (20/20)** :
+   - Bannière Leanback injectée via un plugin de configuration Expo natif (`app/plugins/withAndroidTvBanner.js`).
+   - `npx expo-doctor` passe à **20/20 vérifications réussies (0 erreur)**.
+   - L'application dispose de son visuel officiel sur le launcher Android TV / Google TV.
+4. **Déduplication & Chaînes de Secours Automatiques (App & Web)** :
+   - Les doublons de chaînes sont fusionnés en une seule carte propre avec badge `2 flux` / `X flux`.
    - Chaque chaîne primaire conserve ses flux alternatifs dans `backupChannels`.
-   - En cours de lecture, un bouton interactif `Flux 1/2 (Secours)` permet de tester immédiatement les flux alternatifs.
-   - En cas d'indisponibilité du flux principal, le lecteur bascule automatiquement sur le flux de secours sans interruption.
+   - Bouton `Flux 1/2 (Secours)` directement dans le lecteur pour zapper entre miroirs.
+   - Bouton interactif `🔄 Tester le secours` dans l'écran d'erreur en cas de panne d'un flux.
+   - Basculement automatique transparent vers le flux de secours en cas d'erreur réseau.
+5. **Mise à Jour Instantanée du Site Web (PWA & Cache Invalidation)** :
+   - Service Worker promu en `v15` avec invalidation immédiate de l'ancien cache (`reg.update()`).
+   - Query strings mis à jour (`?v=9985`) sur tous les scripts et styles pour garantir que les navigateurs reçoivent les dernières modifications sans manipulation manuelle.
 
 ---
 

@@ -15,7 +15,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=9975">
+    <link rel="stylesheet" href="style.css?v=9985">
 </head>
 <body>
 
@@ -134,6 +134,10 @@
                 <p id="error-message-text" class="error-desc">Le diffuseur ne répond pas.</p>
                 <div class="error-actions">
                     <button id="btn-retry" class="btn-primary">Réessayer</button>
+                    <button id="btn-backup-stream" class="btn-secondary btn-backup-stream" style="display:none;" title="Basculer sur le flux alternatif de secours">
+                        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+                        <span>Tester le secours</span>
+                    </button>
                     <button id="btn-report-broken" class="btn-secondary btn-report-hs" title="Signaler cette chaîne comme HS">
                         <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"></polygon><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
                         <span>Signaler HS</span>
@@ -156,6 +160,9 @@
                         <div class="channel-name-row">
                             <h2 id="player-channel-name">Chaîne en direct</h2>
                             <span id="player-channel-badge" class="badge-tag">HD</span>
+                            <button id="player-stream-switch-btn" class="stream-switch-pill" style="display:none;" title="Basculer vers le flux de secours">
+                                <span>Flux 1/2</span>
+                            </button>
                         </div>
                         <div id="player-epg-box" class="player-epg-box" style="display:none;">
                             <div class="player-epg-title" id="player-epg-title">Programme en cours</div>
@@ -326,7 +333,13 @@
                 <button class="match-filter-pill" data-filter="ucl">Champions League</button>
                 <button class="match-filter-pill" data-filter="laliga">LaLiga</button>
             </div>
-            <button class="see-all-btn" data-view="sport">Tout voir →</button>
+            <div class="match-header-actions">
+                <button class="btn-toggle-matches" id="btn-toggle-matches" title="Masquer / Afficher les matchs">
+                    <svg id="toggle-matches-icon" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                    <span id="toggle-matches-label">Masquer</span>
+                </button>
+                <button class="see-all-btn" data-view="sport">Tout voir →</button>
+            </div>
         </div>
         <div class="matches-scroll-row" id="matches-scroll-row">
             <!-- Rempli par JS -->
@@ -804,15 +817,15 @@
 <!-- Firebase Cloud Firestore SDK (Compat) -->
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
-<script src="firebase-service.js?v=9978"></script>
+<script src="firebase-service.js?v=9985"></script>
 
 <!-- Scripts -->
 <script src="mpegts.js"></script>
 <script src="hls.min.js"></script>
-<script src="matches.js?v=9978"></script>
-<script src="epg-data.js?v=9978"></script>
-<script src="epg.js?v=9978"></script>
-<script src="channels.js?v=9978"></script>
-<script src="app.js?v=9978"></script>
+<script src="matches.js?v=9985"></script>
+<script src="epg-data.js?v=9985"></script>
+<script src="epg.js?v=9985"></script>
+<script src="channels.js?v=9985"></script>
+<script src="app.js?v=9985"></script>
 </body>
 </html>

@@ -187,6 +187,8 @@
     const btnCloseModal  = document.getElementById('btn-close-modal');
     const btnRetry       = document.getElementById('btn-retry');
     const btnFallback    = document.getElementById('btn-fallback');
+    const btnBackupStream = document.getElementById('btn-backup-stream');
+    const playerStreamSwitchBtn = document.getElementById('player-stream-switch-btn');
 
     // Qualité et réseau
     const qualitySelectorEl = document.getElementById('quality-selector');
@@ -245,10 +247,74 @@
         }, 1000);
     }
 
+    // ── Gestion et commutation des flux de secours ──
+    function handleSwitchBackupStream(channel, idx) {
+        if (!channel) return;
+        const backups = channel.backupChannels || [];
+        if (backups.length === 0) {
+            showToast('Aucun flux alternatif pour cette chaîne.');
+            return;
+        }
+
+        if (!channel._originalUrl) {
+            channel._originalUrl = channel.url;
+            channel._originalFallbackUrl = channel.fallbackUrl || channel.url;
+        }
+
+        const currentSub = channel._activeBackupIndex || 0;
+        const total = backups.length + 1;
+        const nextSub = (currentSub + 1) % total;
+        channel._activeBackupIndex = nextSub;
+
+        if (nextSub === 0) {
+            channel.url = channel._originalUrl;
+            channel.fallbackUrl = channel._originalFallbackUrl;
+        } else {
+            const backup = backups[nextSub - 1];
+            channel.url = backup.url;
+            channel.fallbackUrl = backup.fallbackUrl || backup.url;
+        }
+
+        updateStreamSwitchPill(channel);
+        showToast(`Flux ${nextSub + 1}/${total} en cours...`);
+        clearPlayerOverlays();
+        loadChannel(idx >= 0 ? idx : currentIndex, false, 0);
+    }
+
+    function updateStreamSwitchPill(channel) {
+        if (!playerStreamSwitchBtn) return;
+        if (channel && channel.backupChannels && channel.backupChannels.length > 0) {
+            const total = channel.backupChannels.length + 1;
+            const current = (channel._activeBackupIndex || 0) + 1;
+            playerStreamSwitchBtn.style.display = 'inline-flex';
+            playerStreamSwitchBtn.innerHTML = `<span>Flux ${current}/${total}${current > 1 ? ' (Secours)' : ''}</span>`;
+            playerStreamSwitchBtn.onclick = (e) => {
+                e.stopPropagation();
+                handleSwitchBackupStream(channel, currentIndex);
+            };
+        } else {
+            playerStreamSwitchBtn.style.display = 'none';
+        }
+    }
+
     // Compteur d'échecs par chaîne — on ne supprime qu'après 3 échecs consécutifs
     const _failCount = {};
     function showPlayerError(msg, channel = null, index = -1) {
         hidePlayerLoader();
+        const activeCh = channel || (currentIndex >= 0 ? channels[currentIndex] : null);
+
+        // Activer le bouton "Tester le secours" si un flux alternatif existe
+        if (btnBackupStream) {
+            if (activeCh && activeCh.backupChannels && activeCh.backupChannels.length > 0) {
+                btnBackupStream.style.display = 'inline-flex';
+                btnBackupStream.onclick = () => {
+                    handleSwitchBackupStream(activeCh, index >= 0 ? index : currentIndex);
+                };
+            } else {
+                btnBackupStream.style.display = 'none';
+            }
+        }
+
         if (channel) {
             const cKey = String(channel.id || channel.url);
             _failCount[cKey] = (_failCount[cKey] || 0) + 1;
@@ -274,6 +340,7 @@
         hidePlayerLoader();
         if (errorEl) errorEl.classList.remove('active');
         if (placeholderEl) placeholderEl.style.display = 'none';
+        if (btnBackupStream) btnBackupStream.style.display = 'none';
     }
 
     // ── Destruction propre des instances de lecture actives ──
@@ -772,6 +839,7 @@
         showPlayerLoader();
         if (nowPlayingTitle) nowPlayingTitle.textContent = channel.name;
         if (playerName) playerName.textContent = channel.name;
+        updateStreamSwitchPill(channel);
         if (playerLogo) {
             playerLogo.src = getValidChannelLogo(channel);
             playerLogo.onerror = function() {
@@ -926,14 +994,14 @@
                     lowLatencyMode: false,
                     startLevel: 0,                     // Démarre sur le profil le plus fluide pour affichage immédiat
                     capLevelToPlayerSize: true,
-                    // ── Coussin de sécurité anti-calage (flux continu et fluide) ──
-                    liveSyncDurationCount: 3,          // 3 segments d'avance : absorbe les variations réseau
-                    liveMaxLatencyDurationCount: 8,    // Tolère les légères variations sans caler ni couper
-                    backBufferLength: 15,
-                    maxBufferLength: 30,               // 30s de buffer optimal anti-freeze
-                    maxMaxBufferLength: 60,
-                    maxBufferSize: 40 * 1000 * 1000,
-                    maxBufferHole: 1.0,                // Tolère les micro-trous sans bloquer
+                    // ── Coussin de sécurité anti-calage calibré au plus près du direct ──
+                    liveSyncDurationCount: 2.5,        // ~10-12s d'avance : direct réactif et ultra-fluide
+                    liveMaxLatencyDurationCount: 6,    // Garde le live synchronisé sans retarder ni caler
+                    backBufferLength: 10,
+                    maxBufferLength: 12,               // 12s de buffer optimal (aligné sur l'app native sans calage)
+                    maxMaxBufferLength: 25,
+                    maxBufferSize: 30 * 1000 * 1000,
+                    maxBufferHole: 0.8,                // Tolère les micro-trous sans bloquer
                     highBufferWatchdogPeriod: 2,
                     // ── Timeouts et tolérance aux débits variables ──
                     manifestLoadingTimeOut: 8000,
@@ -4246,6 +4314,45 @@
         }
     }
 
+    // ── Gestion Masquage / Affichage du Ticker de Matchs ──
+    function initMatchToggle() {
+        const btnToggleMatches = document.getElementById('btn-toggle-matches');
+        const toggleIcon = document.getElementById('toggle-matches-icon');
+        const toggleLabel = document.getElementById('toggle-matches-label');
+        const sec = document.getElementById('section-matchs');
+        if (!btnToggleMatches || !sec) return;
+
+        const STORAGE_KEY = 'bokktv_hide_matches';
+        let isHidden = false;
+        try {
+            isHidden = localStorage.getItem(STORAGE_KEY) === 'true';
+        } catch {}
+
+        function updateUI() {
+            if (isHidden) {
+                sec.classList.add('matches-hidden');
+                if (toggleLabel) toggleLabel.textContent = 'Afficher les matchs';
+                if (toggleIcon) {
+                    toggleIcon.innerHTML = '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line>';
+                }
+            } else {
+                sec.classList.remove('matches-hidden');
+                if (toggleLabel) toggleLabel.textContent = 'Masquer';
+                if (toggleIcon) {
+                    toggleIcon.innerHTML = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle>';
+                }
+            }
+        }
+
+        updateUI();
+
+        btnToggleMatches.onclick = (e) => {
+            e.stopPropagation();
+            isHidden = !isHidden;
+            try { localStorage.setItem(STORAGE_KEY, String(isHidden)); } catch {}
+            updateUI();
+        };
+    }
 
 function init() {
         // ── Initialisation Signalements & Abonnés Firebase Cloud ──
@@ -4304,6 +4411,7 @@ function init() {
         renderLiveLogosRow();
         renderUneCards();
         renderMatchesScrollRow();
+        initMatchToggle();
         renderHomeCarousels();
 
         // ── Match Center & carousels ──
@@ -4367,7 +4475,9 @@ function init() {
                 }
             } else if (window.location.protocol === 'https:') {
                 window.addEventListener('load', () => {
-                    navigator.serviceWorker.register('/sw.js?v=4').catch(() => {});
+                    navigator.serviceWorker.register('/sw.js?v=15').then((reg) => {
+                        reg.update();
+                    }).catch(() => {});
                 });
             }
         }

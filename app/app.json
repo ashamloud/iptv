@@ -12,9 +12,6 @@
       "supportsTablet": true
     },
     "android": {
-      "banner": "./assets/images/tv-banner.png",
-      "usesCleartextTraffic": true,
-      "jsEngine": "hermes",
       "adaptiveIcon": {
         "backgroundColor": "#0d1117",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -43,6 +40,7 @@
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
+      "./plugins/withAndroidTvBanner",
       "expo-router",
       [
         "expo-splash-screen",

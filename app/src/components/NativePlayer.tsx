@@ -170,7 +170,7 @@ export function NativePlayer({
     p.staysActiveInBackground = true;
     try {
       p.bufferOptions = OPTIMAL_BUFFER_CONFIG;
-    } catch {}
+    } catch { }
     p.play();
   });
 
@@ -246,14 +246,14 @@ export function NativePlayer({
   useEffect(() => {
     if (!Platform.isTV && Platform.OS !== 'android') return;
 
-    const KEYCODE_CHANNEL_UP   = 166; // CH+ (télécommande)
+    const KEYCODE_CHANNEL_UP = 166; // CH+ (télécommande)
     const KEYCODE_CHANNEL_DOWN = 167; // CH-
-    const KEYCODE_MEDIA_NEXT   = 87;  // >>|
-    const KEYCODE_MEDIA_PREV   = 88;  // |<<
-    const KEYCODE_DPAD_RIGHT   = 22;  // → (zapping rapide en lecture)
-    const KEYCODE_DPAD_LEFT    = 21;  // ←
-    const KEYCODE_DPAD_UP      = 19;  // ↑ (volume ou zapping)
-    const KEYCODE_DPAD_DOWN    = 20;  // ↓
+    const KEYCODE_MEDIA_NEXT = 87;  // >>|
+    const KEYCODE_MEDIA_PREV = 88;  // |<<
+    const KEYCODE_DPAD_RIGHT = 22;  // → (zapping rapide en lecture)
+    const KEYCODE_DPAD_LEFT = 21;  // ←
+    const KEYCODE_DPAD_UP = 19;  // ↑ (volume ou zapping)
+    const KEYCODE_DPAD_DOWN = 20;  // ↓
 
     const handleKeyDown = (evt: any) => {
       const keyCode = evt?.keyCode ?? evt?.nativeEvent?.keyCode;
@@ -306,7 +306,7 @@ export function NativePlayer({
       if (videoViewRef.current?.startPictureInPicture) {
         await videoViewRef.current.startPictureInPicture();
       }
-    } catch {}
+    } catch { }
   };
 
   // ── Solution 3 : Verrouillage Session Unique (1 Écran Simultané) ──
@@ -381,7 +381,7 @@ export function NativePlayer({
     player.replace(nextSource);
     try {
       player.bufferOptions = OPTIMAL_BUFFER_CONFIG;
-    } catch {}
+    } catch { }
     player.play();
   }, [activeCandidate, player]);
 
@@ -395,7 +395,7 @@ export function NativePlayer({
     player.replace(nextSource);
     try {
       player.bufferOptions = OPTIMAL_BUFFER_CONFIG;
-    } catch {}
+    } catch { }
     player.play();
   }, [activeCandidate, player]);
 
@@ -415,7 +415,7 @@ export function NativePlayer({
         player.replace(nextSrc);
         try {
           player.bufferOptions = OPTIMAL_BUFFER_CONFIG;
-        } catch {}
+        } catch { }
         player.play();
         setIsPlaying(true);
       } catch {
@@ -511,7 +511,7 @@ export function NativePlayer({
       player.replace(nextSource);
       try {
         player.bufferOptions = OPTIMAL_BUFFER_CONFIG;
-      } catch {}
+      } catch { }
       player.play();
       setIsPlaying(true);
       resetControlsTimeout();
@@ -554,8 +554,8 @@ export function NativePlayer({
   const logoUri = (activeCandidate.logo && activeCandidate.logo.startsWith('http'))
     ? activeCandidate.logo
     : (channel.logo && channel.logo.startsWith('http'))
-    ? channel.logo
-    : null;
+      ? channel.logo
+      : null;
 
   return (
     <View style={[styles.container, isPlayerFullscreen && styles.containerFullscreen]}>

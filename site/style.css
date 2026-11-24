@@ -2507,3 +2507,93 @@ h1, h2, h3, .topnav-brand-name, .hero-headline, .home-section-label {
     .carousel-card { flex: 0 0 120px; }
     .player-wrapper.is-mini-pip { width: 200px; bottom: 90px; right: 8px; }
 }
+
+/* ── Bouton Masquer / Afficher les Matchs ── */
+.match-header-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto;
+}
+
+.btn-toggle-matches {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    color: #cbd5e1;
+    font-size: 0.78rem;
+    font-weight: 600;
+    padding: 6px 12px;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    white-space: nowrap;
+}
+
+.btn-toggle-matches:hover {
+    background: rgba(255, 255, 255, 0.16);
+    color: #fff;
+    border-color: rgba(255, 255, 255, 0.35);
+    transform: translateY(-1px);
+}
+
+.btn-toggle-matches svg {
+    flex-shrink: 0;
+}
+
+#section-matchs.matches-hidden #matches-scroll-row,
+#section-matchs.matches-hidden #match-time-filters {
+    display: none !important;
+}
+
+#section-matchs.matches-hidden {
+    padding-bottom: 8px !important;
+    margin-bottom: 8px !important;
+    border-bottom: 1px dashed rgba(255, 255, 255, 0.08);
+}
+
+/* ── Sélecteur de flux de secours (Lecteur) ── */
+.stream-switch-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: rgba(56, 189, 248, 0.18);
+    border: 1px solid rgba(56, 189, 248, 0.45);
+    color: #38bdf8;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 3px 9px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-left: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.stream-switch-pill:hover {
+    background: rgba(56, 189, 248, 0.3);
+    border-color: #38bdf8;
+    color: #fff;
+    transform: scale(1.04);
+}
+
+.btn-backup-stream {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(56, 189, 248, 0.2) !important;
+    border: 1px solid rgba(56, 189, 248, 0.5) !important;
+    color: #38bdf8 !important;
+    font-weight: 700 !important;
+    transition: all 0.2s ease;
+}
+
+.btn-backup-stream:hover {
+    background: rgba(56, 189, 248, 0.35) !important;
+    border-color: #38bdf8 !important;
+    color: #ffffff !important;
+    transform: translateY(-1px);
+}

@@ -1,9 +1,9 @@
 /**
  * BOKK TV — Service Worker PWA (Cache App Shell & Mode Offline)
- * v4 — Correction définitive chargement chaînes & Network-First
+ * v15 — Déduplication, flux secours, direct ultra-fluide & masquage matchs
  */
 
-const CACHE_NAME = 'bokk-tv-shell-v12';
+const CACHE_NAME = 'bokk-tv-shell-v15';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
