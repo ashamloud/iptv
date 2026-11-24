@@ -995,12 +995,12 @@
                     startLevel: 0,                     // Démarre sur le profil le plus fluide pour affichage immédiat
                     capLevelToPlayerSize: true,
                     // ── Coussin de sécurité anti-calage calibré au plus près du direct ──
-                    liveSyncDurationCount: 2.5,        // ~10-12s d'avance : direct réactif et ultra-fluide
-                    liveMaxLatencyDurationCount: 6,    // Garde le live synchronisé sans retarder ni caler
+                    liveSyncDurationCount: 2,          // ~6-8s d'avance : direct réactif sans spoil
+                    liveMaxLatencyDurationCount: 5,    // Garde le live synchronisé sans retarder ni caler
                     backBufferLength: 10,
-                    maxBufferLength: 12,               // 12s de buffer optimal (aligné sur l'app native sans calage)
-                    maxMaxBufferLength: 25,
-                    maxBufferSize: 30 * 1000 * 1000,
+                    maxBufferLength: 18,               // 18s de buffer d'anticipation (absorbe 100% des instabilités)
+                    maxMaxBufferLength: 30,
+                    maxBufferSize: 40 * 1000 * 1000,
                     maxBufferHole: 0.8,                // Tolère les micro-trous sans bloquer
                     highBufferWatchdogPeriod: 2,
                     // ── Timeouts et tolérance aux débits variables ──

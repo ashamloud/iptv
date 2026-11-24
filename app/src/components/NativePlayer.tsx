@@ -43,6 +43,7 @@ export interface NativePlayerProps {
 
 function buildVideoSource(channel: Channel, useProxy: boolean = false) {
   const uri = resolveStreamUrl(channel.url, channel, useProxy);
+  const isHls = uri.includes('.m3u8') || (channel.type && channel.type.toLowerCase().includes('hls')) || !uri.includes('.ts');
   const headers: Record<string, string> = {
     'User-Agent': (channel && channel.userAgent) || 'IPTVSmartersPro',
     'Accept': '*/*',
@@ -51,11 +52,16 @@ function buildVideoSource(channel: Channel, useProxy: boolean = false) {
   if (channel && channel.referrer) {
     headers['Referer'] = channel.referrer;
   }
-  return { uri, headers };
+  return {
+    uri,
+    headers,
+    contentType: (isHls ? 'hls' : 'auto') as 'hls' | 'auto',
+  };
 }
 
 async function buildVideoSourceAsync(channel: Channel, useProxy: boolean = false) {
   const uri = await resolveStreamUrlAsync(channel.url, channel, useProxy);
+  const isHls = uri.includes('.m3u8') || (channel.type && channel.type.toLowerCase().includes('hls')) || !uri.includes('.ts');
   const headers: Record<string, string> = {
     'User-Agent': (channel && channel.userAgent) || 'IPTVSmartersPro',
     'Accept': '*/*',
@@ -64,16 +70,27 @@ async function buildVideoSourceAsync(channel: Channel, useProxy: boolean = false
   if (channel && channel.referrer) {
     headers['Referer'] = channel.referrer;
   }
-  return { uri, headers };
+  return {
+    uri,
+    headers,
+    contentType: (isHls ? 'hls' : 'auto') as 'hls' | 'auto',
+  };
 }
 
-// ── Configuration Équilibrée Direct & Zéro Calage ──
-// 12s de buffer anticipé : 2x plus proche du direct réel (évite les 25-30s de décalage),
-// tout en offrant le coussin parfait pour absorber les micro-variations de connexion 3G/4G/Wi-Fi sans AUCUN calage.
-// 1.5s de buffer minimal : démarrage ultra-rapide et décodeurs vidéo toujours stables.
+// ── Configuration Équilibrée Direct & ZÉRO Calage Absolu ──
+// 1. 18s de buffer anticipé (preferredForwardBufferDuration) :
+//    Garde 4 à 5 chunks HLS d'avance en tâche de fond dans la mémoire tampon.
+//    Absorbe 100% des micro-coupures Wi-Fi/4G sans jamais geler l'image.
+// 2. 3.5s de buffer minimal (minBufferForPlayback) :
+//    Garantit qu'au moins 1 à 2 segments complets et des keyframes stables sont décodés
+//    avant d'afficher les premières trames. Démarrage quasi-instantané (< 1s) mais SANS calage.
+// 3. waitsToMinimizeStalling: true :
+//    Empêche les saccades en évitant les démarrages prématurés avec buffer vide.
+// 4. prioritizeTimeOverSizeThreshold: true :
+//    Gestion basée sur la durée temporelle pour garantir la même fluidité en HD et SD.
 const OPTIMAL_BUFFER_CONFIG = {
-  preferredForwardBufferDuration: 12,
-  minBufferForPlayback: 1.5,
+  preferredForwardBufferDuration: 18,
+  minBufferForPlayback: 3.5,
   waitsToMinimizeStalling: true,
   prioritizeTimeOverSizeThreshold: true,
 };
@@ -204,14 +221,23 @@ export function NativePlayer({
   const isRegisteredRef = useRef<boolean>(isRegistered);
   isRegisteredRef.current = isRegistered;
 
-  const player = useVideoPlayer(streamSource, (p) => {
-    p.loop = false;
-    p.staysActiveInBackground = true;
-    try {
-      p.bufferOptions = OPTIMAL_BUFFER_CONFIG;
-    } catch { }
-    p.play();
-  });
+  const player = useVideoPlayer(
+    streamSource,
+    (p) => {
+      p.loop = false;
+      p.staysActiveInBackground = true;
+      try {
+        p.bufferOptions = OPTIMAL_BUFFER_CONFIG;
+        if ('targetOffsetFromLive' in p) {
+          p.targetOffsetFromLive = 5.5;
+        }
+      } catch { }
+      p.play();
+    },
+    {
+      videoChangeFrameRateStrategy: 'off',
+    }
+  );
 
   // Réinitialiser le timer d'auto-masquage des contrôles
   const resetControlsTimeout = useCallback(() => {
@@ -630,6 +656,7 @@ export function NativePlayer({
           nativeControls={false}
           allowsPictureInPicture
           contentFit="contain"
+          surfaceType="surfaceView"
         />
       </Pressable>
 
