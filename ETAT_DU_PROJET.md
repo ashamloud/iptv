@@ -95,6 +95,11 @@
 - [x] **Espacement des vérifications de session simultanée à 35s** (au lieu de 10s) pour préserver 100% de la bande passante au flux vidéo.
 - [x] **Suspension automatique de `syncAdminData`** (téléchargements M3U en arrière-plan) dès qu'un flux vidéo est actif.
 - [x] **Test TypeScript `npx tsc --noEmit` validé avec 0 erreur**.
+- [x] **Commit Git & Push sur GitHub (`main`)** : commit `b4d688b` validé et synchronisé.
+- [🔄] **Compilation EAS Build APK Android en cours** :
+  - **ID du Build** : `44e6dadd-6c44-46d3-b0fe-8b0df2630ab1`
+  - **Page de suivi en direct & Téléchargement APK** : [expo.dev/.../builds/44e6dadd-6c44-46d3-b0fe-8b0df2630ab1](https://expo.dev/accounts/asham_loud/projects/loudstreamtv/builds/44e6dadd-6c44-46d3-b0fe-8b0df2630ab1)
+  - **Profil** : `preview` (génère directement le fichier `.apk` prêt à installer sur mobile et Smart TV Android).
 
 ---
 
