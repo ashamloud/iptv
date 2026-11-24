@@ -3,7 +3,7 @@
 // Contrôles Intégrés au Dock Inférieur, Plein Écran, Compatible TV
 // ═══════════════════════════════════════════════════════════════
 
-import React, { useEffect, useState, useRef, useCallback } from 'react';
+import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import {
   StyleSheet,
   View,
@@ -125,6 +125,14 @@ export function NativePlayer({
   const [internalFullscreen, setInternalFullscreen] = useState<boolean>(false);
   const isPlayerFullscreen = isFullscreen !== undefined ? isFullscreen : internalFullscreen;
 
+  // ── Chaînes de secours & multi-flux (regroupement des chaînes de même nom) ──
+  const candidateChannels = useMemo(() => {
+    return [channel, ...(channel.backupChannels || [])];
+  }, [channel]);
+
+  const [candidateIndex, setCandidateIndex] = useState<number>(0);
+  const activeCandidate = candidateChannels[candidateIndex] || channel;
+
   const [useProxy, setUseProxy] = useState<boolean>(false);
   const [streamSource, setStreamSource] = useState(() => buildVideoSource(channel, false));
   const [isReported, setIsReported] = useState<boolean>(false);
@@ -150,9 +158,10 @@ export function NativePlayer({
     p.loop = false;
     p.staysActiveInBackground = true;
     try {
+      // ── Configuration Ultra-Faible Latence (Démarrage instantané <1s et calé sur le direct) ──
       p.bufferOptions = {
-        preferredForwardBufferDuration: 25,
-        minBufferForPlayback: 2,
+        preferredForwardBufferDuration: 8,
+        minBufferForPlayback: 0.8,
         waitsToMinimizeStalling: true,
       };
     } catch {}
@@ -352,6 +361,77 @@ export function NativePlayer({
     setIsPlaying(true);
   };
 
+  const handleRetryDirect = useCallback(async () => {
+    setHasError(false);
+    setUseProxy(false);
+    setIsBuffering(true);
+    setStatusMessage('Reconnexion directe...');
+    const retryChannel = {
+      ...activeCandidate,
+      url: activeCandidate.fallbackUrl || activeCandidate.url
+    };
+    const nextSource = await buildVideoSourceAsync(retryChannel, false);
+    setStreamSource(nextSource);
+    player.replace(nextSource);
+    try {
+      player.bufferOptions = {
+        preferredForwardBufferDuration: 8,
+        minBufferForPlayback: 0.8,
+        waitsToMinimizeStalling: true,
+      };
+    } catch {}
+    player.play();
+  }, [activeCandidate, player]);
+
+  const handleRetryWithProxy = useCallback(async () => {
+    setHasError(false);
+    setUseProxy(true);
+    setIsBuffering(true);
+    setStatusMessage('Connexion de secours...');
+    const nextSource = await buildVideoSourceAsync(activeCandidate, true);
+    setStreamSource(nextSource);
+    player.replace(nextSource);
+    try {
+      player.bufferOptions = {
+        preferredForwardBufferDuration: 8,
+        minBufferForPlayback: 0.8,
+        waitsToMinimizeStalling: true,
+      };
+    } catch {}
+    player.play();
+  }, [activeCandidate, player]);
+
+  // Basculer manuellement ou automatiquement sur la chaîne de secours (même nom)
+  const handleSwitchBackupStream = useCallback(async () => {
+    resetControlsTimeout();
+    if (candidateChannels.length > 1) {
+      const nextIdx = (candidateIndex + 1) % candidateChannels.length;
+      setCandidateIndex(nextIdx);
+      const targetChan = candidateChannels[nextIdx];
+      setStatusMessage(`Flux alternatif (${nextIdx + 1}/${candidateChannels.length}) : ${targetChan.name}...`);
+      setIsBuffering(true);
+      setHasError(false);
+      try {
+        const nextSrc = await buildVideoSourceAsync(targetChan, false);
+        setStreamSource(nextSrc);
+        player.replace(nextSrc);
+        try {
+          player.bufferOptions = {
+            preferredForwardBufferDuration: 8,
+            minBufferForPlayback: 0.8,
+            waitsToMinimizeStalling: true,
+          };
+        } catch {}
+        player.play();
+        setIsPlaying(true);
+      } catch {
+        setHasError(true);
+      }
+    } else {
+      handleRetryWithProxy();
+    }
+  }, [candidateChannels, candidateIndex, player, resetControlsTimeout, handleRetryWithProxy]);
+
   // Écouter les changements d'état du lecteur expo-video (avec debouncing anti-coupure)
   useEffect(() => {
     const subStatus = player.addListener('statusChange', ({ status, error }) => {
@@ -362,7 +442,15 @@ export function NativePlayer({
         }
         setHasError(true);
         setIsBuffering(false);
-        if (!useProxy && channel.fallbackUrl && channel.fallbackUrl !== channel.url) {
+
+        // Si une chaîne de secours avec le même nom existe et n'a pas encore été essayée : basculer automatiquement
+        if (candidateChannels.length > 1 && candidateIndex < candidateChannels.length - 1) {
+          const nextIdx = candidateIndex + 1;
+          setStatusMessage(`Flux principal indisponible, basculement sur le flux de secours (${nextIdx + 1}/${candidateChannels.length})...`);
+          setTimeout(() => {
+            handleSwitchBackupStream();
+          }, 800);
+        } else if (!useProxy && channel.fallbackUrl && channel.fallbackUrl !== channel.url) {
           setStatusMessage('Basculement sur flux alternatif...');
           handleRetryDirect();
         } else if (!useProxy) {
@@ -409,7 +497,7 @@ export function NativePlayer({
         bufferingTimerRef.current = null;
       }
     };
-  }, [player, useProxy, channel]);
+  }, [player, useProxy, channel, candidateChannels, candidateIndex, handleSwitchBackupStream, handleRetryDirect, handleRetryWithProxy]);
 
   // Recharger le flux UNIQUEMENT si la chaîne change (élimine le double chargement des 3 secondes)
   useEffect(() => {
@@ -420,6 +508,7 @@ export function NativePlayer({
     setIsBuffering(true);
     setIsReported(false);
     setStatusMessage('');
+    setCandidateIndex(0);
 
     async function initChannelPlayback() {
       const nextSource = await buildVideoSourceAsync(channel, false);
@@ -427,9 +516,10 @@ export function NativePlayer({
       setStreamSource(nextSource);
       player.replace(nextSource);
       try {
+        // ── Buffer Ultra-Faible Latence (Démarrage instantané <1s et flux calé sur le direct) ──
         player.bufferOptions = {
-          preferredForwardBufferDuration: 25,
-          minBufferForPlayback: 2,
+          preferredForwardBufferDuration: 8,
+          minBufferForPlayback: 0.8,
           waitsToMinimizeStalling: true,
         };
       } catch {}
@@ -472,33 +562,11 @@ export function NativePlayer({
     }
   };
 
-  const handleRetryDirect = useCallback(async () => {
-    setHasError(false);
-    setUseProxy(false);
-    setIsBuffering(true);
-    setStatusMessage('Reconnexion directe...');
-    const retryChannel = {
-      ...channel,
-      url: channel.fallbackUrl || channel.url
-    };
-    const nextSource = await buildVideoSourceAsync(retryChannel, false);
-    setStreamSource(nextSource);
-    player.replace(nextSource);
-    player.play();
-  }, [channel, player]);
-
-  const handleRetryWithProxy = useCallback(async () => {
-    setHasError(false);
-    setUseProxy(true);
-    setIsBuffering(true);
-    setStatusMessage('Connexion de secours...');
-    const nextSource = await buildVideoSourceAsync(channel, true);
-    setStreamSource(nextSource);
-    player.replace(nextSource);
-    player.play();
-  }, [channel, player]);
-
-  const logoUri = channel.logo && channel.logo.startsWith('http') ? channel.logo : null;
+  const logoUri = (activeCandidate.logo && activeCandidate.logo.startsWith('http'))
+    ? activeCandidate.logo
+    : (channel.logo && channel.logo.startsWith('http'))
+    ? channel.logo
+    : null;
 
   return (
     <View style={[styles.container, isPlayerFullscreen && styles.containerFullscreen]}>
@@ -620,20 +688,20 @@ export function NativePlayer({
 
                 <View style={styles.dockMetaTextCol}>
                   <Text style={styles.dockChannelName} numberOfLines={1}>
-                    {channel.name}
+                    {activeCandidate.name}
                   </Text>
                   <View style={styles.dockBadgesRow}>
                     {/* Badge Catégorie (ex: FRANCOPHONE, SPORT, SÉNÉGAL) */}
                     <View style={styles.badgeCategory}>
                       <Text style={styles.badgeCategoryText}>
-                        {(channel.category || channel.group || 'GÉNÉRAL').toUpperCase()}
+                        {(activeCandidate.category || activeCandidate.group || 'GÉNÉRAL').toUpperCase()}
                       </Text>
                     </View>
 
                     {/* Badge Qualité (ex: FHD, 1080p, HD) */}
                     <View style={styles.badgeQuality}>
                       <Text style={styles.badgeQualityText}>
-                        {channel.badge || 'FHD'}
+                        {activeCandidate.badge || 'FHD'}
                       </Text>
                     </View>
 
@@ -642,6 +710,21 @@ export function NativePlayer({
                       <View style={styles.liveGreenDot} />
                       <Text style={styles.badgeLiveText}>DIRECT</Text>
                     </View>
+
+                    {/* BOUTON TESTER LE SECOURS (Si plusieurs flux pour ce même nom) */}
+                    {candidateChannels.length > 1 && (
+                      <PlayerButton
+                        style={styles.backupStreamBtn}
+                        onPress={handleSwitchBackupStream}
+                        hitSlop={8}
+                        accessibilityLabel="Tester le flux de secours"
+                      >
+                        <Ionicons name="swap-horizontal" size={12} color="#38bdf8" />
+                        <Text style={styles.backupStreamBtnText}>
+                          Flux {candidateIndex + 1}/{candidateChannels.length} (Secours)
+                        </Text>
+                      </PlayerButton>
+                    )}
                   </View>
                 </View>
               </View>
@@ -786,12 +869,16 @@ export function NativePlayer({
             <View style={styles.netflixModalBtnRow}>
               <TouchableOpacity
                 style={styles.primaryModalBtn}
-                onPress={handleRetryWithProxy}
+                onPress={handleSwitchBackupStream}
                 activeOpacity={0.85}
                 focusable={true}
               >
-                <Ionicons name="shield-checkmark" size={15} color="#fff" />
-                <Text style={styles.primaryModalBtnText}>Tester le Secours</Text>
+                <Ionicons name="swap-horizontal" size={15} color="#fff" />
+                <Text style={styles.primaryModalBtnText}>
+                  {candidateChannels.length > 1
+                    ? `Tester Secours (${candidateIndex + 1}/${candidateChannels.length})`
+                    : 'Tester le Secours'}
+                </Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -1083,6 +1170,23 @@ const styles = StyleSheet.create({
     fontSize: 8.5,
     fontWeight: '900',
     letterSpacing: 0.4,
+  },
+  backupStreamBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(56, 189, 248, 0.18)',
+    borderWidth: 1,
+    borderColor: '#38bdf8',
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 5,
+  },
+  backupStreamBtnText: {
+    color: '#38bdf8',
+    fontSize: 9,
+    fontWeight: '800',
+    letterSpacing: 0.2,
   },
   dockFavBtn: {
     width: 36,

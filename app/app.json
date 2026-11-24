@@ -12,6 +12,7 @@
       "supportsTablet": true
     },
     "android": {
+      "banner": "./assets/images/tv-banner.png",
       "usesCleartextTraffic": true,
       "jsEngine": "hermes",
       "adaptiveIcon": {

@@ -8,6 +8,7 @@ export interface Channel {
   name: string;
   url: string;
   fallbackUrl?: string;
+  backupChannels?: Channel[];
   type?: 'hls' | 'ts' | 'embed' | string;
   category: string;
   group?: string;

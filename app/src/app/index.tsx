@@ -145,6 +145,8 @@ export default function NativeBokkApp() {
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [isAccountModalOpen, setIsAccountModalOpen] = useState<boolean>(false);
   const [isInitLoaded, setIsInitLoaded] = useState<boolean>(false);
+  // Ticker matchs : masquable par l'utilisateur
+  const [showMatchTicker, setShowMatchTicker] = useState<boolean>(true);
 
   // Historique des dernières chaînes regardées
   const [lastWatched, setLastWatched] = useState<string[]>([]);
@@ -160,10 +162,45 @@ export default function NativeBokkApp() {
   // State pour forcer le re-render de la carte sélectionnée (surbrillance visible)
   const [tvFocusedIndex, setTvFocusedIndex] = useState<number>(-1);
 
-  // Fusion des chaînes de base et des playlists M3U Cloud ajoutées par l'admin
+  // ── Fonction de déduplication & liaison des chaînes de secours ──
+  // Si deux chaînes ont le même nom (ex: TF1 HD et TF1, ou deux serveurs Canal+ Sport),
+  // on n'affiche qu'UNE seule carte et on rattache l'autre en flux de secours (backupChannels).
   const allChannels = useMemo(() => {
-    if (!m3uChannels.length) return channelsAll;
-    return [...channelsAll, ...m3uChannels];
+    const rawList = !m3uChannels.length ? channelsAll : [...channelsAll, ...m3uChannels];
+    const map = new Map<string, Channel>();
+
+    for (let i = 0; i < rawList.length; i++) {
+      const ch = rawList[i];
+      if (!ch || !ch.name) continue;
+
+      // Normaliser le nom pour identifier les doublons
+      const cleanName = ch.name
+        .toLowerCase()
+        .replace(/\b(fhd|hd|hevc|4k|uhd|sd|raw|50fps|h265|h264|1080p|720p)\b/gi, '')
+        .replace(/[\(\)\[\]\-]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+      const cat = (ch.category || ch.group || 'general').toLowerCase();
+      const key = `${cleanName}__${cat}`;
+
+      const existing = map.get(key);
+      if (!existing) {
+        map.set(key, { ...ch, backupChannels: [] });
+      } else {
+        // Si l'URL est différente, l'enregistrer comme flux de secours
+        if (existing.url !== ch.url) {
+          if (!existing.backupChannels) {
+            existing.backupChannels = [];
+          }
+          if (!existing.backupChannels.some((b) => b.url === ch.url)) {
+            existing.backupChannels.push(ch);
+          }
+        }
+      }
+    }
+
+    return Array.from(map.values());
   }, [channelsAll, m3uChannels]);
 
   // Détermination du nombre de colonnes (Smartphone: 2 en Grille, Tablettes: 3 à 5, Smart TV / TV Box: 5)
@@ -739,7 +776,32 @@ export default function NativeBokkApp() {
 
           {/* ── TICKER MATCHS & CHOCS DU JOUR (STYLE SPORT NATIF) ── */}
           {!activeChannel && matches.length > 0 && !searchQuery && (
-            <MatchHeaderTicker matches={matches} onSelectMatch={handleSelectMatch} />
+            <View style={styles.tickerWrapper}>
+              {showMatchTicker && (
+                <MatchHeaderTicker matches={matches} onSelectMatch={handleSelectMatch} />
+              )}
+              {/* Bouton masquer / afficher le ticker (Compatible Mobile & Télécommande TV) */}
+              <Pressable
+                focusable={true}
+                accessible={true}
+                style={({ pressed }) => [
+                  styles.tickerToggleBtn,
+                  pressed && { opacity: 0.7 }
+                ]}
+                onPress={() => setShowMatchTicker((v) => !v)}
+                hitSlop={8}
+                accessibilityLabel={showMatchTicker ? 'Masquer les annonces de matchs' : 'Afficher les matchs du jour'}
+              >
+                <Ionicons
+                  name={showMatchTicker ? 'eye-off-outline' : 'football-outline'}
+                  size={13}
+                  color={showMatchTicker ? '#94a3b8' : '#f59e0b'}
+                />
+                <Text style={[styles.tickerToggleText, !showMatchTicker && styles.tickerToggleTextOn]}>
+                  {showMatchTicker ? 'Masquer les matchs' : `Afficher les matchs (${matches.length})`}
+                </Text>
+              </Pressable>
+            </View>
           )}
 
           {/* ── BARRE DE RECHERCHE FLOTTANTE DÉPLIABLE ── */}
@@ -1501,5 +1563,32 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '800' as const,
     letterSpacing: 0.5,
+  },
+  // ── Ticker Matchs toggle ──
+  tickerWrapper: {
+    position: 'relative' as const,
+  },
+  tickerToggleBtn: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    alignSelf: 'flex-end' as const,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    marginTop: 2,
+    marginRight: 12,
+    marginBottom: 2,
+    borderRadius: 20,
+    backgroundColor: 'rgba(15, 23, 42, 0.85)',
+    borderWidth: 1,
+    borderColor: 'rgba(100, 116, 139, 0.3)',
+    gap: 5,
+  },
+  tickerToggleText: {
+    color: '#64748b',
+    fontSize: 11,
+    fontWeight: '600' as const,
+  },
+  tickerToggleTextOn: {
+    color: '#f59e0b',
   },
 });

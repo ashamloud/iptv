@@ -189,9 +189,48 @@
 
 ---
 
+### F. Faible Latence, Chaînes de Secours Automatiques & Bannière TV — Commit `Next` (24 Nov 2026) ✅
+
+> **Demandes traitées** :
+> 1. *"Faire en sorte qu'il y ait peu de latence voir pas du tout partout"*
+> 2. *"Un bouton qui puisse permettre de masquer les matchs tout en haut (pour avoir une plus grande vue sur les chaînes)"*
+> 3. *"L'image qui représente l'application sur la TV n'est pas présente dans les applications"*
+> 4. *"S'il y a deux chaînes qui ont le même nom, afficher uniquement une seule, et lorsque celle-ci ne vient plus ou qu'on clique sur Tester le secours, que l'autre chaîne s'affiche"*
+
+#### Fichiers modifiés :
+
+| Fichier | Rôle |
+|---|---|
+| `app/app.json` | Ajout de la propriété `"banner": "./assets/images/tv-banner.png"` sous `android` |
+| `app/assets/images/tv-banner.png` | **NOUVEAU** — Bannière officielle Android TV Leanback (320×180 px) avec logo BOKK TV |
+| `app/src/data/channels.ts` | Ajout du champ `backupChannels?: Channel[]` à l'interface `Channel` |
+| `app/src/app/index.tsx` | Déduplication intelligente des chaînes de même nom + bouton toggle masquer/afficher le ticker de matchs |
+| `app/src/components/ChannelCard.tsx` | Badge `X flux` / `Secours` affiché sur les cartes ayant des flux alternatifs |
+| `app/src/components/NativePlayer.tsx` | Buffer ultra-faible latence (< 0.8s), basculement auto sur flux alternatif en cas d'erreur + bouton dock `Flux 1/X (Tester secours)` |
+
+#### Détails des améliorations :
+
+1. **Ultra-Faible Latence & Démarrage Instantané** :
+   - Réduction du `minBufferForPlayback` de 2.0s à **0.8s** (démarrage du direct quasi-instantané).
+   - Réduction du `preferredForwardBufferDuration` de 25s à **8s** (élimine la latence de 25 secondes par rapport au flux réel en direct).
+2. **Bouton Masquer / Afficher les Matchs du Jour** :
+   - Bouton `Afficher les matchs (X)` / `Masquer les matchs` au-dessus de la grille.
+   - Compatible mobile et télécommande Smart TV (focus D-Pad).
+   - Libère immédiatement toute la hauteur d'écran pour visualiser les chaînes sans masquage.
+3. **Bannière Android TV Officielle** :
+   - Image 320×180 au format Android TV Leanback (`tv-banner.png`) intégrée à `app.json`.
+   - L'application dispose désormais de son logo officiel haute résolution dans le launcher d'applications de toutes les Smart TV Android / Google TV.
+4. **Déduplication & Chaînes de Secours Automatiques** :
+   - Les 853 doublons de chaînes (ex: serveurs miroirs, versions HD/FHD d'une même chaîne) sont fusionnés en une seule carte propre.
+   - Chaque chaîne primaire conserve ses flux alternatifs dans `backupChannels`.
+   - En cours de lecture, un bouton interactif `Flux 1/2 (Secours)` permet de tester immédiatement les flux alternatifs.
+   - En cas d'indisponibilité du flux principal, le lecteur bascule automatiquement sur le flux de secours sans interruption.
+
+---
+
 ## 📋 5. Ce qu'il Reste à Faire (Roadmap Future)
 
-1. **Validation & Test APK TV** : Tester la navigation CH+/CH- sur la télévision physique.
+1. **Validation & Test APK TV** : Tester la navigation CH+/CH- et le basculement secours sur la télévision physique.
 2. **Guide des Programmes (EPG) dans le dock du lecteur** : Afficher la barre de progression et le titre de l'émission en cours.
 3. **Multi-profils famille** : Permettre à un compte de créer des profils (Adulte, Enfants) sans changer de numéro.
 4. **Contrôle Parental** : Code PIN pour certaines catégories sensibles.

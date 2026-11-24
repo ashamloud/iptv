@@ -82,6 +82,12 @@ export const ChannelCard = memo(function ChannelCard({
                 <Text style={styles.badgePillText}>{channel.badge}</Text>
               </View>
             )}
+            {channel.backupChannels && channel.backupChannels.length > 0 && (
+              <View style={styles.backupBadge}>
+                <Ionicons name="shield-checkmark" size={8} color="#38bdf8" />
+                <Text style={styles.backupBadgeText}>{1 + channel.backupChannels.length} flux</Text>
+              </View>
+            )}
           </View>
           <Text style={[styles.meta, isHighlighted && styles.metaFocused]} numberOfLines={1}>
             {channel.group || channel.category || 'Direct TV'}
@@ -178,6 +184,14 @@ export const ChannelCard = memo(function ChannelCard({
           ) : (
             <View style={[styles.qualityBadge, isHighlighted && styles.qualityBadgeFocused]}>
               <Text style={[styles.qualityText, isHighlighted && styles.qualityTextFocused]}>HD</Text>
+            </View>
+          )}
+
+          {/* Badge discret si flux de secours disponible */}
+          {channel.backupChannels && channel.backupChannels.length > 0 && !isPlaying && (
+            <View style={styles.backupBadge}>
+              <Ionicons name="shield-checkmark" size={8} color="#38bdf8" />
+              <Text style={styles.backupBadgeText}>{1 + channel.backupChannels.length} flux</Text>
             </View>
           )}
         </View>
@@ -333,6 +347,22 @@ const styles = StyleSheet.create({
   qualityTextFocused: {
     color: '#030712',
     fontWeight: '900',
+  },
+  backupBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: 'rgba(15, 23, 42, 0.85)',
+    borderWidth: 1,
+    borderColor: 'rgba(56, 189, 248, 0.4)',
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  backupBadgeText: {
+    color: '#38bdf8',
+    fontSize: 8,
+    fontWeight: '800',
   },
   gridFavBtn: {
     position: 'absolute',
