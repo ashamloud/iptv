@@ -1,7 +1,7 @@
 # 📺 BOKK TV — JOURNAL DE BORD & ÉTAT D'AVANCEMENT DU PROJET
 
 > **Document de référence pour le développement et la reprise de session.**  
-> *Dernière mise à jour : 24 Novembre 2026 — Commit `24a3b6d`*
+> *Dernière mise à jour : 24 Novembre 2026 — Commit `d46f885`*
 
 ---
 
@@ -154,9 +154,12 @@
   - Build Navigation Télécommande : `cb6b32b2` (commit `7609962`)
   - Build Latence & Secours : `b8c2213e` (commit `0a3cad2`)
   - Build Audit Global : `3ad7d4c3` (commit `e4c9df5`)
-  - **Build Calibrage Direct & Zéro Calage : `4fbfab53` (commit `cbe76d8`) — EN COURS DE BUILD**
-    - Buffer 12s (2x plus près du direct réel), démarrage 1.5s, priorité temps, zéro calage garanti
-  - 📺 **Suivi en direct** : [expo.dev/.../builds/4fbfab53-cd93-41c5-9f1d-856ed72162fc](https://expo.dev/accounts/asham_loud/projects/loudstreamtv/builds/4fbfab53-cd93-41c5-9f1d-856ed72162fc)
+  - Build Calibrage Direct & Zéro Calage : `4fbfab53` (commit `cbe76d8`)
+  - **Build Final Site & App Intégrés (Expo-Doctor 20/20, Toggle Matchs, Secours) : `1fd534f8` (commit `d46f885`) — EN COURS**
+    - Bannière Android TV native Leanback + Cleartext Traffic via plugin Expo
+    - Validation `expo-doctor` : 20/20 vérifications réussies
+    - Buffer direct 12s, commutation secours dynamique, masquage des matchs
+  - 📺 **Suivi en direct** : [expo.dev/.../builds/1fd534f8-2960-4d3e-b0cf-85cd0f860f6a](https://expo.dev/accounts/asham_loud/projects/loudstreamtv/builds/1fd534f8-2960-4d3e-b0cf-85cd0f860f6a)
   - **Profil** : `preview` → fichier `.apk` direct, prêt à installer sur mobile et Smart TV Android.
 
 ### E. Navigation Télécommande TV — Commit `7609962` (24 Nov 2026) ✅
