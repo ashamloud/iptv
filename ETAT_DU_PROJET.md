@@ -1,7 +1,7 @@
 # 📺 BOKK TV — JOURNAL DE BORD & ÉTAT D'AVANCEMENT DU PROJET
 
 > **Document de référence pour le développement et la reprise de session.**  
-> *Dernière mise à jour : 24 Novembre 2026 — Commit `d46f885`*
+> *Dernière mise à jour : 24 Novembre 2026 — Commits `f44f188`, `676ffba` & `979ef9f`*
 
 ---
 
@@ -249,6 +249,44 @@
 5. **Mise à Jour Instantanée du Site Web (PWA & Cache Invalidation)** :
    - Service Worker promu en `v15` avec invalidation immédiate de l'ancien cache (`reg.update()`).
    - Query strings mis à jour (`?v=9985`) sur tous les scripts et styles pour garantir que les navigateurs reçoivent les dernières modifications sans manipulation manuelle.
+
+---
+
+### G. Expérience Utilisateur Ultime TV (D-Pad), Zéro-Scroll QR Code & PWA v16 — Commits `f44f188` & `979ef9f` (24 Nov 2026) ✅
+
+> **Demandes traitées** :
+> 1. *"Le cadre bleu qui me permet de savoir où je suis ne me suit pas partout (aperçu des matchs, boutons en-tête changer de vue/recherche, et page Pass VIP)"*
+> 2. *"Le code QR Wave est bien fait mais il faut scroller pour le voir, je veux voir automatiquement le code QR à scanner directement"*
+> 3. *"C'est dur d'effectuer une recherche vu qu'à chaque lettre il faut replacer le curseur"*
+> 4. *"Des chaînes se rechargent toutes les 2 secondes malgré le changement de flux + masquer la barre de progression du lecteur pour le direct"*
+> 5. *"Ne pas fixer les chaînes récemment vues, qu'elles scrollent pour ne pas gêner la vue"*
+> 6. *"La navigation avec la télécommande (touches directionnelles et bouton OK uniquement) : apporter les meilleures pratiques des grandes plateformes (Apple TV, YouTube TV, Netflix, TiviMate)"*
+> 7. *"Mettre à jour le site web aussi (les dernières modifications n'apparaissaient pas à cause du cache PWA)"*
+
+#### Détails des implémentations :
+
+1. **Cadre Bleu D-Pad Lumineux (`#38bdf8`) sur 100% des Composants** :
+   - `MatchHeaderTicker.tsx` : Remplacement du sélecteur CSS de Pressable par un état explicite `focusedId` avec bordure 3px `#38bdf8`, scale 1.06 et ombre lumineuse.
+   - `index.tsx` (En-tête) : Boutons changer de vue, recherche, Pass VIP et toggle match convertis en `Pressable focusable={true}` avec écoute `onFocus`/`onBlur`.
+   - `AccountModal.tsx` : Cartes des 3 plans Wave (1 mois, 3 mois, 12 mois) dotées de `planCardFocused` (`borderColor: '#38bdf8', borderWidth: 2.5, backgroundColor: '#13283c'`).
+   - `NativePlayer.tsx` : Boutons de modale d'erreur ("Tester Secours", "Réessayer Direct", "Signaler") et de concurrence convertis en `ModalActionBtn` avec cadre bleu TV et focus préféré automatique sur "Tester Secours".
+   - `ChannelCard.tsx` : Désactivation du focus (`focusable={false}`) sur les boutons étoile favoris pour éliminer le piégeage de focus D-Pad.
+2. **Affichage Instantané du Code QR Wave Sans Aucun Scroll** :
+   - Sorti du conteneur `ScrollView` de la page d'abonnement.
+   - Présenté sous forme de modale pop-up centrée en plein milieu de l'écran avec QR Code 240×240 haute netteté et bouton "✕ Fermer le QR Code" avec `hasTVPreferredFocus={true}`.
+3. **Recherche Fluide Sans Saut de Curseur** :
+   - Découplage de la saisie utilisateur et du filtrage lourd de 800+ chaînes via un debounce de 200ms (`handleSearchTextChange`).
+   - Suppression du flag `autoFocus` intempestif qui réinitialisait le curseur clavier virtuel Android TV à chaque lettre tapée.
+4. **Lecteur Vidéo Épuré & Anti-Boucle 2s** :
+   - Fausse barre de progression / scrubber supprimée pour le direct TV, remplacée par un badge minimaliste `[● EN DIRECT] + Nom de la chaîne`.
+   - Throttling des erreurs (cooldown 2500ms), basculement unique sur flux de secours sans relance infinie de `player.replace()`.
+5. **Navigation Télécommande D-Pad TV Protégée** :
+   - Le gestionnaire d'événements clavier `handleKeyDown` n'intercepte plus les flèches `DPAD_LEFT`/`RIGHT`/`UP`/`DOWN` lorsque les contrôles ou les modales sont visibles, permettant de se déplacer librement entre les boutons du lecteur.
+   - Les pilules de zapping rapide (`ZappingPillItem`) sont désormais focusables avec surbrillance bleue.
+6. **Mise à Jour Site Web PWA v16 (Network-First Absolu)** :
+   - Service worker promu en `v16` avec règle Network-First sur la racine `/` et `index.html` (ne sert plus jamais un vieux cache HTML).
+   - Headers meta anti-cache ajoutés dans `<head>` de `index.html`.
+   - Query strings `?v=9990` et auto-update du service worker.
 
 ---
 
