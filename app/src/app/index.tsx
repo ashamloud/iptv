@@ -33,13 +33,91 @@ import channelsAll, { Channel, CATEGORIES } from '../data/channels';
 import { ChannelCard } from '../components/ChannelCard';
 import { NativePlayer } from '../components/NativePlayer';
 import { AccountModal } from '../components/AccountModal';
+import { TvSidebar } from '../components/TvSidebar';
 import { MatchHeaderTicker } from '../components/MatchHeaderTicker';
 import { MatchesService, MatchItem } from '../services/matches';
 import { StorageService } from '../services/storage';
 import { FirebaseService, Subscriber, AdminMessage } from '../services/firebase';
 
+interface CategoryPillProps {
+  cat: { key: string; label: string; icon: string };
+  isSelected: boolean;
+  onSelect: () => void;
+}
+
+function CategoryPillItem({ cat, isSelected, onSelect }: CategoryPillProps) {
+  const [isFocused, setIsFocused] = useState(false);
+  return (
+    <Pressable
+      focusable={true}
+      accessible={true}
+      onFocus={() => setIsFocused(true)}
+      onBlur={() => setIsFocused(false)}
+      style={({ pressed }) => [
+        styles.categoryPill,
+        isSelected && styles.categoryPillActive,
+        isFocused && styles.categoryPillFocused,
+        pressed && styles.categoryPillPressed
+      ]}
+      onPress={onSelect}
+    >
+      <Ionicons
+        name={cat.icon as any}
+        size={13}
+        color={isFocused ? '#ffffff' : isSelected ? '#ffffff' : '#94a3b8'}
+        style={styles.catIcon}
+      />
+      <Text style={[styles.catText, isSelected && styles.catTextActive, isFocused && styles.catTextFocused]}>
+        {cat.label}
+      </Text>
+    </Pressable>
+  );
+}
+
+interface RecentWatchedItemProps {
+  channel: Channel;
+  hasTVPreferredFocus?: boolean;
+  onPress: () => void;
+}
+
+function RecentWatchedItem({ channel, hasTVPreferredFocus, onPress }: RecentWatchedItemProps) {
+  const [isFocused, setIsFocused] = useState(false);
+  return (
+    <Pressable
+      focusable={true}
+      accessible={true}
+      hasTVPreferredFocus={hasTVPreferredFocus}
+      onFocus={() => setIsFocused(true)}
+      onBlur={() => setIsFocused(false)}
+      style={({ pressed }) => [
+        styles.recentCard,
+        isFocused && styles.recentCardFocused,
+        pressed && styles.recentCardPressed
+      ]}
+      onPress={onPress}
+    >
+      <View style={[styles.recentLogoWrap, isFocused && styles.recentLogoWrapFocused]}>
+        {channel.logo && channel.logo.startsWith('http') ? (
+          <Image
+            source={{ uri: channel.logo }}
+            style={styles.recentLogo}
+            contentFit="contain"
+            transition={200}
+          />
+        ) : (
+          <Ionicons name="tv-outline" size={18} color={isFocused ? '#38bdf8' : '#e50914'} />
+        )}
+      </View>
+      <Text style={[styles.recentName, isFocused && styles.recentNameFocused]} numberOfLines={1}>
+        {channel.name}
+      </Text>
+    </Pressable>
+  );
+}
+
 export default function NativeBokkApp() {
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
+  const isTvMode = Platform.isTV || (width >= 850 && width > height);
 
   // État lecteur & chaîne active
   const [activeChannel, setActiveChannel] = useState<Channel | null>(null);
@@ -82,15 +160,15 @@ export default function NativeBokkApp() {
     return [...channelsAll, ...m3uChannels];
   }, [channelsAll, m3uChannels]);
 
-  // Détermination du nombre de colonnes (Smartphone: 2 en Grille, Tablettes: 3 à 5, Smart TV / TV Box: 6)
+  // Détermination du nombre de colonnes (Smartphone: 2 en Grille, Tablettes: 3 à 5, Smart TV / TV Box: 5)
   const numColumns = useMemo(() => {
     if (viewMode === 'list') return 1;
-    if (Platform.isTV || width >= 1200) return 6;
-    if (width >= 1024) return 5;
-    if (width >= 768) return 4;
+    if (isTvMode || width >= 1200) return 5;
+    if (width >= 1024) return 4;
+    if (width >= 768) return 3;
     if (width >= 480) return 3;
     return 2;
-  }, [width, viewMode]);
+  }, [width, viewMode, isTvMode]);
 
   // ── Synchronisation Temps Réel avec le Panneau Admin ──
   const syncAdminData = useCallback(async () => {
@@ -309,11 +387,14 @@ export default function NativeBokkApp() {
   // Sélection d'une chaîne
   const handleSelectChannel = useCallback((channel: Channel) => {
     setActiveChannel(channel);
+    if (isTvMode) {
+      setIsPlayerFullscreen(true);
+    }
     // Enregistrer dans l'historique des dernières chaînes regardées
     StorageService.addLastWatched(String(channel.id)).then(() => {
       StorageService.getLastWatched().then(ids => setLastWatched(ids));
     });
-  }, []);
+  }, [isTvMode]);
 
   // Fermeture du lecteur
   const handleClosePlayer = useCallback(() => {
@@ -507,354 +588,345 @@ export default function NativeBokkApp() {
     <SafeAreaView style={styles.safeArea} edges={isPlayerFullscreen ? [] : ['top', 'left', 'right']}>
       <StatusBar style="light" hidden={isPlayerFullscreen} />
 
-      {/* ── HEADER PREMIUM BOKK TV ── */}
-      <View style={styles.header}>
-        <View style={styles.logoRow}>
-          <View style={styles.logoBadge}>
-            <Text style={styles.logoBold}>BOKK</Text>
-            <Text style={styles.logoSub}>TV</Text>
-          </View>
-          <View style={styles.liveIndicator}>
-            <View style={styles.liveDot} />
-            <Text style={styles.liveText}>DIRECT</Text>
-          </View>
-        </View>
-
-        <View style={styles.headerActions}>
-          {/* Bascule Grille / Liste */}
-          <TouchableOpacity
-            accessible={true}
-            style={styles.headerIconBtn}
-            onPress={() => setViewMode((m) => (m === 'grid' ? 'list' : 'grid'))}
-            accessibilityLabel="Changer de vue"
-          >
-            <Ionicons
-              name={viewMode === 'grid' ? 'list' : 'grid'}
-              size={18}
-              color="#cbd5e1"
-            />
-          </TouchableOpacity>
-
-          {/* Bouton Recherche */}
-          <TouchableOpacity
-            accessible={true}
-            style={[styles.headerIconBtn, isSearchOpen && styles.headerIconBtnActive]}
-            onPress={() => {
+      <View style={isTvMode ? styles.tvRootRow : styles.mobileRootCol}>
+        {/* ── SIDEBAR VERTICALE SMART TV (Uniquement sur Smart TV & Écran large, hors plein écran) ── */}
+        {isTvMode && !isPlayerFullscreen && (
+          <TvSidebar
+            activeTab={activeNavTab}
+            onSelectTab={handleNavTabPress}
+            onOpenAccount={() => setIsAccountModalOpen(true)}
+            isRegistered={isRegisteredUser}
+            subscriber={subscriber}
+            isSearchOpen={isSearchOpen}
+            onToggleSearch={() => {
               setIsSearchOpen((prev) => !prev);
               if (isSearchOpen) setSearchQuery('');
             }}
-            accessibilityLabel="Recherche"
-          >
-            <Ionicons
-              name={isSearchOpen ? 'close' : 'search'}
-              size={18}
-              color={isSearchOpen ? '#e50914' : '#cbd5e1'}
-            />
-          </TouchableOpacity>
-
-          {/* Bouton Mon Pass / Compte */}
-          <TouchableOpacity
-            accessible={true}
-            style={[styles.accountBtn, isRegisteredUser ? styles.accountBtnVip : styles.accountBtnFree]}
-            onPress={() => setIsAccountModalOpen(true)}
-            activeOpacity={0.8}
-          >
-            <Ionicons
-              name={isRegisteredUser ? 'ribbon' : 'person-circle-outline'}
-              size={16}
-              color={isRegisteredUser ? '#22c55e' : '#f59e0b'}
-            />
-            <Text style={[styles.accountBtnText, isRegisteredUser && styles.accountBtnTextVip]}>
-              {subscriber ? subscriber.prenom || subscriber.id : 'Pass VIP'}
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* ── TICKER MATCHS & CHOCS DU JOUR (STYLE SPORT NATIF) ── */}
-      {!activeChannel && matches.length > 0 && !searchQuery && (
-        <MatchHeaderTicker matches={matches} onSelectMatch={handleSelectMatch} />
-      )}
-
-      {/* ── BARRE DE RECHERCHE FLOTTANTE DÉPLIABLE ── */}
-      {isSearchOpen && (
-        <View style={styles.searchBarContainer}>
-          <Ionicons name="search" size={18} color="#64748b" style={styles.searchIcon} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Rechercher une chaîne (Canal+, beIN, RTS, TF1...)"
-            placeholderTextColor="#64748b"
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            autoFocus
-            returnKeyType="search"
           />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery('')} hitSlop={10}>
-              <Ionicons name="close-circle" size={18} color="#94a3b8" />
-            </TouchableOpacity>
+        )}
+
+        {/* ── CONTENU PRINCIPAL DE L'APPLICATION ── */}
+        <View style={isTvMode ? styles.tvContentArea : styles.mobileContentArea}>
+          {/* ── HEADER PREMIUM BOKK TV ── */}
+          <View style={styles.header}>
+            <View style={styles.logoRow}>
+              <View style={styles.logoBadge}>
+                <Text style={styles.logoBold}>BOKK</Text>
+                <Text style={styles.logoSub}>TV</Text>
+              </View>
+              <View style={styles.liveIndicator}>
+                <View style={styles.liveDot} />
+                <Text style={styles.liveText}>DIRECT</Text>
+              </View>
+            </View>
+
+            <View style={styles.headerActions}>
+              {/* Bascule Grille / Liste */}
+              <TouchableOpacity
+                accessible={true}
+                style={styles.headerIconBtn}
+                onPress={() => setViewMode((m) => (m === 'grid' ? 'list' : 'grid'))}
+                accessibilityLabel="Changer de vue"
+              >
+                <Ionicons
+                  name={viewMode === 'grid' ? 'list' : 'grid'}
+                  size={18}
+                  color="#cbd5e1"
+                />
+              </TouchableOpacity>
+
+              {/* Bouton Recherche */}
+              <TouchableOpacity
+                accessible={true}
+                style={[styles.headerIconBtn, isSearchOpen && styles.headerIconBtnActive]}
+                onPress={() => {
+                  setIsSearchOpen((prev) => !prev);
+                  if (isSearchOpen) setSearchQuery('');
+                }}
+                accessibilityLabel="Recherche"
+              >
+                <Ionicons
+                  name={isSearchOpen ? 'close' : 'search'}
+                  size={18}
+                  color={isSearchOpen ? '#e50914' : '#cbd5e1'}
+                />
+              </TouchableOpacity>
+
+              {/* Bouton Mon Pass / Compte */}
+              <TouchableOpacity
+                accessible={true}
+                style={[styles.accountBtn, isRegisteredUser ? styles.accountBtnVip : styles.accountBtnFree]}
+                onPress={() => setIsAccountModalOpen(true)}
+                activeOpacity={0.8}
+              >
+                <Ionicons
+                  name={isRegisteredUser ? 'ribbon' : 'person-circle-outline'}
+                  size={16}
+                  color={isRegisteredUser ? '#22c55e' : '#f59e0b'}
+                />
+                <Text style={[styles.accountBtnText, isRegisteredUser && styles.accountBtnTextVip]}>
+                  {subscriber ? subscriber.prenom || subscriber.id : 'Pass VIP'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* ── TICKER MATCHS & CHOCS DU JOUR (STYLE SPORT NATIF) ── */}
+          {!activeChannel && matches.length > 0 && !searchQuery && (
+            <MatchHeaderTicker matches={matches} onSelectMatch={handleSelectMatch} />
           )}
-        </View>
-      )}
 
-      {/* ── LECTEUR VIDÉO NATIF (DOCKÉ / PLEIN ÉCRAN) ── */}
-      {activeChannel ? (
-        <View style={[styles.playerWrapper, isPlayerFullscreen && styles.playerWrapperFullscreen]}>
-          <NativePlayer
-            channel={activeChannel}
-            onClose={handleClosePlayer}
-            onPreviewLockTriggered={handlePreviewLock}
-            isRegistered={isRegisteredUser}
-            subscriber={subscriber}
-            onNextChannel={handleNextChannel}
-            onPrevChannel={handlePrevChannel}
-            isFavorite={favorites.includes(String(activeChannel.id))}
-            onToggleFavorite={() => handleToggleFavorite(activeChannel.id)}
-            isFullscreen={isPlayerFullscreen}
-            onToggleFullscreen={(fs) => setIsPlayerFullscreen(fs)}
-          />
+          {/* ── BARRE DE RECHERCHE FLOTTANTE DÉPLIABLE ── */}
+          {isSearchOpen && (
+            <View style={styles.searchBarContainer}>
+              <Ionicons name="search" size={18} color="#64748b" style={styles.searchIcon} />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Rechercher une chaîne (Canal+, beIN, RTS, TF1...)"
+                placeholderTextColor="#64748b"
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                autoFocus
+                returnKeyType="search"
+              />
+              {searchQuery.length > 0 && (
+                <TouchableOpacity onPress={() => setSearchQuery('')} hitSlop={10}>
+                  <Ionicons name="close-circle" size={18} color="#94a3b8" />
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
 
-          {/* ── BANDEAU DE ZAPPING RAPIDE (Masqué en plein écran) ── */}
-          {!isPlayerFullscreen && relatedZappingChannels.length > 0 && (
-            <View style={styles.zappingStrip}>
-              <Text style={styles.zappingLabel}>ZAPPING RAPIDE :</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.zappingScroll}>
-                {relatedZappingChannels.map((c) => (
-                  <TouchableOpacity
-                    key={c.id}
-                    style={styles.zappingPill}
-                    onPress={() => handleSelectChannel(c)}
-                    activeOpacity={0.7}
-                  >
-                    <Ionicons name="play" size={10} color="#e50914" />
-                    <Text style={styles.zappingPillText} numberOfLines={1}>
-                      {c.name}
-                    </Text>
-                  </TouchableOpacity>
+          {/* ── LECTEUR VIDÉO NATIF (DOCKÉ / PLEIN ÉCRAN) ── */}
+          {activeChannel ? (
+            <View style={[styles.playerWrapper, isPlayerFullscreen && styles.playerWrapperFullscreen]}>
+              <NativePlayer
+                channel={activeChannel}
+                onClose={handleClosePlayer}
+                onPreviewLockTriggered={handlePreviewLock}
+                isRegistered={isRegisteredUser}
+                subscriber={subscriber}
+                onNextChannel={handleNextChannel}
+                onPrevChannel={handlePrevChannel}
+                isFavorite={favorites.includes(String(activeChannel.id))}
+                onToggleFavorite={() => handleToggleFavorite(activeChannel.id)}
+                isFullscreen={isPlayerFullscreen}
+                onToggleFullscreen={(fs) => setIsPlayerFullscreen(fs)}
+              />
+
+              {/* ── BANDEAU DE ZAPPING RAPIDE (Masqué en plein écran) ── */}
+              {!isPlayerFullscreen && relatedZappingChannels.length > 0 && (
+                <View style={styles.zappingStrip}>
+                  <Text style={styles.zappingLabel}>ZAPPING RAPIDE :</Text>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.zappingScroll}>
+                    {relatedZappingChannels.map((c) => (
+                      <TouchableOpacity
+                        key={c.id}
+                        style={styles.zappingPill}
+                        onPress={() => handleSelectChannel(c)}
+                        activeOpacity={0.7}
+                      >
+                        <Ionicons name="play" size={10} color="#e50914" />
+                        <Text style={styles.zappingPillText} numberOfLines={1}>
+                          {c.name}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </View>
+              )}
+            </View>
+          ) : null}
+
+          {/* ── BARRE DE CATÉGORIES ── */}
+          <View style={styles.categoryBarWrap}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.categoryScroll}
+            >
+              {CATEGORIES.map((cat) => {
+                const isSelected = selectedCategory === cat.key;
+                return (
+                  <CategoryPillItem
+                    key={cat.key}
+                    cat={cat}
+                    isSelected={isSelected}
+                    onSelect={() => {
+                      setSelectedCategory(cat.key);
+                      if (activeNavTab !== 'tv' && activeNavTab !== 'home') {
+                        setActiveNavTab('tv');
+                      }
+                    }}
+                  />
+                );
+              })}
+            </ScrollView>
+          </View>
+
+          {/* ── SOUS-TITRE / COMPTEUR DE CHAÎNES ── */}
+          <View style={styles.metaRow}>
+            <Text style={styles.metaText}>
+              {filteredChannels.length} {filteredChannels.length > 1 ? 'chaînes disponibles' : 'chaîne disponible'}
+              {selectedCategory !== 'tous' ? ` • ${selectedCategory.toUpperCase()}` : ''}
+            </Text>
+            <Text style={styles.metaModeHint}>
+              Mode : {viewMode === 'grid' ? 'Grille' : 'Liste'}
+            </Text>
+          </View>
+
+          {/* ── HISTORIQUE "DERNIÈRES CHAÎNES REGARDÉES" ── */}
+          {isInitLoaded && showRecentWatched && (
+            <View style={styles.recentSection}>
+              <Text style={styles.recentTitle}>▶ Vues récemment</Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.recentScroll}
+              >
+                {recentWatchedChannels.map((ch, idx) => (
+                  <RecentWatchedItem
+                    key={`recent-${ch.id}`}
+                    channel={ch}
+                    hasTVPreferredFocus={Platform.isTV && idx === 0}
+                    onPress={() => handleSelectChannel(ch)}
+                  />
                 ))}
               </ScrollView>
             </View>
           )}
-        </View>
-      ) : null}
 
-      {/* ── BARRE DE CATÉGORIES ── */}
-      <View style={styles.categoryBarWrap}>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.categoryScroll}
-        >
-          {CATEGORIES.map((cat) => {
-            const isSelected = selectedCategory === cat.key;
-            return (
-              <TouchableOpacity
-                key={cat.key}
-                accessible={true}
-                style={[
-                  styles.categoryPill,
-                  isSelected && styles.categoryPillActive
-                ]}
-                onPress={() => {
-                  setSelectedCategory(cat.key);
-                  if (activeNavTab !== 'tv' && activeNavTab !== 'home') {
-                    setActiveNavTab('tv');
-                  }
-                }}
-                activeOpacity={0.7}
-              >
-                <Ionicons
-                  name={cat.icon as any}
-                  size={13}
-                  color={isSelected ? '#ffffff' : '#94a3b8'}
-                  style={styles.catIcon}
+          {/* ── GRILLE / LISTE DES CHAÎNES (FLATLIST FLUIDE 60 FPS) ── */}
+          {!isInitLoaded ? (
+            <View style={styles.centerContainer}>
+              <ActivityIndicator size="large" color="#e50914" />
+              <Text style={styles.loadingText}>Chargement des flux BOKK TV...</Text>
+            </View>
+          ) : filteredChannels.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Ionicons name="tv-outline" size={48} color="#334155" />
+              <Text style={styles.emptyTitle}>Aucune chaîne trouvée</Text>
+              <Text style={styles.emptyDesc}>
+                {searchQuery
+                  ? `Aucun résultat pour « ${searchQuery} »`
+                  : selectedCategory === 'favoris'
+                  ? 'Aucune chaîne dans vos favoris. Touchez l’étoile ⭐ sur une chaîne pour l’ajouter ici.'
+                  : 'Aucune chaîne disponible dans cette sélection.'}
+              </Text>
+            </View>
+          ) : (
+            <FlatList
+              ref={flatListRef}
+              key={`${viewMode}-${numColumns}`} // Re-render propre si l'on change entre Grille et Liste
+              data={filteredChannels}
+              renderItem={renderChannelItem}
+              keyExtractor={keyExtractor}
+              numColumns={numColumns}
+              contentContainerStyle={[styles.gridContent, { paddingBottom: isTvMode ? 30 : 100 }]}
+              initialNumToRender={18}
+              maxToRenderPerBatch={24}
+              windowSize={7}
+              removeClippedSubviews={Platform.OS === 'android'}
+              showsVerticalScrollIndicator={false}
+              refreshControl={
+                <RefreshControl
+                  refreshing={isRefreshing}
+                  onRefresh={handleRefresh}
+                  tintColor="#e50914"
+                  colors={['#e50914', '#0070f3']}
                 />
-                <Text style={[styles.catText, isSelected && styles.catTextActive]}>
-                  {cat.label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
+              }
+            />
+          )}
+        </View>
       </View>
 
-      {/* ── SOUS-TITRE / COMPTEUR DE CHAÎNES ── */}
-      <View style={styles.metaRow}>
-        <Text style={styles.metaText}>
-          {filteredChannels.length} {filteredChannels.length > 1 ? 'chaînes disponibles' : 'chaîne disponible'}
-          {selectedCategory !== 'tous' ? ` • ${selectedCategory.toUpperCase()}` : ''}
-        </Text>
-        <Text style={styles.metaModeHint}>
-          Mode : {viewMode === 'grid' ? 'Grille' : 'Liste'}
-        </Text>
-      </View>
+      {/* ── BARRE DE NAVIGATION FLOTTANTE DU BAS (UNIQUEMENT SUR MOBILE ET HORS PLEIN ÉCRAN) ── */}
+      {!isTvMode && !isPlayerFullscreen && (
+        <View style={styles.bottomNavContainer}>
+          <View style={styles.bottomNavPill}>
+            <TouchableOpacity
+              accessible={true}
+              style={[styles.bottomNavItem, activeNavTab === 'home' && styles.bottomNavItemActive]}
+              onPress={() => handleNavTabPress('home')}
+              activeOpacity={0.8}
+            >
+              <Ionicons
+                name={activeNavTab === 'home' ? 'home' : 'home-outline'}
+                size={19}
+                color={activeNavTab === 'home' ? '#ffffff' : '#64748b'}
+              />
+              <Text style={[styles.bottomNavLabel, activeNavTab === 'home' && styles.bottomNavLabelActive]}>
+                Accueil
+              </Text>
+            </TouchableOpacity>
 
-      {/* ── HISTORIQUE "DERNIÈRES CHAÎNES REGARDÉES" ── */}
-      {isInitLoaded && showRecentWatched && (
-        <View style={styles.recentSection}>
-          <Text style={styles.recentTitle}>▶ Vues récemment</Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.recentScroll}
-          >
-            {recentWatchedChannels.map((ch, idx) => (
-              <TouchableOpacity
-                key={`recent-${ch.id}`}
-                accessible={true}
-                hasTVPreferredFocus={Platform.isTV && idx === 0}
-                style={styles.recentCard}
-                onPress={() => handleSelectChannel(ch)}
-                activeOpacity={0.7}
-              >
-                <View style={styles.recentLogoWrap}>
-                  {ch.logo && ch.logo.startsWith('http') ? (
-                    <Image
-                      source={{ uri: ch.logo }}
-                      style={styles.recentLogo}
-                      contentFit="contain"
-                      transition={200}
-                    />
-                  ) : (
-                    <Ionicons name="tv-outline" size={18} color="#e50914" />
-                  )}
-                </View>
-                <Text style={styles.recentName} numberOfLines={1}>
-                  {ch.name}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
+            <TouchableOpacity
+              accessible={true}
+              style={[styles.bottomNavItem, activeNavTab === 'tv' && styles.bottomNavItemActive]}
+              onPress={() => handleNavTabPress('tv')}
+              activeOpacity={0.8}
+            >
+              <Ionicons
+                name={activeNavTab === 'tv' ? 'tv' : 'tv-outline'}
+                size={19}
+                color={activeNavTab === 'tv' ? '#ffffff' : '#64748b'}
+              />
+              <Text style={[styles.bottomNavLabel, activeNavTab === 'tv' && styles.bottomNavLabelActive]}>
+                Direct TV
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              accessible={true}
+              style={[styles.bottomNavItem, activeNavTab === 'sport' && styles.bottomNavItemActive]}
+              onPress={() => handleNavTabPress('sport')}
+              activeOpacity={0.8}
+            >
+              <Ionicons
+                name={activeNavTab === 'sport' ? 'football' : 'football-outline'}
+                size={19}
+                color={activeNavTab === 'sport' ? '#ffffff' : '#64748b'}
+              />
+              <Text style={[styles.bottomNavLabel, activeNavTab === 'sport' && styles.bottomNavLabelActive]}>
+                Sports
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              accessible={true}
+              style={[styles.bottomNavItem, activeNavTab === 'favoris' && styles.bottomNavItemActive]}
+              onPress={() => handleNavTabPress('favoris')}
+              activeOpacity={0.8}
+            >
+              <Ionicons
+                name={activeNavTab === 'favoris' ? 'star' : 'star-outline'}
+                size={19}
+                color={activeNavTab === 'favoris' ? '#ffffff' : '#64748b'}
+              />
+              <Text style={[styles.bottomNavLabel, activeNavTab === 'favoris' && styles.bottomNavLabelActive]}>
+                Favoris
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              accessible={true}
+              style={styles.bottomNavItem}
+              onPress={() => setIsAccountModalOpen(true)}
+              activeOpacity={0.8}
+            >
+              <Ionicons
+                name="person-circle-outline"
+                size={20}
+                color={isRegisteredUser ? '#22c55e' : '#f59e0b'}
+              />
+              <Text style={styles.bottomNavLabel}>
+                Mon ID
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
       )}
-
-      {/* ── GRILLE / LISTE DES CHAÎNES (FLATLIST FLUIDE 60 FPS) ── */}
-      {!isInitLoaded ? (
-        <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color="#e50914" />
-          <Text style={styles.loadingText}>Chargement des flux BOKK TV...</Text>
-        </View>
-      ) : filteredChannels.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <Ionicons name="tv-outline" size={48} color="#334155" />
-          <Text style={styles.emptyTitle}>Aucune chaîne trouvée</Text>
-          <Text style={styles.emptyDesc}>
-            {searchQuery
-              ? `Aucun résultat pour « ${searchQuery} »`
-              : selectedCategory === 'favoris'
-              ? 'Aucune chaîne dans vos favoris. Touchez l’étoile ⭐ sur une chaîne pour l’ajouter ici.'
-              : 'Aucune chaîne disponible dans cette sélection.'}
-          </Text>
-        </View>
-      ) : (
-        <FlatList
-          ref={flatListRef}
-          key={`${viewMode}-${numColumns}`} // Re-render propre si l'on change entre Grille et Liste
-          data={filteredChannels}
-          renderItem={renderChannelItem}
-          keyExtractor={keyExtractor}
-          numColumns={numColumns}
-          contentContainerStyle={[styles.gridContent, { paddingBottom: 100 }]}
-          initialNumToRender={18}
-          maxToRenderPerBatch={24}
-          windowSize={7}
-          removeClippedSubviews={Platform.OS === 'android'}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl
-              refreshing={isRefreshing}
-              onRefresh={handleRefresh}
-              tintColor="#e50914"
-              colors={['#e50914', '#0070f3']}
-            />
-          }
-        />
-      )}
-
-      {/* ── BARRE DE NAVIGATION FLOTTANTE DU BAS (Style Reezn / iOS) ── */}
-      <View style={styles.bottomNavContainer}>
-        <View style={styles.bottomNavPill}>
-          <TouchableOpacity
-            accessible={true}
-            style={[styles.bottomNavItem, activeNavTab === 'home' && styles.bottomNavItemActive]}
-            onPress={() => handleNavTabPress('home')}
-            activeOpacity={0.8}
-          >
-            <Ionicons
-              name={activeNavTab === 'home' ? 'home' : 'home-outline'}
-              size={19}
-              color={activeNavTab === 'home' ? '#ffffff' : '#64748b'}
-            />
-            <Text style={[styles.bottomNavLabel, activeNavTab === 'home' && styles.bottomNavLabelActive]}>
-              Accueil
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            accessible={true}
-            style={[styles.bottomNavItem, activeNavTab === 'tv' && styles.bottomNavItemActive]}
-            onPress={() => handleNavTabPress('tv')}
-            activeOpacity={0.8}
-          >
-            <Ionicons
-              name={activeNavTab === 'tv' ? 'tv' : 'tv-outline'}
-              size={19}
-              color={activeNavTab === 'tv' ? '#ffffff' : '#64748b'}
-            />
-            <Text style={[styles.bottomNavLabel, activeNavTab === 'tv' && styles.bottomNavLabelActive]}>
-              Direct TV
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            accessible={true}
-            style={[styles.bottomNavItem, activeNavTab === 'sport' && styles.bottomNavItemActive]}
-            onPress={() => handleNavTabPress('sport')}
-            activeOpacity={0.8}
-          >
-            <Ionicons
-              name={activeNavTab === 'sport' ? 'football' : 'football-outline'}
-              size={19}
-              color={activeNavTab === 'sport' ? '#ffffff' : '#64748b'}
-            />
-            <Text style={[styles.bottomNavLabel, activeNavTab === 'sport' && styles.bottomNavLabelActive]}>
-              Sports
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            accessible={true}
-            style={[styles.bottomNavItem, activeNavTab === 'favoris' && styles.bottomNavItemActive]}
-            onPress={() => handleNavTabPress('favoris')}
-            activeOpacity={0.8}
-          >
-            <Ionicons
-              name={activeNavTab === 'favoris' ? 'star' : 'star-outline'}
-              size={19}
-              color={activeNavTab === 'favoris' ? '#ffffff' : '#64748b'}
-            />
-            <Text style={[styles.bottomNavLabel, activeNavTab === 'favoris' && styles.bottomNavLabelActive]}>
-              Favoris
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            accessible={true}
-            style={styles.bottomNavItem}
-            onPress={() => setIsAccountModalOpen(true)}
-            activeOpacity={0.8}
-          >
-            <Ionicons
-              name="person-circle-outline"
-              size={20}
-              color={isRegisteredUser ? '#22c55e' : '#f59e0b'}
-            />
-            <Text style={styles.bottomNavLabel}>
-              Mon ID
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </View>
 
       {/* ── MODALE COMPTE & PASS VIP ── */}
       <AccountModal
@@ -889,6 +961,24 @@ export default function NativeBokkApp() {
 
 const styles = StyleSheet.create({
   safeArea: {
+    flex: 1,
+    backgroundColor: '#07090e',
+  },
+  tvRootRow: {
+    flex: 1,
+    flexDirection: 'row',
+    backgroundColor: '#07090e',
+  },
+  mobileRootCol: {
+    flex: 1,
+    flexDirection: 'column',
+    backgroundColor: '#07090e',
+  },
+  tvContentArea: {
+    flex: 1,
+    backgroundColor: '#07090e',
+  },
+  mobileContentArea: {
     flex: 1,
     backgroundColor: '#07090e',
   },
@@ -1090,6 +1180,19 @@ const styles = StyleSheet.create({
     backgroundColor: '#e50914',
     borderColor: '#e50914',
   },
+  categoryPillFocused: {
+    borderColor: '#38bdf8',
+    borderWidth: 2,
+    backgroundColor: 'rgba(56, 189, 248, 0.22)',
+    transform: [{ scale: 1.08 }],
+    shadowColor: '#38bdf8',
+    shadowOpacity: 0.9,
+    shadowRadius: 10,
+    elevation: 10,
+  },
+  categoryPillPressed: {
+    transform: [{ scale: 0.96 }],
+  },
   catIcon: {
     marginRight: 5,
   },
@@ -1101,6 +1204,10 @@ const styles = StyleSheet.create({
   catTextActive: {
     color: '#ffffff',
     fontWeight: '800',
+  },
+  catTextFocused: {
+    color: '#38bdf8',
+    fontWeight: '900',
   },
   metaRow: {
     flexDirection: 'row',
@@ -1141,8 +1248,21 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 8,
     alignItems: 'center',
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: 'rgba(255, 255, 255, 0.08)',
+  },
+  recentCardFocused: {
+    borderColor: '#38bdf8',
+    borderWidth: 2.5,
+    backgroundColor: '#0f172a',
+    transform: [{ scale: 1.08 }],
+    shadowColor: '#38bdf8',
+    shadowOpacity: 0.9,
+    shadowRadius: 12,
+    elevation: 12,
+  },
+  recentCardPressed: {
+    transform: [{ scale: 0.96 }],
   },
   recentLogoWrap: {
     width: 44,
@@ -1154,6 +1274,10 @@ const styles = StyleSheet.create({
     marginBottom: 5,
     overflow: 'hidden',
   },
+  recentLogoWrapFocused: {
+    borderColor: '#38bdf8',
+    backgroundColor: '#13283c',
+  },
   recentLogo: {
     width: '80%',
     height: '80%',
@@ -1164,6 +1288,10 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textAlign: 'center',
     width: '100%',
+  },
+  recentNameFocused: {
+    color: '#38bdf8',
+    fontWeight: '800',
   },
   gridContent: {
     paddingHorizontal: 7,

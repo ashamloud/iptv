@@ -1,4 +1,4 @@
-import React, { memo } from 'react';
+import React, { memo, useState } from 'react';
 import { StyleSheet, Text, View, Pressable, Platform } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -24,6 +24,8 @@ export const ChannelCard = memo(function ChannelCard({
   viewMode = 'grid',
   hasTVPreferredFocus = false
 }: ChannelCardProps) {
+  const [isFocused, setIsFocused] = useState(false);
+
   const logoUri = channel.logo && channel.logo.startsWith('http')
     ? channel.logo
     : null;
@@ -35,17 +37,17 @@ export const ChannelCard = memo(function ChannelCard({
         focusable={true}
         accessible={true}
         hasTVPreferredFocus={hasTVPreferredFocus}
-        {...(Platform.isTV ? ({ tvParallaxProperties: { enabled: true } } as any) : {})}
-        style={({ pressed, focused }: any) => [
+        onFocus={() => setIsFocused(true)}
+        onBlur={() => setIsFocused(false)}
+        style={({ pressed }) => [
           styles.listCard,
           isPlaying && styles.listCardPlaying,
-          focused && styles.cardFocused,
-          focused && styles.tvFocusStyle,
+          isFocused && styles.listCardFocused,
           pressed && styles.cardActive
         ]}
         onPress={onPress}
       >
-        <View style={styles.listLogoWrap}>
+        <View style={[styles.listLogoWrap, isFocused && styles.listLogoWrapFocused]}>
           {logoUri ? (
             <Image
               source={{ uri: logoUri }}
@@ -67,7 +69,7 @@ export const ChannelCard = memo(function ChannelCard({
 
         <View style={styles.listInfo}>
           <View style={styles.titleRow}>
-            <Text style={[styles.name, isPlaying && styles.namePlaying]} numberOfLines={1}>
+            <Text style={[styles.name, isPlaying && styles.namePlaying, isFocused && styles.nameFocused]} numberOfLines={1}>
               {channel.name}
             </Text>
             {channel.badge && (
@@ -76,7 +78,7 @@ export const ChannelCard = memo(function ChannelCard({
               </View>
             )}
           </View>
-          <Text style={styles.meta} numberOfLines={1}>
+          <Text style={[styles.meta, isFocused && styles.metaFocused]} numberOfLines={1}>
             {channel.group || channel.category || 'Direct TV'}
           </Text>
         </View>
@@ -86,6 +88,12 @@ export const ChannelCard = memo(function ChannelCard({
             <View style={[styles.eqBar, styles.eqBar1]} />
             <View style={[styles.eqBar, styles.eqBar2]} />
             <View style={[styles.eqBar, styles.eqBar3]} />
+          </View>
+        )}
+
+        {isFocused && (
+          <View style={styles.listTvOkHint}>
+            <Text style={styles.listTvOkText}>OK</Text>
           </View>
         )}
 
@@ -107,26 +115,32 @@ export const ChannelCard = memo(function ChannelCard({
     );
   }
 
-  // ── MODE GRILLE (Carte moderne style myCANAL / Netflix) ──
+  // ── MODE GRILLE (Carte moderne style myCANAL / Android TV Leanback) ──
   return (
     <Pressable
       focusable={true}
       accessible={true}
       hasTVPreferredFocus={hasTVPreferredFocus}
-      {...(Platform.isTV ? ({ tvParallaxProperties: { enabled: true } } as any) : {})}
-      style={({ pressed, focused }: any) => [
+      onFocus={() => setIsFocused(true)}
+      onBlur={() => setIsFocused(false)}
+      style={({ pressed }) => [
         styles.gridCard,
         isPlaying && styles.gridCardPlaying,
-        focused && styles.cardFocused,
-        focused && styles.tvFocusStyle,
+        isFocused && styles.cardFocused,
         pressed && styles.cardActive
       ]}
       onPress={onPress}
     >
       {/* Zone visuelle avec Logo */}
-      <View style={styles.gridVisualBox}>
+      <View style={[styles.gridVisualBox, isFocused && styles.gridVisualBoxFocused]}>
         <LinearGradient
-          colors={isPlaying ? ['#281014', '#121624'] : ['#171d2c', '#0d111a']}
+          colors={
+            isFocused
+              ? ['#13283c', '#0f172a']
+              : isPlaying
+              ? ['#281014', '#121624']
+              : ['#171d2c', '#0d111a']
+          }
           style={StyleSheet.absoluteFill}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
@@ -135,13 +149,13 @@ export const ChannelCard = memo(function ChannelCard({
         {logoUri ? (
           <Image
             source={{ uri: logoUri }}
-            style={styles.gridLogo}
+            style={[styles.gridLogo, isFocused && styles.gridLogoFocused]}
             contentFit="contain"
             transition={200}
           />
         ) : (
           <View style={styles.placeholderLogo}>
-            <Ionicons name="tv-outline" size={26} color="#e50914" />
+            <Ionicons name="tv-outline" size={26} color={isFocused ? '#38bdf8' : '#e50914'} />
           </View>
         )}
 
@@ -153,12 +167,12 @@ export const ChannelCard = memo(function ChannelCard({
               <Text style={styles.liveNowText}>EN COURS</Text>
             </View>
           ) : channel.badge ? (
-            <View style={styles.qualityBadge}>
-              <Text style={styles.qualityText}>{channel.badge}</Text>
+            <View style={[styles.qualityBadge, isFocused && styles.qualityBadgeFocused]}>
+              <Text style={[styles.qualityText, isFocused && styles.qualityTextFocused]}>{channel.badge}</Text>
             </View>
           ) : (
-            <View style={styles.qualityBadge}>
-              <Text style={styles.qualityText}>HD</Text>
+            <View style={[styles.qualityBadge, isFocused && styles.qualityBadgeFocused]}>
+              <Text style={[styles.qualityText, isFocused && styles.qualityTextFocused]}>HD</Text>
             </View>
           )}
         </View>
@@ -181,20 +195,28 @@ export const ChannelCard = memo(function ChannelCard({
       </View>
 
       {/* Zone texte et détails en bas */}
-      <View style={[styles.gridInfoBox, isPlaying && styles.gridInfoBoxPlaying]}>
+      <View style={[styles.gridInfoBox, isPlaying && styles.gridInfoBoxPlaying, isFocused && styles.gridInfoBoxFocused]}>
         <Text
-          style={[styles.gridName, isPlaying && styles.gridNamePlaying]}
+          style={[styles.gridName, isPlaying && styles.gridNamePlaying, isFocused && styles.gridNameFocused]}
           numberOfLines={1}
         >
           {channel.name}
         </Text>
-        <Text style={styles.gridMeta} numberOfLines={1}>
+        <Text style={[styles.gridMeta, isFocused && styles.gridMetaFocused]} numberOfLines={1}>
           {channel.group || channel.category || 'Direct TV'}
         </Text>
       </View>
 
-      {/* Ligne rouge brillante en bas quand la chaîne est en lecture */}
-      {isPlaying && <View style={styles.playingUnderline} />}
+      {/* ── BANDEAU DE FOCUS VISUEL SUR SMART TV (Indicateur ultra-clair anti-tâtonnement) ── */}
+      {isFocused ? (
+        <View style={styles.tvFocusBar}>
+          <Ionicons name="play" size={10} color="#030712" />
+          <Text style={styles.tvFocusBarText}>OK POUR REGARDER</Text>
+        </View>
+      ) : isPlaying ? (
+        /* Ligne rouge brillante en bas quand la chaîne est en lecture */
+        <View style={styles.playingUnderline} />
+      ) : null}
     </Pressable>
   );
 });
@@ -203,21 +225,22 @@ const styles = StyleSheet.create({
   // ── Grille ──
   gridCard: {
     flex: 1,
-    margin: 5,
+    margin: 6,
     borderRadius: 14,
     backgroundColor: '#111522',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.07)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
     overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.35,
     shadowRadius: 8,
     elevation: 4,
+    position: 'relative',
   },
   gridCardPlaying: {
     borderColor: '#e50914',
-    borderWidth: 1.5,
+    borderWidth: 2,
     shadowColor: '#e50914',
     shadowOpacity: 0.5,
     shadowRadius: 10,
@@ -228,28 +251,34 @@ const styles = StyleSheet.create({
     opacity: 0.9,
   },
   cardFocused: {
-    borderColor: '#00d2ff',
-    borderWidth: 2.5,
-    transform: [{ scale: 1.04 }],
-    shadowColor: '#00d2ff',
-    shadowOpacity: 0.8,
-    shadowRadius: 10,
-    elevation: 10,
-  },
-  tvFocusStyle: {
     borderColor: '#38bdf8',
-    borderWidth: 2,
+    borderWidth: 3,
+    transform: [{ scale: 1.07 }],
+    shadowColor: '#38bdf8',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 1,
+    shadowRadius: 16,
+    elevation: 16,
+    zIndex: 25,
+    backgroundColor: '#0f172a',
   },
   gridVisualBox: {
-    height: 84,
+    height: 86,
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
     padding: 8,
   },
+  gridVisualBoxFocused: {
+    backgroundColor: '#13283c',
+  },
   gridLogo: {
     width: '70%',
     height: '70%',
+  },
+  gridLogoFocused: {
+    width: '78%',
+    height: '78%',
   },
   topBadgeRow: {
     position: 'absolute',
@@ -260,7 +289,7 @@ const styles = StyleSheet.create({
   liveNowBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(229, 9, 20, 0.9)',
+    backgroundColor: 'rgba(229, 9, 20, 0.92)',
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
@@ -286,11 +315,19 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.1)',
   },
+  qualityBadgeFocused: {
+    backgroundColor: '#38bdf8',
+    borderColor: '#38bdf8',
+  },
   qualityText: {
     color: '#94a3b8',
     fontSize: 8,
     fontWeight: '800',
     letterSpacing: 0.3,
+  },
+  qualityTextFocused: {
+    color: '#030712',
+    fontWeight: '900',
   },
   gridFavBtn: {
     position: 'absolute',
@@ -308,13 +345,16 @@ const styles = StyleSheet.create({
   },
   gridInfoBox: {
     paddingHorizontal: 10,
-    paddingVertical: 9,
+    paddingVertical: 8,
     backgroundColor: '#0d101a',
     borderTopWidth: 1,
     borderTopColor: 'rgba(255, 255, 255, 0.04)',
   },
   gridInfoBoxPlaying: {
     backgroundColor: '#170c10',
+  },
+  gridInfoBoxFocused: {
+    backgroundColor: '#0f172a',
   },
   gridName: {
     color: '#f8fafc',
@@ -326,16 +366,39 @@ const styles = StyleSheet.create({
     color: '#ff4d4d',
     fontWeight: '800',
   },
+  gridNameFocused: {
+    color: '#ffffff',
+    fontWeight: '900',
+  },
   gridMeta: {
     color: '#64748b',
     fontSize: 10.5,
     marginTop: 2,
     fontWeight: '500',
   },
+  gridMetaFocused: {
+    color: '#93c5fd',
+    fontWeight: '600',
+  },
   playingUnderline: {
-    height: 2.5,
+    height: 3,
     backgroundColor: '#e50914',
     width: '100%',
+  },
+  tvFocusBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#38bdf8',
+    paddingVertical: 3,
+    gap: 4,
+    width: '100%',
+  },
+  tvFocusBarText: {
+    color: '#030712',
+    fontSize: 9,
+    fontWeight: '900',
+    letterSpacing: 0.6,
   },
 
   // ── Mode Liste ──
@@ -346,13 +409,24 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 10,
     marginVertical: 4,
-    marginHorizontal: 12,
-    borderWidth: 1,
+    marginHorizontal: 10,
+    borderWidth: 1.5,
     borderColor: 'rgba(255, 255, 255, 0.06)',
   },
   listCardPlaying: {
     borderColor: '#e50914',
     backgroundColor: '#1b1418',
+  },
+  listCardFocused: {
+    borderColor: '#38bdf8',
+    borderWidth: 3,
+    backgroundColor: '#0f172a',
+    transform: [{ scale: 1.02 }],
+    shadowColor: '#38bdf8',
+    shadowOpacity: 0.9,
+    shadowRadius: 12,
+    elevation: 12,
+    zIndex: 20,
   },
   listLogoWrap: {
     width: 46,
@@ -365,6 +439,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.08)',
     position: 'relative',
+  },
+  listLogoWrapFocused: {
+    borderColor: '#38bdf8',
+    backgroundColor: '#13283c',
   },
   listLogo: {
     width: 36,
@@ -407,6 +485,10 @@ const styles = StyleSheet.create({
     color: '#ff4d4d',
     fontWeight: '800',
   },
+  nameFocused: {
+    color: '#38bdf8',
+    fontWeight: '900',
+  },
   badgePill: {
     backgroundColor: 'rgba(229, 9, 20, 0.18)',
     paddingHorizontal: 6,
@@ -426,6 +508,10 @@ const styles = StyleSheet.create({
     marginTop: 2,
     fontWeight: '500',
   },
+  metaFocused: {
+    color: '#93c5fd',
+    fontWeight: '600',
+  },
   liveEqualizer: {
     flexDirection: 'row',
     alignItems: 'flex-end',
@@ -441,6 +527,18 @@ const styles = StyleSheet.create({
   eqBar1: { height: 8 },
   eqBar2: { height: 14 },
   eqBar3: { height: 10 },
+  listTvOkHint: {
+    backgroundColor: '#38bdf8',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 5,
+    marginRight: 8,
+  },
+  listTvOkText: {
+    color: '#030712',
+    fontSize: 10,
+    fontWeight: '900',
+  },
   favBtn: {
     padding: 6,
     marginLeft: 6,

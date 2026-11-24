@@ -10,7 +10,9 @@ import {
   Linking,
   Alert,
   Clipboard,
-  ScrollView
+  ScrollView,
+  Image,
+  Platform,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -34,6 +36,10 @@ export function AccountModal({
   const [prenom, setPrenom] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showProlongInfo, setShowProlongInfo] = useState(false);
+  const [tvQrPlan, setTvQrPlan] = useState<null | { url: string; label: string }>(null);
+
+  // Détection Smart TV (Android TV ou grand écran paysage)
+  const isTvDevice = Platform.isTV;
 
   const deviceName = StorageService.getDeviceName();
 
@@ -203,11 +209,14 @@ export function AccountModal({
                     {/* 1 mois – 3 000 F */}
                     <TouchableOpacity
                       style={styles.planCard}
-                      onPress={() =>
-                        Linking.openURL('https://pay.wave.com/m/M_sn_cop5B9UJYF8P/c/sn/?amount=3000').catch(() => {
-                          Alert.alert('Erreur', "Impossible d'ouvrir Wave.");
-                        })
-                      }
+                      onPress={() => {
+                        const url = 'https://pay.wave.com/m/M_sn_cop5B9UJYF8P/c/sn/?amount=3000';
+                        if (isTvDevice) {
+                          setTvQrPlan(tvQrPlan?.url === url ? null : { url, label: '1 mois – 3 000 F' });
+                        } else {
+                          Linking.openURL(url).catch(() => Alert.alert('Erreur', "Impossible d'ouvrir Wave."));
+                        }
+                      }}
                       activeOpacity={0.85}
                     >
                       <View style={styles.planInfo}>
@@ -216,18 +225,21 @@ export function AccountModal({
                         <Text style={styles.planPrice}>3 000 F</Text>
                       </View>
                       <View style={styles.planWaveBadge}>
-                        <Text style={styles.planWaveText}>Wave →</Text>
+                        <Text style={styles.planWaveText}>{isTvDevice ? 'QR Code' : 'Wave →'}</Text>
                       </View>
                     </TouchableOpacity>
 
                     {/* 3 mois – 7 500 F (économie 1500F) */}
                     <TouchableOpacity
                       style={[styles.planCard, styles.planCardPopular]}
-                      onPress={() =>
-                        Linking.openURL('https://pay.wave.com/m/M_sn_cop5B9UJYF8P/c/sn/?amount=7500').catch(() => {
-                          Alert.alert('Erreur', "Impossible d'ouvrir Wave.");
-                        })
-                      }
+                      onPress={() => {
+                        const url = 'https://pay.wave.com/m/M_sn_cop5B9UJYF8P/c/sn/?amount=7500';
+                        if (isTvDevice) {
+                          setTvQrPlan(tvQrPlan?.url === url ? null : { url, label: '3 mois – 7 500 F' });
+                        } else {
+                          Linking.openURL(url).catch(() => Alert.alert('Erreur', "Impossible d'ouvrir Wave."));
+                        }
+                      }}
                       activeOpacity={0.85}
                     >
                       <View style={styles.planInfo}>
@@ -241,18 +253,21 @@ export function AccountModal({
                         <Text style={styles.planPrice}>7 500 F</Text>
                       </View>
                       <View style={[styles.planWaveBadge, styles.planWaveBadgePopular]}>
-                        <Text style={styles.planWaveText}>Wave →</Text>
+                        <Text style={styles.planWaveText}>{isTvDevice ? 'QR Code' : 'Wave →'}</Text>
                       </View>
                     </TouchableOpacity>
 
                     {/* 12 mois – 25 000 F (économie 11000F) */}
                     <TouchableOpacity
                       style={styles.planCard}
-                      onPress={() =>
-                        Linking.openURL('https://pay.wave.com/m/M_sn_cop5B9UJYF8P/c/sn/?amount=25000').catch(() => {
-                          Alert.alert('Erreur', "Impossible d'ouvrir Wave.");
-                        })
-                      }
+                      onPress={() => {
+                        const url = 'https://pay.wave.com/m/M_sn_cop5B9UJYF8P/c/sn/?amount=25000';
+                        if (isTvDevice) {
+                          setTvQrPlan(tvQrPlan?.url === url ? null : { url, label: '12 mois – 25 000 F' });
+                        } else {
+                          Linking.openURL(url).catch(() => Alert.alert('Erreur', "Impossible d'ouvrir Wave."));
+                        }
+                      }}
                       activeOpacity={0.85}
                     >
                       <View style={styles.planInfo}>
@@ -266,9 +281,29 @@ export function AccountModal({
                         <Text style={styles.planPrice}>25 000 F</Text>
                       </View>
                       <View style={styles.planWaveBadge}>
-                        <Text style={styles.planWaveText}>Wave →</Text>
+                        <Text style={styles.planWaveText}>{isTvDevice ? 'QR Code' : 'Wave →'}</Text>
                       </View>
                     </TouchableOpacity>
+
+                    {/* QR Code affiché sur TV après sélection d'un plan */}
+                    {isTvDevice && tvQrPlan && (
+                      <View style={styles.tvQrBox}>
+                        <Text style={styles.tvQrTitle}>📱 Scannez avec votre téléphone</Text>
+                        <Text style={styles.tvQrPlan}>{tvQrPlan.label}</Text>
+                        <Image
+                          source={{
+                            uri: `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(tvQrPlan.url)}&bgcolor=ffffff&color=000000&margin=10`,
+                          }}
+                          style={styles.tvQrImage}
+                        />
+                        <Text style={styles.tvQrInstruction}>
+                          Ouvrez l'appareil photo de votre téléphone et pointez-le vers ce QR code pour payer avec Wave.
+                        </Text>
+                        <TouchableOpacity style={styles.tvQrClose} onPress={() => setTvQrPlan(null)}>
+                          <Text style={styles.tvQrCloseText}>✕ Fermer</Text>
+                        </TouchableOpacity>
+                      </View>
+                    )}
                   </View>
                 </View>
 
@@ -769,5 +804,58 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 14,
     marginTop: 6,
+  },
+  // ─── TV QR Code ───
+  tvQrBox: {
+    marginTop: 16,
+    backgroundColor: '#0f172a',
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: '#38bdf8',
+    padding: 20,
+    alignItems: 'center',
+  },
+  tvQrTitle: {
+    color: '#38bdf8',
+    fontSize: 15,
+    fontWeight: '700',
+    marginBottom: 4,
+    textAlign: 'center',
+  },
+  tvQrPlan: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: '600',
+    marginBottom: 14,
+    textAlign: 'center',
+    opacity: 0.85,
+  },
+  tvQrImage: {
+    width: 220,
+    height: 220,
+    borderRadius: 10,
+    backgroundColor: '#ffffff',
+  },
+  tvQrInstruction: {
+    color: '#94a3b8',
+    fontSize: 11.5,
+    textAlign: 'center',
+    marginTop: 14,
+    lineHeight: 16,
+    maxWidth: 280,
+  },
+  tvQrClose: {
+    marginTop: 14,
+    paddingHorizontal: 24,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: '#1e293b',
+    borderWidth: 1,
+    borderColor: '#334155',
+  },
+  tvQrCloseText: {
+    color: '#94a3b8',
+    fontSize: 12,
+    fontWeight: '600',
   },
 });

@@ -13,7 +13,9 @@ import {
   ActivityIndicator,
   Alert,
   Dimensions,
-  TouchableWithoutFeedback
+  TouchableWithoutFeedback,
+  BackHandler,
+  Platform
 } from 'react-native';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -62,6 +64,48 @@ async function buildVideoSourceAsync(channel: Channel, useProxy: boolean = false
     headers['Referer'] = channel.referrer;
   }
   return { uri, headers };
+}
+
+interface PlayerButtonProps {
+  style?: any;
+  focusedStyle?: any;
+  onPress: () => void;
+  children: React.ReactNode;
+  hasTVPreferredFocus?: boolean;
+  accessibilityLabel?: string;
+  hitSlop?: any;
+}
+
+function PlayerButton({
+  style,
+  focusedStyle,
+  onPress,
+  children,
+  hasTVPreferredFocus,
+  accessibilityLabel,
+  hitSlop
+}: PlayerButtonProps) {
+  const [isFocused, setIsFocused] = useState(false);
+  return (
+    <Pressable
+      focusable={true}
+      accessible={true}
+      hasTVPreferredFocus={hasTVPreferredFocus}
+      onFocus={() => setIsFocused(true)}
+      onBlur={() => setIsFocused(false)}
+      onPress={onPress}
+      hitSlop={hitSlop}
+      accessibilityLabel={accessibilityLabel}
+      style={({ pressed }) => [
+        style,
+        isFocused && styles.ctrlFocused,
+        isFocused && focusedStyle,
+        pressed && styles.ctrlPressed
+      ]}
+    >
+      {children}
+    </Pressable>
+  );
 }
 
 export function NativePlayer({
@@ -161,6 +205,24 @@ export function NativePlayer({
       setInternalFullscreen(nextVal);
     }
   };
+
+  // Gestion de la touche Retour sur Smart TV : quitter le plein écran sans fermer l'app
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    const onBack = () => {
+      if (isPlayerFullscreen) {
+        if (onToggleFullscreen) {
+          onToggleFullscreen(false);
+        } else {
+          setInternalFullscreen(false);
+        }
+        return true;
+      }
+      return false;
+    };
+    const sub = BackHandler.addEventListener('hardwareBackPress', onBack);
+    return () => sub.remove();
+  }, [isPlayerFullscreen, onToggleFullscreen]);
 
   const handleTogglePiP = async () => {
     resetControlsTimeout();
@@ -379,19 +441,22 @@ export function NativePlayer({
 
   return (
     <View style={[styles.container, isPlayerFullscreen && styles.containerFullscreen]}>
-      {/* ── Surface Vidéo Plein Écran (Cliquable pour afficher/masquer contrôles) ── */}
-      <TouchableWithoutFeedback onPress={toggleControls}>
-        <View style={StyleSheet.absoluteFill}>
-          <VideoView
-            ref={videoViewRef}
-            player={player}
-            style={styles.video}
-            nativeControls={false}
-            allowsPictureInPicture
-            contentFit="contain"
-          />
-        </View>
-      </TouchableWithoutFeedback>
+      {/* ── Surface Vidéo Plein Écran (Cliquable avec télécommande OK pour afficher contrôles) ── */}
+      <Pressable
+        onPress={toggleControls}
+        focusable={!showControls}
+        hasTVPreferredFocus={Platform.isTV && !showControls}
+        style={StyleSheet.absoluteFill}
+      >
+        <VideoView
+          ref={videoViewRef}
+          player={player}
+          style={styles.video}
+          nativeControls={false}
+          allowsPictureInPicture
+          contentFit="contain"
+        />
+      </Pressable>
 
       {/* ── Spinner BOKK TV de chargement ── */}
       {isBuffering && !hasError && !concurrencyError && (
@@ -415,27 +480,24 @@ export function NativePlayer({
             pointerEvents="box-none"
           >
             <View style={styles.topBar}>
-              <TouchableOpacity
+              <PlayerButton
                 style={styles.backCircleBtn}
                 onPress={onClose}
                 hitSlop={10}
-                focusable={true}
                 accessibilityLabel="Fermer ou quitter le lecteur"
               >
                 <Ionicons name="chevron-back" size={22} color="#ffffff" />
-              </TouchableOpacity>
+              </PlayerButton>
 
               <View style={styles.topRightActions}>
                 {/* Mode Secours / Direct */}
-                <TouchableOpacity
+                <PlayerButton
                   style={styles.streamModePill}
                   onPress={() => {
                     resetControlsTimeout();
                     if (useProxy) handleRetryDirect();
                     else handleRetryWithProxy();
                   }}
-                  activeOpacity={0.8}
-                  focusable={true}
                 >
                   <Ionicons
                     name={useProxy ? 'shield-checkmark' : 'flash'}
@@ -445,14 +507,12 @@ export function NativePlayer({
                   <Text style={styles.streamModeText}>
                     {useProxy ? 'Secours Actif' : 'Direct'}
                   </Text>
-                </TouchableOpacity>
+                </PlayerButton>
 
                 {/* Bouton Signaler */}
-                <TouchableOpacity
+                <PlayerButton
                   style={[styles.reportBtn, isReported && styles.reportBtnDone]}
                   onPress={handleReport}
-                  activeOpacity={0.8}
-                  focusable={true}
                 >
                   <Ionicons
                     name={isReported ? 'checkmark-circle' : 'warning-outline'}
@@ -462,17 +522,16 @@ export function NativePlayer({
                   <Text style={[styles.reportText, isReported && styles.reportTextDone]}>
                     {isReported ? 'Signalé' : 'Signaler'}
                   </Text>
-                </TouchableOpacity>
+                </PlayerButton>
 
                 {/* Bouton Fermer */}
-                <TouchableOpacity
+                <PlayerButton
                   style={styles.closeBtn}
                   onPress={onClose}
                   hitSlop={10}
-                  focusable={true}
                 >
                   <Ionicons name="close" size={18} color="#ffffff" />
-                </TouchableOpacity>
+                </PlayerButton>
               </View>
             </View>
           </LinearGradient>
@@ -528,14 +587,13 @@ export function NativePlayer({
 
               {/* Bouton Favori Étoile à droite */}
               {onToggleFavorite && (
-                <TouchableOpacity
+                <PlayerButton
                   style={[styles.dockFavBtn, isFavorite && styles.dockFavBtnActive]}
                   onPress={() => {
                     resetControlsTimeout();
                     onToggleFavorite();
                   }}
                   hitSlop={10}
-                  focusable={true}
                   accessibilityLabel="Ajouter aux favoris"
                 >
                   <Ionicons
@@ -543,7 +601,7 @@ export function NativePlayer({
                     size={20}
                     color={isFavorite ? '#f59e0b' : '#ffffff'}
                   />
-                </TouchableOpacity>
+                </PlayerButton>
               )}
             </View>
 
@@ -552,33 +610,23 @@ export function NativePlayer({
               {/* Groupe Gauche : Zapping Prev, Play/Pause Rouge BOKK, Zapping Next, Mute */}
               <View style={styles.dockControlsLeft}>
                 {onPrevChannel && (
-                  <Pressable
-                    style={({ pressed, focused }: any) => [
-                      styles.circleCtrlBtn,
-                      focused && styles.ctrlFocused,
-                      pressed && styles.ctrlPressed
-                    ]}
+                  <PlayerButton
+                    style={styles.circleCtrlBtn}
                     onPress={() => {
                       resetControlsTimeout();
                       onPrevChannel();
                     }}
-                    focusable={true}
                     hitSlop={8}
                     accessibilityLabel="Chaîne précédente"
                   >
                     <Ionicons name="play-skip-back" size={17} color="#ffffff" />
-                  </Pressable>
+                  </PlayerButton>
                 )}
 
                 {/* Bouton Play/Pause Rouge BOKK d'Origine */}
-                <Pressable
-                  style={({ pressed, focused }: any) => [
-                    styles.mainPlayPauseBtn,
-                    focused && styles.ctrlFocused,
-                    pressed && styles.playPressed
-                  ]}
+                <PlayerButton
+                  style={styles.mainPlayPauseBtn}
                   onPress={handleTogglePlayPause}
-                  focusable={true}
                   accessibilityLabel={isPlaying ? 'Pause' : 'Lecture'}
                 >
                   <Ionicons
@@ -587,36 +635,26 @@ export function NativePlayer({
                     color="#ffffff"
                     style={!isPlaying && { marginLeft: 2 }}
                   />
-                </Pressable>
+                </PlayerButton>
 
                 {onNextChannel && (
-                  <Pressable
-                    style={({ pressed, focused }: any) => [
-                      styles.circleCtrlBtn,
-                      focused && styles.ctrlFocused,
-                      pressed && styles.ctrlPressed
-                    ]}
+                  <PlayerButton
+                    style={styles.circleCtrlBtn}
                     onPress={() => {
                       resetControlsTimeout();
                       onNextChannel();
                     }}
-                    focusable={true}
                     hitSlop={8}
                     accessibilityLabel="Chaîne suivante"
                   >
                     <Ionicons name="play-skip-forward" size={17} color="#ffffff" />
-                  </Pressable>
+                  </PlayerButton>
                 )}
 
                 {/* Bouton Son Mute / Unmute */}
-                <Pressable
-                  style={({ pressed, focused }: any) => [
-                    styles.circleCtrlBtn,
-                    focused && styles.ctrlFocused,
-                    pressed && styles.ctrlPressed
-                  ]}
+                <PlayerButton
+                  style={styles.circleCtrlBtn}
                   onPress={handleToggleMute}
-                  focusable={true}
                   hitSlop={8}
                   accessibilityLabel={isMuted ? 'Activer le son' : 'Couper le son'}
                 >
@@ -625,7 +663,7 @@ export function NativePlayer({
                     size={18}
                     color="#ffffff"
                   />
-                </Pressable>
+                </PlayerButton>
               </View>
 
               {/* Centre : Scrubber / Ligne Rouge en Direct avec Bouton Blanc */}
@@ -639,39 +677,33 @@ export function NativePlayer({
               {/* Groupe Droite : PiP & BOUTON PLEIN ÉCRAN */}
               <View style={styles.dockControlsRight}>
                 {/* Bouton PiP (Picture-in-Picture) */}
-                <Pressable
-                  style={({ pressed, focused }: any) => [
-                    styles.circleCtrlBtn,
-                    focused && styles.ctrlFocused,
-                    pressed && styles.ctrlPressed
-                  ]}
+                <PlayerButton
+                  style={styles.circleCtrlBtn}
                   onPress={handleTogglePiP}
-                  focusable={true}
                   hitSlop={8}
                   accessibilityLabel="Picture in Picture"
                 >
                   <Ionicons name="albums-outline" size={18} color="#ffffff" />
-                </Pressable>
+                </PlayerButton>
 
-                {/* ── BOUTON PLEIN ÉCRAN (BIEN VISIBLE & PROÉMINENT) ── */}
-                <Pressable
-                  style={({ pressed, focused }: any) => [
+                {/* ── BOUTON PLEIN ÉCRAN (FOCUS PAR DÉFAUT SUR TÉLÉCOMMANDE TV) ── */}
+                <PlayerButton
+                  hasTVPreferredFocus={true}
+                  style={[
                     styles.fullscreenBtn,
-                    isPlayerFullscreen && styles.fullscreenBtnActive,
-                    focused && styles.ctrlFocused,
-                    pressed && styles.ctrlPressed
+                    isPlayerFullscreen && styles.fullscreenBtnActive
                   ]}
+                  focusedStyle={styles.fullscreenBtnFocused}
                   onPress={handleToggleFullscreen}
-                  focusable={true}
                   hitSlop={10}
                   accessibilityLabel={isPlayerFullscreen ? 'Quitter le plein écran' : 'Plein écran'}
                 >
                   <Ionicons
                     name={isPlayerFullscreen ? 'contract-outline' : 'expand-outline'}
-                    size={20}
+                    size={22}
                     color="#ffffff"
                   />
-                </Pressable>
+                </PlayerButton>
               </View>
             </View>
           </LinearGradient>
@@ -1051,9 +1083,14 @@ const styles = StyleSheet.create({
   },
   ctrlFocused: {
     borderColor: '#38bdf8',
-    borderWidth: 2,
-    transform: [{ scale: 1.08 }],
-    elevation: 8,
+    borderWidth: 2.5,
+    backgroundColor: 'rgba(56, 189, 248, 0.28)',
+    transform: [{ scale: 1.15 }],
+    shadowColor: '#38bdf8',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.9,
+    shadowRadius: 10,
+    elevation: 10,
   },
   dockScrubberWrap: {
     flex: 1,
@@ -1092,18 +1129,27 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   fullscreenBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: 'rgba(255, 255, 255, 0.16)',
-    borderWidth: 1.5,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.45)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   fullscreenBtnActive: {
-    backgroundColor: 'rgba(229, 9, 20, 0.35)',
+    backgroundColor: 'rgba(229, 9, 20, 0.45)',
     borderColor: '#e50914',
+  },
+  fullscreenBtnFocused: {
+    borderColor: '#38bdf8',
+    backgroundColor: '#0284c7',
+    transform: [{ scale: 1.2 }],
+    shadowColor: '#38bdf8',
+    shadowOpacity: 1,
+    shadowRadius: 12,
+    elevation: 14,
   },
 
   // ── Modales d'erreur & Concurrence ──
