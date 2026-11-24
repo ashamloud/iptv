@@ -10,7 +10,7 @@ const PROJECT_ID = 'bokk-tv';
 const FIRESTORE_BASE = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents`;
 
 export interface Subscriber {
-  id: string; // Clé unique : Numéro de téléphone normalisé (ex: "221771234567")
+  id: string; // Identifiant clair basé sur le numéro (ex: "BK-771234567")
   phone: string;
   prenom: string;
   status: 'active' | 'suspended' | 'expired';
@@ -21,15 +21,66 @@ export interface Subscriber {
   lastActiveAt?: string;
 }
 
-export function normalizePhone(rawPhone: string): string {
-  if (!rawPhone) return '';
-  // Supprimer espaces, tirets, parenthèses, plus
-  const digits = rawPhone.replace(/\D/g, '');
-  // Si numéro sénégalais local 9 chiffres (77xxxxxxx), préfixer avec 221
-  if (digits.length === 9 && (digits.startsWith('70') || digits.startsWith('75') || digits.startsWith('76') || digits.startsWith('77') || digits.startsWith('78'))) {
-    return `221${digits}`;
+export function validatePhone(rawPhone: string): {
+  valid: boolean;
+  error?: string;
+  national?: string;
+  id?: string;
+  display?: string;
+} {
+  if (!rawPhone) return { valid: false, error: 'Numéro de téléphone requis.' };
+  let clean = rawPhone.trim().replace(/[\s\.\-\(\)]/g, '');
+  if (clean.startsWith('00')) clean = '+' + clean.slice(2);
+
+  let national = '';
+  if (clean.startsWith('+221')) {
+    national = clean.slice(4);
+  } else if (clean.startsWith('221') && clean.length === 12) {
+    national = clean.slice(3);
+  } else if (/^(70|75|76|77|78)\d{7}$/.test(clean)) {
+    national = clean;
   }
-  return digits;
+
+  if (national) {
+    if (!/^(70|75|76|77|78)\d{7}$/.test(national)) {
+      return {
+        valid: false,
+        error: 'Numéro sénégalais invalide (doit commencer par 70, 75, 76, 77 ou 78 et comporter 9 chiffres).'
+      };
+    }
+    if (/^(\d)\1{8}$/.test(national) || /^7[0-8](\d)\1{6}$/.test(national)) {
+      return { valid: false, error: 'Numéro non valide (chiffres répétés suspects).' };
+    }
+    return {
+      valid: true,
+      national: national,
+      id: `BK-${national}`,
+      display: national.replace(/(\d{2})(\d{3})(\d{2})(\d{2})/, '$1 $2 $3 $4')
+    };
+  }
+
+  if (/^\+[1-9]\d{7,14}$/.test(clean)) {
+    const digits = clean.replace(/\D/g, '');
+    if (/^(\d)\1{7,}$/.test(digits)) {
+      return { valid: false, error: 'Numéro international non valide (chiffres répétés).' };
+    }
+    return {
+      valid: true,
+      national: digits,
+      id: `BK-${digits}`,
+      display: clean
+    };
+  }
+
+  return {
+    valid: false,
+    error: 'Numéro invalide. Entrez un numéro sénégalais (ex: 77 123 45 67) ou international avec indicatif (+33...).'
+  };
+}
+
+export function normalizePhone(rawPhone: string): string {
+  const v = validatePhone(rawPhone);
+  return v.valid && v.national ? v.national : (rawPhone || '').replace(/\D/g, '');
 }
 
 export interface DisabledChannelsData {
@@ -180,43 +231,50 @@ export const FirebaseService = {
     }
   },
 
-  // ── 3. Authentification par Numéro de Téléphone Unique (Connexion / Inscription) ──
-  async loginOrRegisterWithPhone(rawPhone: string, prenom: string = ''): Promise<Subscriber | null> {
-    const cleanPhone = normalizePhone(rawPhone);
-    if (!cleanPhone || cleanPhone.length < 6) return null;
+  // ── 3. Authentification par Numéro de Téléphone Unique (1 Compte = 1 Numéro) ──
+  async loginOrRegisterWithPhone(rawPhone: string, prenom: string = ''): Promise<{ subscriber: Subscriber | null; isExisting?: boolean; error?: string }> {
+    const val = validatePhone(rawPhone);
+    if (!val.valid || !val.national || !val.id) {
+      return { subscriber: null, error: val.error || 'Numéro invalide' };
+    }
+
+    const standardId = val.id; // Ex: "BK-771234567"
+    const nationalPhone = val.national; // Ex: "771234567"
+    const candidateIds = [standardId, nationalPhone, `221${nationalPhone}`];
 
     try {
-      const url = `${FIRESTORE_BASE}/subscribers/${cleanPhone}`;
-      
-      // A. Vérifier si le compte existe déjà
-      const checkRes = await fetch(url);
-      if (checkRes.ok) {
-        const doc = await checkRes.json();
-        if (doc.fields) {
-          const f = doc.fields;
-          const subObj: Subscriber = {
-            id: cleanPhone,
-            phone: cleanPhone,
-            prenom: f.prenom?.stringValue || prenom.trim() || 'Abonné',
-            status: (f.status?.stringValue as any) || 'active',
-            createdAt: f.createdAt?.timestampValue || new Date().toISOString(),
-            expiresAt: f.expiresAt?.timestampValue || new Date(Date.now() + 30 * 86400000).toISOString(),
-            activeSessionId: f.activeSessionId?.stringValue,
-            activeDeviceName: f.activeDeviceName?.stringValue
-          };
-          await StorageService.setSubscriber(subObj);
-          return subObj;
+      // A. Vérifier si le compte existe déjà sous l'un des formats d'identifiant
+      for (const candId of candidateIds) {
+        const url = `${FIRESTORE_BASE}/subscribers/${candId}`;
+        const checkRes = await fetch(url);
+        if (checkRes.ok) {
+          const doc = await checkRes.json();
+          if (doc.fields) {
+            const f = doc.fields;
+            const subObj: Subscriber = {
+              id: candId,
+              phone: f.phone?.stringValue || nationalPhone,
+              prenom: f.prenom?.stringValue || prenom.trim() || 'Abonné',
+              status: (f.status?.stringValue as any) || 'active',
+              createdAt: f.createdAt?.timestampValue || new Date().toISOString(),
+              expiresAt: f.expiresAt?.timestampValue || new Date(Date.now() + 30 * 86400000).toISOString(),
+              activeSessionId: f.activeSessionId?.stringValue,
+              activeDeviceName: f.activeDeviceName?.stringValue
+            };
+            await StorageService.setSubscriber(subObj);
+            return { subscriber: subObj, isExisting: true };
+          }
         }
       }
 
-      // B. Si nouveau numéro : Création automatique avec 30 jours offerts
+      // B. Si nouveau numéro : Création avec 30 jours offerts et ID = BK-<phone>
       const cleanPrenom = prenom.trim() || 'Abonné BOKK';
       const now = new Date();
       const expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
 
       const subObj: Subscriber = {
-        id: cleanPhone,
-        phone: cleanPhone,
+        id: standardId,
+        phone: nationalPhone,
         prenom: cleanPrenom,
         status: 'active',
         createdAt: now.toISOString(),
@@ -225,8 +283,8 @@ export const FirebaseService = {
 
       const payload = {
         fields: {
-          id: { stringValue: cleanPhone },
-          phone: { stringValue: cleanPhone },
+          id: { stringValue: standardId },
+          phone: { stringValue: nationalPhone },
           prenom: { stringValue: cleanPrenom },
           status: { stringValue: 'active' },
           createdAt: { timestampValue: now.toISOString() },
@@ -234,49 +292,67 @@ export const FirebaseService = {
         }
       };
 
-      await fetch(url, {
+      const createUrl = `${FIRESTORE_BASE}/subscribers/${standardId}`;
+      await fetch(createUrl, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
 
       await StorageService.setSubscriber(subObj);
-      return subObj;
-    } catch {
-      return null;
+      return { subscriber: subObj, isExisting: false };
+    } catch (e: any) {
+      return { subscriber: null, error: e?.message || 'Erreur réseau' };
     }
   },
 
-  // Rétrocompatibilité : connexion avec ancien identifiant BK-XXXX
+  // Connexion par Numéro direct ou Identifiant (BK-...)
   async loginSubscriber(idOrPhone: string): Promise<Subscriber | null> {
-    const clean = idOrPhone.trim().toUpperCase();
-    if (!clean) return null;
+    const raw = (idOrPhone || '').trim();
+    if (!raw) return null;
+
+    const val = validatePhone(raw);
+    const candidateIds: string[] = [];
+
+    if (val.valid && val.id && val.national) {
+      candidateIds.push(val.id);
+      candidateIds.push(val.national);
+      candidateIds.push(`221${val.national}`);
+    } else {
+      const clean = raw.toUpperCase();
+      candidateIds.push(clean);
+      const digits = raw.replace(/\D/g, '');
+      if (digits.length >= 6) {
+        candidateIds.push(`BK-${digits}`);
+        candidateIds.push(digits);
+      }
+    }
 
     try {
-      // Tenter d'abord comme numéro normalisé
-      const phoneDigits = normalizePhone(clean);
-      const targetId = phoneDigits.length >= 6 ? phoneDigits : clean;
+      for (const candId of candidateIds) {
+        const url = `${FIRESTORE_BASE}/subscribers/${candId}`;
+        const res = await fetch(url);
+        if (res.ok) {
+          const doc = await res.json();
+          if (doc.fields) {
+            const f = doc.fields;
+            const subObj: Subscriber = {
+              id: candId,
+              phone: f.phone?.stringValue || val.national || candId,
+              prenom: f.prenom?.stringValue || 'Abonné',
+              status: (f.status?.stringValue as any) || 'active',
+              createdAt: f.createdAt?.timestampValue || new Date().toISOString(),
+              expiresAt: f.expiresAt?.timestampValue || new Date(Date.now() + 30 * 86400000).toISOString(),
+              activeSessionId: f.activeSessionId?.stringValue,
+              activeDeviceName: f.activeDeviceName?.stringValue
+            };
 
-      const url = `${FIRESTORE_BASE}/subscribers/${targetId}`;
-      const res = await fetch(url);
-      if (!res.ok) return null;
-      const doc = await res.json();
-      if (!doc.fields) return null;
-
-      const f = doc.fields;
-      const subObj: Subscriber = {
-        id: targetId,
-        phone: f.phone?.stringValue || targetId,
-        prenom: f.prenom?.stringValue || 'Abonné',
-        status: (f.status?.stringValue as any) || 'active',
-        createdAt: f.createdAt?.timestampValue || new Date().toISOString(),
-        expiresAt: f.expiresAt?.timestampValue || new Date(Date.now() + 30 * 86400000).toISOString(),
-        activeSessionId: f.activeSessionId?.stringValue,
-        activeDeviceName: f.activeDeviceName?.stringValue
-      };
-
-      await StorageService.setSubscriber(subObj);
-      return subObj;
+            await StorageService.setSubscriber(subObj);
+            return subObj;
+          }
+        }
+      }
+      return null;
     } catch {
       return null;
     }
@@ -432,7 +508,7 @@ export const FirebaseService = {
     }
   },
 
-  // ── 6. Déclarations de Paiements Wave (Option C) ──
+  // ── 6. Déclarations de Paiements Wave (Option C - Notification Automatique & Validation 1-Clic) ──
   async submitPaymentClaim(claim: {
     subscriberId: string;
     subscriberName?: string;
@@ -441,6 +517,7 @@ export const FirebaseService = {
     amount: number;
     days: number;
     txId?: string;
+    autoCreated?: boolean;
   }): Promise<{ success: boolean; error?: string }> {
     try {
       const subId = claim.subscriberId.trim();
@@ -449,11 +526,11 @@ export const FirebaseService = {
         return { success: false, error: 'Numéro de compte et numéro Wave requis' };
       }
 
-      const claimId = `${subId}_${Date.now()}`;
-      const url = `${FIRESTORE_BASE}/payment_claims/${claimId}`;
+      const cleanClaimId = `${subId.replace(/[^a-zA-Z0-9]/g, '_')}_${Date.now()}`;
+      const url = `${FIRESTORE_BASE}/payment_claims/${cleanClaimId}`;
       const payload = {
         fields: {
-          claimId: { stringValue: claimId },
+          claimId: { stringValue: cleanClaimId },
           subscriberId: { stringValue: subId },
           subscriberName: { stringValue: claim.subscriberName || '' },
           payerPhone: { stringValue: payer },
@@ -461,6 +538,7 @@ export const FirebaseService = {
           amount: { integerValue: String(claim.amount) },
           days: { integerValue: String(claim.days) },
           txId: { stringValue: claim.txId || '' },
+          autoCreated: { booleanValue: claim.autoCreated !== false },
           status: { stringValue: 'pending' },
           createdAt: { timestampValue: new Date().toISOString() }
         }

@@ -18,7 +18,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { Subscriber, FirebaseService } from '../services/firebase';
+import { Subscriber, FirebaseService, validatePhone } from '../services/firebase';
 import { StorageService } from '../services/storage';
 
 interface AccountModalProps {
@@ -49,24 +49,80 @@ export function AccountModal({
   const deviceName = StorageService.getDeviceName();
 
   const handleAuth = async () => {
-    if (!phone.trim()) {
-      Alert.alert('Numéro Requis', 'Veuillez saisir votre numéro de téléphone (ex: 77 123 45 67).');
+    const val = validatePhone(phone);
+    if (!val.valid) {
+      Alert.alert('Numéro Invalide', val.error || 'Veuillez saisir votre numéro de téléphone (ex: 77 123 45 67).');
       return;
     }
 
     setIsLoading(true);
-    const sub = await FirebaseService.loginOrRegisterWithPhone(phone, prenom);
+    const res = await FirebaseService.loginOrRegisterWithPhone(phone, prenom);
     setIsLoading(false);
 
-    if (sub) {
-      onSubscriberUpdated(sub);
-      Alert.alert(
-        'Accès BOKK TV Validé !',
-        `Bienvenue ${sub.prenom} !\nVotre numéro ${sub.phone} est maintenant activé.\n(1 seul écran simultané)`
-      );
+    if (res.subscriber) {
+      onSubscriberUpdated(res.subscriber);
+      if (res.isExisting) {
+        Alert.alert(
+          'Bon retour sur BOKK TV !',
+          `Bienvenue ${res.subscriber.prenom} !\nVotre compte (${res.subscriber.id}) est activé.\n(1 seul écran simultané)`
+        );
+      } else {
+        Alert.alert(
+          'Accès BOKK TV Validé !',
+          `Bienvenue ${res.subscriber.prenom} !\nVotre ID est : ${res.subscriber.id}\n(30 jours offerts • 1 seul écran simultané)`
+        );
+      }
       onClose();
     } else {
-      Alert.alert('Erreur', 'Impossible de valider votre numéro. Vérifiez votre connexion internet.');
+      Alert.alert('Erreur', res.error || 'Impossible de valider votre numéro. Vérifiez votre connexion internet.');
+    }
+  };
+
+  const handleSelectWavePlan = (planKey: '1m' | '3m' | '12m', amount: number, days: number) => {
+    const subId = subscriber?.id || (subscriber?.phone ? `BK-${subscriber.phone}` : (phone ? `BK-${phone.replace(/\D/g, '')}` : ''));
+    const subName = subscriber?.prenom || prenom || 'Abonné';
+    const payerPhone = subscriber?.phone || phone || '';
+
+    if (!subId || !payerPhone) {
+      Alert.alert('Numéro Requis', 'Veuillez saisir votre numéro de téléphone pour associer votre règlement à votre compte.');
+      return;
+    }
+
+    // 1. Notification automatique à l'administrateur dans Firestore
+    FirebaseService.submitPaymentClaim({
+      subscriberId: subId,
+      subscriberName: subName,
+      payerPhone: payerPhone,
+      plan: planKey,
+      amount,
+      days,
+      autoCreated: true,
+    }).catch(() => {});
+
+    const waveUrl = `https://pay.wave.com/m/M_sn_cop5B9UJYF8P/c/sn/?amount=${amount}`;
+    const planLabel = `${days === 365 ? '12 mois' : days === 90 ? '3 mois' : '1 mois'} – ${amount.toLocaleString('fr-FR')} F`;
+
+    if (isTvDevice) {
+      setTvQrPlan({ url: waveUrl, label: planLabel });
+      Alert.alert(
+        'Demande transmise à l\'administrateur !',
+        `Votre demande pour le compte ${subId} est enregistrée chez l'administrateur. Scannez le QR Code Wave affiché à l'écran pour finaliser le règlement.`
+      );
+    } else {
+      Alert.alert(
+        'Demande transmise à l\'administrateur !',
+        `Votre intention de renouvellement (${planLabel}) pour le compte ${subId} a été transmise.\nOuverture de l'application Wave...`,
+        [
+          {
+            text: 'Ouvrir Wave',
+            onPress: () => {
+              Linking.openURL(waveUrl).catch(() => {
+                Alert.alert('Erreur', "Impossible d'ouvrir le lien de paiement Wave.");
+              });
+            }
+          }
+        ]
+      );
     }
   };
 
@@ -291,14 +347,7 @@ export function AccountModal({
                         focusedPlan === '1m' && styles.planCardFocused,
                         pressed && { opacity: 0.85 }
                       ]}
-                      onPress={() => {
-                        const url = 'https://pay.wave.com/m/M_sn_cop5B9UJYF8P/c/sn/?amount=3000';
-                        if (isTvDevice) {
-                          setTvQrPlan({ url, label: '1 mois – 3 000 F' });
-                        } else {
-                          Linking.openURL(url).catch(() => Alert.alert('Erreur', "Impossible d'ouvrir Wave."));
-                        }
-                      }}
+                      onPress={() => handleSelectWavePlan('1m', 3000, 30)}
                     >
                       <View style={styles.planInfo}>
                         <Ionicons name="time-outline" size={16} color={focusedPlan === '1m' ? '#38bdf8' : '#94a3b8'} />
@@ -322,14 +371,7 @@ export function AccountModal({
                         focusedPlan === '3m' && styles.planCardFocused,
                         pressed && { opacity: 0.85 }
                       ]}
-                      onPress={() => {
-                        const url = 'https://pay.wave.com/m/M_sn_cop5B9UJYF8P/c/sn/?amount=7500';
-                        if (isTvDevice) {
-                          setTvQrPlan({ url, label: '3 mois – 7 500 F' });
-                        } else {
-                          Linking.openURL(url).catch(() => Alert.alert('Erreur', "Impossible d'ouvrir Wave."));
-                        }
-                      }}
+                      onPress={() => handleSelectWavePlan('3m', 7500, 90)}
                     >
                       <View style={styles.planInfo}>
                         <Ionicons name="flame" size={16} color={focusedPlan === '3m' ? '#38bdf8' : '#f59e0b'} />
@@ -357,14 +399,7 @@ export function AccountModal({
                         focusedPlan === '12m' && styles.planCardFocused,
                         pressed && { opacity: 0.85 }
                       ]}
-                      onPress={() => {
-                        const url = 'https://pay.wave.com/m/M_sn_cop5B9UJYF8P/c/sn/?amount=25000';
-                        if (isTvDevice) {
-                          setTvQrPlan({ url, label: '12 mois – 25 000 F' });
-                        } else {
-                          Linking.openURL(url).catch(() => Alert.alert('Erreur', "Impossible d'ouvrir Wave."));
-                        }
-                      }}
+                      onPress={() => handleSelectWavePlan('12m', 25000, 365)}
                     >
                       <View style={styles.planInfo}>
                         <Ionicons name="trophy" size={16} color={focusedPlan === '12m' ? '#38bdf8' : '#22c55e'} />

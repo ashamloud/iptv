@@ -51,20 +51,30 @@ function nodeFetch(url, extraHeaders, maxRedirects) {
     if (maxRedirects === undefined) maxRedirects = 5;
     return new Promise((resolve, reject) => {
         try {
+            let fetchUrl = url;
             const parsed = new URL(url);
-            const isHttps = parsed.protocol === "https:";
+            const hdrs = Object.assign({
+                "User-Agent": "IPTVSmartersPro",
+                "Accept": "*/*",
+                "Connection": "keep-alive"
+            }, extraHeaders || {});
+
+            // Contournement DNS fiable pour barrelastv.ottcst.org
+            if (parsed.hostname === "barrelastv.ottcst.org") {
+                hdrs["Host"] = parsed.host;
+                fetchUrl = url.replace(parsed.host, `103.205.17.108:${parsed.port || 80}`);
+            }
+
+            const pFetch = new URL(fetchUrl);
+            const isHttps = pFetch.protocol === "https:";
             const mod = isHttps ? https : http;
             const options = {
-                hostname: parsed.hostname,
-                port: parsed.port || (isHttps ? 443 : 80),
-                path: parsed.pathname + parsed.search,
+                hostname: pFetch.hostname,
+                port: pFetch.port || (isHttps ? 443 : 80),
+                path: pFetch.pathname + pFetch.search,
                 method: "GET",
-                headers: Object.assign({
-                    "User-Agent": "IPTVSmartersPro",
-                    "Accept": "*/*",
-                    "Connection": "keep-alive"
-                }, extraHeaders || {}),
-                timeout: 20000
+                headers: hdrs,
+                timeout: 15000
             };
             const req = mod.request(options, (res) => {
                 if ([301,302,307,308].includes(res.statusCode) && res.headers.location && maxRedirects > 0) {
@@ -73,6 +83,7 @@ function nodeFetch(url, extraHeaders, maxRedirects) {
                     nodeFetch(next, extraHeaders, maxRedirects - 1).then(resolve).catch(reject);
                     return;
                 }
+                res.finalUrl = url;
                 resolve(res);
             });
             req.on("timeout", () => req.destroy(new Error("Timeout")));
@@ -149,8 +160,18 @@ module.exports = async function handler(req, res) {
 
     if (RTS_CHANNELS[targetUrl.toLowerCase()]) {
         const resolved = await resolveRtsUrl(targetUrl);
-        if (resolved) { targetUrl = resolved; }
-        else { res.statusCode = 502; return res.end("Impossible de contacter le serveur officiel RTS."); }
+        if (resolved) {
+            if (req.query.resolve === "1") {
+                res.statusCode = 200;
+                res.setHeader("Content-Type", "application/json; charset=utf-8");
+                res.setHeader("Cache-Control", "no-cache");
+                return res.end(JSON.stringify({ url: resolved }));
+            }
+            targetUrl = resolved;
+        } else {
+            res.statusCode = 502;
+            return res.end("Impossible de contacter le serveur officiel RTS.");
+        }
     }
 
     if (targetUrl.includes("megatv5074.com") && targetUrl.includes("/live/")) {

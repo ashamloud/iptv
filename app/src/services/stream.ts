@@ -77,10 +77,27 @@ function rewriteMegaTvUrl(targetUrl: string): string {
   return targetUrl;
 }
 
+export function buildStreamHeaders(channel?: any, resolvedUrl?: string): Record<string, string> {
+  const headers: Record<string, string> = {
+    'User-Agent': (channel && channel.userAgent) || 'IPTVSmartersPro',
+    'Accept': '*/*',
+    'Connection': 'keep-alive',
+  };
+  if (channel && channel.referrer) {
+    headers['Referer'] = channel.referrer;
+  }
+  // Si on contourne le DNS vers l'IP directe, conserver le Host d'origine pour Nginx/Xtream
+  if (resolvedUrl && resolvedUrl.includes('103.205.17.108')) {
+    headers['Host'] = 'barrelastv.ottcst.org';
+  }
+  return headers;
+}
+
 export function resolveStreamUrl(
   rawUrl: string,
   channel?: any,
-  useProxyFallback: boolean = false
+  useProxyFallback: boolean = false,
+  bypassDnsIp: boolean = false
 ): string {
   if (!rawUrl) return '';
 
@@ -93,7 +110,6 @@ export function resolveStreamUrl(
     if (cached && Date.now() - cached.time < 300000) {
       return cached.url;
     }
-    // Fallback proxy uniquement si non encore résolu
     return `https://bokktv.vercel.app/api/proxy?url=${encodeURIComponent(lowerUrl)}`;
   }
 
@@ -102,8 +118,8 @@ export function resolveStreamUrl(
     finalUrl = rewriteMegaTvUrl(finalUrl);
   }
 
-  // 3. Contournement DNS des domaines souvent bloqués par les opérateurs mobiles
-  if (finalUrl.includes('barrelastv.ottcst.org')) {
+  // 3. Contournement DNS uniquement si demandé en secours ou blocage opérateur (avec Host header associé)
+  if (bypassDnsIp && finalUrl.includes('barrelastv.ottcst.org')) {
     finalUrl = finalUrl.replace('barrelastv.ottcst.org', '103.205.17.108');
   }
 
@@ -123,18 +139,19 @@ export function resolveStreamUrl(
 export async function resolveStreamUrlAsync(
   rawUrl: string,
   channel?: any,
-  useProxyFallback: boolean = false
+  useProxyFallback: boolean = false,
+  bypassDnsIp: boolean = false
 ): Promise<string> {
   if (!rawUrl) return '';
 
   const clean = rawUrl.trim();
   const lower = clean.toLowerCase();
 
-  // Résolution directe ACAN si disponible
+  // Résolution directe ACAN si disponible (zéro passage par proxy)
   if (RTS_IDS[lower]) {
     const directUrl = await fetchAcanDirectUrl(lower);
     if (directUrl) return directUrl;
   }
 
-  return resolveStreamUrl(clean, channel, useProxyFallback);
+  return resolveStreamUrl(clean, channel, useProxyFallback, bypassDnsIp);
 }

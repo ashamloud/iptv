@@ -195,9 +195,76 @@
     }
 
 
-    // ── GESTION DES ABONNÉS / IDENTIFIANTS UNIQUE (ID) ──
+    // ── GESTION DES ABONNÉS / IDENTIFIANTS UNIQUE (ID) BASÉS SUR LE NUMÉRO ──
 
-    function generateSubscriberId() {
+    /**
+     * Valide et normalise un numéro de téléphone (Sénégal ou International)
+     * Règle anti-chiffres au hasard et calcul direct de l'ID BOKK TV
+     */
+    function validateAndFormatPhone(raw) {
+        if (!raw) return { valid: false, error: 'Numéro de téléphone requis.' };
+        const trimmed = String(raw).trim();
+        // Supprimer espaces, points, tirets, parenthèses
+        let clean = trimmed.replace(/[\s\.\-\(\)]/g, '');
+        if (clean.startsWith('00')) clean = '+' + clean.slice(2);
+
+        // Détection format Sénégal
+        let national = '';
+        if (clean.startsWith('+221')) {
+            national = clean.slice(4);
+        } else if (clean.startsWith('221') && clean.length === 12) {
+            national = clean.slice(3);
+        } else if (/^(70|75|76|77|78)\d{7}$/.test(clean)) {
+            national = clean;
+        }
+
+        if (national) {
+            // Validation préfixe Sénégal : 70 (Expresso), 75 (Promobile), 76 (Free), 77 (Orange), 78 (Orange)
+            if (!/^(70|75|76|77|78)\d{7}$/.test(national)) {
+                return {
+                    valid: false,
+                    error: 'Numéro sénégalais invalide. Le numéro doit comporter 9 chiffres et commencer par 70, 75, 76, 77 ou 78.'
+                };
+            }
+            // Détection de faux numéros (séries de chiffres identiques : 777777777, 000000000, 111111111)
+            if (/^(\d)\1{8}$/.test(national) || /^7[0-8](\d)\1{6}$/.test(national)) {
+                return { valid: false, error: 'Numéro non valide (suite de chiffres suspects ou répétitifs).' };
+            }
+
+            return {
+                valid: true,
+                isSenegal: true,
+                national: national,
+                e164: '+221' + national,
+                display: national.replace(/(\d{2})(\d{3})(\d{2})(\d{2})/, '$1 $2 $3 $4'),
+                id: 'BK-' + national
+            };
+        }
+
+        // Format International avec indicatif (+) suivi de 8 à 15 chiffres valides
+        if (/^\+[1-9]\d{7,14}$/.test(clean)) {
+            const digits = clean.replace(/\D/g, '');
+            if (/^(\d)\1{7,}$/.test(digits)) {
+                return { valid: false, error: 'Numéro international non valide (chiffres répétés).' };
+            }
+            return {
+                valid: true,
+                isSenegal: false,
+                national: digits,
+                e164: clean,
+                display: clean,
+                id: 'BK-' + digits
+            };
+        }
+
+        return {
+            valid: false,
+            error: 'Format invalide. Entrez un numéro sénégalais (ex: 77 123 45 67) ou international (+33...).'
+        };
+    }
+
+    function generateSubscriberId(phoneVal) {
+        if (phoneVal && phoneVal.id) return phoneVal.id;
         const num = Math.floor(1000 + Math.random() * 9000);
         return 'BK-' + num;
     }
@@ -206,19 +273,85 @@
         const cleanPrenom = (prenom || '').trim();
         if (!cleanPrenom) return { success: false, error: 'prenom_required' };
 
-        const id = generateSubscriberId();
+        // 1. Validation stricte du numéro de téléphone
+        const phoneVal = validateAndFormatPhone(phone);
+        if (!phoneVal.valid) {
+            return { success: false, error: phoneVal.error || 'phone_invalid' };
+        }
+
+        const id = phoneVal.id; // Ex: "BK-771234567"
+        const cleanPhone = phoneVal.national;
+
+        // 2. Règle "Un compte = Un numéro" : vérifier si le compte existe déjà
+        if (isInitialized && db) {
+            try {
+                // Recherche par ID direct
+                const docRef = db.collection('subscribers').doc(id);
+                const doc = await docRef.get();
+                if (doc.exists) {
+                    const data = doc.data();
+                    const expDate = data.expiresAt ? (typeof data.expiresAt.toDate === 'function' ? data.expiresAt.toDate() : new Date(data.expiresAt)) : new Date();
+                    const isExpired = expDate.getTime() < Date.now();
+                    const existingSub = {
+                        id: doc.id,
+                        prenom: data.prenom || cleanPrenom,
+                        phone: data.phone || cleanPhone,
+                        phoneDisplay: phoneVal.display,
+                        createdAt: formatFirestoreTimestamp(data.createdAt),
+                        expiresAt: expDate.toISOString(),
+                        status: isExpired ? 'expired' : (data.status || 'active')
+                    };
+                    try {
+                        localStorage.setItem('bokk_subscriber', JSON.stringify(existingSub));
+                        localStorage.setItem('bokk_sub_id', existingSub.id);
+                    } catch (e) {}
+                    console.log('[BOKK TV] 🔄 Compte existant retrouvé pour ce numéro:', id);
+                    return { success: true, subscriber: existingSub, alreadyExists: true };
+                }
+
+                // Recherche alternative par champ 'phone'
+                const phoneQuery = await db.collection('subscribers').where('phone', '==', cleanPhone).limit(1).get();
+                if (!phoneQuery.empty) {
+                    const foundDoc = phoneQuery.docs[0];
+                    const data = foundDoc.data();
+                    const expDate = data.expiresAt ? (typeof data.expiresAt.toDate === 'function' ? data.expiresAt.toDate() : new Date(data.expiresAt)) : new Date();
+                    const isExpired = expDate.getTime() < Date.now();
+                    const existingSub = {
+                        id: foundDoc.id,
+                        prenom: data.prenom || cleanPrenom,
+                        phone: data.phone || cleanPhone,
+                        phoneDisplay: phoneVal.display,
+                        createdAt: formatFirestoreTimestamp(data.createdAt),
+                        expiresAt: expDate.toISOString(),
+                        status: isExpired ? 'expired' : (data.status || 'active')
+                    };
+                    try {
+                        localStorage.setItem('bokk_subscriber', JSON.stringify(existingSub));
+                        localStorage.setItem('bokk_sub_id', existingSub.id);
+                    } catch (e) {}
+                    console.log('[BOKK TV] 🔄 Compte existant retrouvé par téléphone:', foundDoc.id);
+                    return { success: true, subscriber: existingSub, alreadyExists: true };
+                }
+            } catch (err) {
+                console.warn('[BOKK TV] Erreur vérification compte existant:', err);
+            }
+        }
+
+        // 3. Nouveau compte : création avec 30 jours offerts
         const now = new Date();
         const expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
 
         const subData = {
             id: id,
             prenom: cleanPrenom,
-            phone: (phone || '').trim(),
+            phone: cleanPhone,
+            phoneDisplay: phoneVal.display,
+            phoneE164: phoneVal.e164,
             createdAt: (isInitialized && db) ? firebase.firestore.FieldValue.serverTimestamp() : now.toISOString(),
             expiresAt: (isInitialized && db) ? firebase.firestore.Timestamp.fromDate(expiresAt) : expiresAt.toISOString(),
             status: 'active'
         };
-        console.log('[BOKK TV] Inscription abonne:', id, cleanPrenom, 'Firebase ready:', isInitialized);
+        console.log('[BOKK TV] ✨ Création nouvel abonné unique:', id, cleanPrenom, cleanPhone);
 
         if (isInitialized && db) {
             try {
@@ -231,7 +364,9 @@
         const localData = {
             id,
             prenom: cleanPrenom,
-            phone: (phone || '').trim(),
+            phone: cleanPhone,
+            phoneDisplay: phoneVal.display,
+            phoneE164: phoneVal.e164,
             createdAt: now.toISOString(),
             expiresAt: expiresAt.toISOString(),
             status: 'active'
@@ -241,17 +376,37 @@
             localStorage.setItem('bokk_sub_id', id);
         } catch (e) {}
 
-        return { success: true, subscriber: localData };
+        return { success: true, subscriber: localData, isNew: true };
     }
 
-    async function loginSubscriber(id) {
-        const cleanId = (id || '').trim().toUpperCase();
-        if (!cleanId) return { success: false, error: 'id_required' };
+    async function loginSubscriber(idOrPhone) {
+        const raw = (idOrPhone || '').trim();
+        if (!raw) return { success: false, error: 'id_required' };
+
+        // Déterminer les clés de recherche possibles
+        let directKey = raw.toUpperCase();
+        let phoneSearch = '';
+
+        // Si l'utilisateur saisit un numéro (avec ou sans espaces), calculer l'ID BK-<phone>
+        const phoneVal = validateAndFormatPhone(raw);
+        if (phoneVal.valid) {
+            directKey = phoneVal.id; // Ex: "BK-771234567"
+            phoneSearch = phoneVal.national;
+        } else {
+            // Nettoyage au cas où il a tapé "BK-77..." ou "77..."
+            const digits = raw.replace(/\D/g, '');
+            if (digits.length >= 6) {
+                phoneSearch = digits;
+                if (!directKey.startsWith('BK-')) {
+                    directKey = 'BK-' + digits;
+                }
+            }
+        }
 
         if (!isInitialized || !db) {
             try {
                 const local = JSON.parse(localStorage.getItem('bokk_subscriber') || 'null');
-                if (local && local.id.toUpperCase() === cleanId) {
+                if (local && (local.id.toUpperCase() === directKey || (local.phone && local.phone === phoneSearch))) {
                     return { success: true, subscriber: local };
                 }
             } catch(e) {}
@@ -259,19 +414,37 @@
         }
 
         try {
-            const doc = await db.collection('subscribers').doc(cleanId).get();
+            // 1. Tenter par ID direct (BK-771234567 ou BK-XXXX)
+            let doc = await db.collection('subscribers').doc(directKey).get();
+
+            // 2. Si non trouvé et qu'un numéro existe, chercher par where('phone', '==', phoneSearch)
+            if (!doc.exists && phoneSearch) {
+                const qSnap = await db.collection('subscribers').where('phone', '==', phoneSearch).limit(1).get();
+                if (!qSnap.empty) {
+                    doc = qSnap.docs[0];
+                }
+            }
+
+            // 3. Si toujours non trouvé, tenter recherche insensible à la casse ou clé brute
+            if (!doc.exists && directKey !== raw.toUpperCase()) {
+                const rawDoc = await db.collection('subscribers').doc(raw.toUpperCase()).get();
+                if (rawDoc.exists) doc = rawDoc;
+            }
+
             if (!doc.exists) {
                 return { success: false, error: 'not_found' };
             }
+
             const data = doc.data();
-            const expDate = data.expiresAt ? data.expiresAt.toDate() : new Date();
+            const expDate = data.expiresAt ? (typeof data.expiresAt.toDate === 'function' ? data.expiresAt.toDate() : new Date(data.expiresAt)) : new Date();
             const isExpired = expDate.getTime() < Date.now();
 
             const sub = {
                 id: doc.id,
                 prenom: data.prenom || 'Abonné',
-                phone: data.phone || '',
-                createdAt: data.createdAt ? data.createdAt.toDate().toISOString() : new Date().toISOString(),
+                phone: data.phone || phoneSearch || '',
+                phoneDisplay: data.phoneDisplay || data.phone || '',
+                createdAt: formatFirestoreTimestamp(data.createdAt),
                 expiresAt: expDate.toISOString(),
                 status: isExpired ? 'expired' : (data.status || 'active')
             };
@@ -626,6 +799,106 @@
         }
     }
 
+    // ── Gestion des Déclarations de Paiements Wave ──
+    async function submitPaymentClaim(claimData) {
+        if (!isInitialized || !db) return { success: false, error: 'Firebase non initialisé' };
+        try {
+            const subId = String(claimData.subscriberId || '').trim();
+            const payer = String(claimData.payerPhone || '').trim();
+            if (!subId) return { success: false, error: 'Compte BOKK TV requis' };
+            if (!payer) return { success: false, error: 'Numéro Wave payeur requis' };
+
+            const claimId = `${subId.replace(/[^a-zA-Z0-9]/g, '_')}_${Date.now()}`;
+            await db.collection('payment_claims').doc(claimId).set({
+                claimId: claimId,
+                subscriberId: subId,
+                subscriberName: claimData.subscriberName || '',
+                payerPhone: payer,
+                plan: claimData.plan || '1m',
+                amount: Number(claimData.amount) || 3000,
+                days: Number(claimData.days) || 30,
+                txId: (claimData.txId || claimData.waveRef || '').trim(),
+                autoCreated: claimData.autoCreated !== false, // Vrai par défaut au clic sur Payer
+                status: 'pending',
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+
+            console.log('[BOKK TV] 💰 Intention de paiement Wave enregistrée:', claimId, subId, payer);
+            return { success: true, claimId: claimId };
+        } catch (e) {
+            console.error('[BOKK TV] Erreur submitPaymentClaim:', e);
+            return { success: false, error: e.message };
+        }
+    }
+
+    function listenPaymentClaims(callback) {
+        if (!isInitialized || !db) return () => {};
+        try {
+            return db.collection('payment_claims')
+                .onSnapshot(snapshot => {
+                    const list = [];
+                    snapshot.forEach(doc => {
+                        const d = doc.data() || {};
+                        list.push({
+                            id: doc.id,
+                            claimId: d.claimId || doc.id,
+                            subscriberId: d.subscriberId || '',
+                            subscriberName: d.subscriberName || '',
+                            payerPhone: d.payerPhone || '',
+                            plan: d.plan || '1m',
+                            amount: d.amount || 3000,
+                            days: d.days || 30,
+                            txId: d.txId || '',
+                            status: d.status || 'pending',
+                            createdAt: formatFirestoreTimestamp(d.createdAt),
+                            approvedAt: formatFirestoreTimestamp(d.approvedAt),
+                            rejectedAt: formatFirestoreTimestamp(d.rejectedAt)
+                        });
+                    });
+                    // Tri par date décroissante
+                    list.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+                    if (typeof callback === 'function') callback(list);
+                }, err => console.warn('[BOKK TV] Erreur listenPaymentClaims:', err));
+        } catch (e) {
+            console.warn('[BOKK TV] Exception listenPaymentClaims:', e);
+            return () => {};
+        }
+    }
+
+    async function approvePaymentClaim(claimId, subscriberId, days = 30) {
+        if (!claimId || !isInitialized || !db) return { success: false };
+        try {
+            const renewRes = await renewSubscriber(subscriberId, days);
+            if (!renewRes.success) {
+                console.warn('[BOKK TV] Erreur renewSubscriber dans approvePaymentClaim:', renewRes.error);
+            }
+
+            await db.collection('payment_claims').doc(String(claimId)).update({
+                status: 'approved',
+                approvedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+
+            return { success: true };
+        } catch (e) {
+            console.error('[BOKK TV] Erreur approvePaymentClaim:', e);
+            return { success: false, error: e.message };
+        }
+    }
+
+    async function rejectPaymentClaim(claimId, reason = '') {
+        if (!claimId || !isInitialized || !db) return { success: false };
+        try {
+            await db.collection('payment_claims').doc(String(claimId)).update({
+                status: 'rejected',
+                rejectedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                rejectReason: reason
+            });
+            return { success: true };
+        } catch (e) {
+            return { success: false, error: e.message };
+        }
+    }
+
     window.BokkFirebase = {
         isReady: () => isInitialized,
         reportBroken: reportBrokenChannel,
@@ -640,6 +913,7 @@
         isReported: (id) => reportedChannelsCache.has(String(id)),
 
         // Gestion des abonnés & ID
+        validatePhone: validateAndFormatPhone,
         registerSubscriber: registerSubscriber,
         loginSubscriber: loginSubscriber,
         getCurrentSubscriber: getCurrentSubscriber,
@@ -652,6 +926,12 @@
         listenSubscriber: listenSubscriber,
         getPaywallConfig: getPaywallConfig,
         setPaywallConfig: setPaywallConfig,
+
+        // Gestion des réclamations de paiements Wave (Option C)
+        submitPaymentClaim: submitPaymentClaim,
+        listenPaymentClaims: listenPaymentClaims,
+        approvePaymentClaim: approvePaymentClaim,
+        rejectPaymentClaim: rejectPaymentClaim,
 
         // Gestion des playlists M3U Admin
         saveM3uPlaylist: saveM3uPlaylist,

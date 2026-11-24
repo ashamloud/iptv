@@ -23,7 +23,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { Channel } from '../data/channels';
-import { resolveStreamUrl, resolveStreamUrlAsync } from '../services/stream';
+import { resolveStreamUrlAsync, buildStreamHeaders } from '../services/stream';
 import { FirebaseService, Subscriber } from '../services/firebase';
 import { StorageService } from '../services/storage';
 
@@ -41,65 +41,57 @@ export interface NativePlayerProps {
   onToggleFullscreen?: (fullscreen: boolean) => void;
 }
 
-function isStreamHls(uri: string, channel?: Channel): boolean {
+function isStreamHls(uri: string, channel?: Channel, forceHls: boolean = false): boolean {
+  if (forceHls) return true;
+  const lower = (uri || '').toLowerCase();
+  if (lower.includes('.m3u8') || lower.includes('m3u')) return true;
+  if (lower.includes('.ts') || lower.endsWith('.mpegts')) return false;
   if (channel?.type === 'ts') return false;
   if (channel?.type === 'hls') return true;
-  if (uri.includes('.m3u8')) return true;
-  if (uri.includes('.ts')) return false;
   return false;
 }
 
-function buildVideoSource(channel: Channel, useProxy: boolean = false) {
-  const uri = resolveStreamUrl(channel.url, channel, useProxy);
-  const isHls = isStreamHls(uri, channel);
-  const headers: Record<string, string> = {
-    'User-Agent': (channel && channel.userAgent) || 'IPTVSmartersPro',
-    'Accept': '*/*',
-    'Connection': 'keep-alive',
-  };
-  if (channel && channel.referrer) {
-    headers['Referer'] = channel.referrer;
-  }
+async function buildVideoSourceAsync(
+  channel: Channel,
+  options: { useProxy?: boolean; bypassDns?: boolean; forceHls?: boolean } = {}
+) {
+  const { useProxy = false, bypassDns = false, forceHls = false } = options;
+  const uri = await resolveStreamUrlAsync(channel.url, channel, useProxy, bypassDns);
+  const isHls = isStreamHls(uri, channel, forceHls);
+  const headers = buildStreamHeaders(channel, uri);
   return {
     uri,
     headers,
+    useCaching: false,
     contentType: (isHls ? 'hls' : 'auto') as 'hls' | 'auto',
   };
 }
 
-async function buildVideoSourceAsync(channel: Channel, useProxy: boolean = false) {
-  const uri = await resolveStreamUrlAsync(channel.url, channel, useProxy);
-  const isHls = isStreamHls(uri, channel);
-  const headers: Record<string, string> = {
-    'User-Agent': (channel && channel.userAgent) || 'IPTVSmartersPro',
-    'Accept': '*/*',
-    'Connection': 'keep-alive',
-  };
-  if (channel && channel.referrer) {
-    headers['Referer'] = channel.referrer;
-  }
-  return {
-    uri,
-    headers,
-    contentType: (isHls ? 'hls' : 'auto') as 'hls' | 'auto',
-  };
-}
-
-// ── Configuration Pro IPTV Anti-Coupure & ZÉRO Boucle ──
-// 1. 20s de buffer anticipé (preferredForwardBufferDuration) :
-//    Télécharge en tâche de fond pour absorber les micro-variations sans caler.
-// 2. 1.0s de buffer minimal (minBufferForPlayback) :
-//    Démarrage ultra-rapide sans bloquer le moteur, idéal pour connexion 1.5 Mbps.
-// 3. waitsToMinimizeStalling: false :
-//    Empêche les gels et saccades artificielles lors des micro-variations.
-// 4. AUCUN targetOffsetFromLive :
-//    Suppression totale pour éliminer la boucle des scènes (relecture des mêmes 3-5s).
+// ── Configuration Pro IPTV Anti-Calage (Spécial Connexion 1.5 Mbps & Direct MPEG-TS/HLS) ──
+// 1. preferredForwardBufferDuration: 30s :
+//    Constitue un coussin profond pour absorber les micro-coupures et variations réseau.
+// 2. minBufferForPlayback: 3.5s :
+//    Attend 3.5s de tampon sain au démarrage ET après toute micro-coupure (bufferForPlaybackAfterRebufferMs)
+//    afin d'éviter le cycle infini "démarre avec 1s -> se vide -> recale".
+// 3. waitsToMinimizeStalling: true (iOS) :
+//    AVPlayer stabilise la lecture avant d'afficher l'image sans figer inutilement.
+// 4. prioritizeTimeOverSizeThreshold: true :
+//    Garantit les 30s de buffer indépendamment du débit vidéo.
 const OPTIMAL_BUFFER_CONFIG = {
-  preferredForwardBufferDuration: 20,
-  minBufferForPlayback: 1.0,
-  waitsToMinimizeStalling: false,
+  preferredForwardBufferDuration: 30,
+  minBufferForPlayback: 3.5,
+  maxBufferBytes: 0,
+  waitsToMinimizeStalling: true,
   prioritizeTimeOverSizeThreshold: true,
 };
+
+type QualityPreset = 'eco' | 'hd' | 'max';
+
+function getResolutionCap(preset: QualityPreset): { width: number; height: number } | null {
+  if (preset === 'eco') return { width: 854, height: 480 };   // ≤ ~1.2 Mbps (Fluide garanti à 1.5 Mbps)
+  if (preset === 'hd') return { width: 1280, height: 720 };   // ≤ ~2.2 Mbps
+  return null;                                                // Auto illimité
+}
 
 interface PlayerButtonProps {
   style?: any;
@@ -204,7 +196,7 @@ export function NativePlayer({
   const activeCandidate = candidateChannels[candidateIndex] || channel;
 
   const [useProxy, setUseProxy] = useState<boolean>(false);
-  const [streamSource, setStreamSource] = useState(() => buildVideoSource(channel, false));
+  const [qualityPreset, setQualityPreset] = useState<QualityPreset>('eco');
   const [isReported, setIsReported] = useState<boolean>(false);
   const [hasError, setHasError] = useState<boolean>(false);
   const [statusMessage, setStatusMessage] = useState<string>('');
@@ -219,28 +211,63 @@ export function NativePlayer({
   const previewTimerRef = useRef<any>(null);
   const hideControlsTimerRef = useRef<any>(null);
   const bufferingTimerRef = useRef<any>(null);
+  const stallWatchdogRef = useRef<any>(null);
   const autoRetryCountRef = useRef<number>(0);
+  const liveReconnectCountRef = useRef<number>(0);
   const hasAutoSwitchedBackupRef = useRef<boolean>(false);
+  const hasTriedBypassDnsRef = useRef<boolean>(false);
+  const hasTriedForceHlsRef = useRef<boolean>(false);
+  const hasStartedPlayingRef = useRef<boolean>(false);
   const lastErrorTimeRef = useRef<number>(0);
+  const isPlayingRef = useRef<boolean>(true);
+  isPlayingRef.current = isPlaying;
   const sessionIdRef = useRef<string>('');
   const videoViewRef = useRef<any>(null);
   const isRegisteredRef = useRef<boolean>(isRegistered);
   isRegisteredRef.current = isRegistered;
 
+  const isVodItem = String(channel.id || '').startsWith('vod_') || channel.category === 'cinema';
+
+  // Source initiale null : tout chargement passe UNIQUEMENT par applySourceToPlayer()
+  // Cela élimine définitivement le double appel réseau / double connexion simultané sur Xtream (max_connections=1)
   const player = useVideoPlayer(
-    streamSource,
+    null as any,
     (p) => {
       p.loop = false;
       p.staysActiveInBackground = true;
       try {
         p.bufferOptions = OPTIMAL_BUFFER_CONFIG;
+        p.maxResolution = getResolutionCap('eco');
       } catch { }
-      p.play();
     },
     {
       videoChangeFrameRateStrategy: 'off',
     }
   );
+
+  const applySourceToPlayer = useCallback(async (
+    targetChan: Channel,
+    options: { useProxy?: boolean; bypassDns?: boolean; forceHls?: boolean; useFallbackUrl?: boolean } = {}
+  ) => {
+    const effectiveChan = options.useFallbackUrl && targetChan.fallbackUrl
+      ? { ...targetChan, url: targetChan.fallbackUrl }
+      : targetChan;
+    const nextSource = await buildVideoSourceAsync(effectiveChan, options);
+    try {
+      player.bufferOptions = OPTIMAL_BUFFER_CONFIG;
+      player.maxResolution = getResolutionCap(qualityPreset);
+    } catch { }
+    try {
+      if (typeof player.replaceAsync === 'function') {
+        await player.replaceAsync(nextSource);
+      } else {
+        player.replace(nextSource);
+      }
+    } catch {
+      player.replace(nextSource);
+    }
+    player.play();
+  }, [player, qualityPreset]);
 
   // Réinitialiser le timer d'auto-masquage des contrôles
   const resetControlsTimeout = useCallback(() => {
@@ -435,37 +462,52 @@ export function NativePlayer({
     setIsPlaying(true);
   };
 
+  const handleCycleQuality = useCallback(() => {
+    resetControlsTimeout();
+    setQualityPreset((prev) => {
+      const next: QualityPreset = prev === 'eco' ? 'hd' : prev === 'hd' ? 'max' : 'eco';
+      try {
+        player.maxResolution = getResolutionCap(next);
+      } catch { }
+      return next;
+    });
+  }, [player, resetControlsTimeout]);
+
+  const clearBufferingTimers = useCallback(() => {
+    if (bufferingTimerRef.current) {
+      clearTimeout(bufferingTimerRef.current);
+      bufferingTimerRef.current = null;
+    }
+    if (stallWatchdogRef.current) {
+      clearTimeout(stallWatchdogRef.current);
+      stallWatchdogRef.current = null;
+    }
+  }, []);
+
   const handleRetryDirect = useCallback(async () => {
     setHasError(false);
     setUseProxy(false);
     setIsBuffering(true);
     setStatusMessage('Reconnexion directe...');
-    const retryChannel = {
-      ...activeCandidate,
-      url: activeCandidate.fallbackUrl || activeCandidate.url
-    };
-    const nextSource = await buildVideoSourceAsync(retryChannel, false);
-    setStreamSource(nextSource);
-    player.replace(nextSource);
-    try {
-      player.bufferOptions = OPTIMAL_BUFFER_CONFIG;
-    } catch { }
-    player.play();
-  }, [activeCandidate, player]);
+    await applySourceToPlayer(activeCandidate, {
+      useProxy: false,
+      bypassDns: hasTriedBypassDnsRef.current,
+      forceHls: hasTriedForceHlsRef.current,
+      useFallbackUrl: true,
+    });
+  }, [activeCandidate, applySourceToPlayer]);
 
   const handleRetryWithProxy = useCallback(async () => {
     setHasError(false);
     setUseProxy(true);
     setIsBuffering(true);
     setStatusMessage('Connexion de secours...');
-    const nextSource = await buildVideoSourceAsync(activeCandidate, true);
-    setStreamSource(nextSource);
-    player.replace(nextSource);
-    try {
-      player.bufferOptions = OPTIMAL_BUFFER_CONFIG;
-    } catch { }
-    player.play();
-  }, [activeCandidate, player]);
+    await applySourceToPlayer(activeCandidate, {
+      useProxy: true,
+      bypassDns: false,
+      forceHls: hasTriedForceHlsRef.current,
+    });
+  }, [activeCandidate, applySourceToPlayer]);
 
   // Basculer manuellement ou automatiquement sur la chaîne de secours (même nom)
   const handleSwitchBackupStream = useCallback(async () => {
@@ -474,17 +516,14 @@ export function NativePlayer({
       const nextIdx = (candidateIndex + 1) % candidateChannels.length;
       setCandidateIndex(nextIdx);
       const targetChan = candidateChannels[nextIdx];
+      hasTriedBypassDnsRef.current = false;
+      hasTriedForceHlsRef.current = false;
+      setUseProxy(false);
       setStatusMessage(`Flux alternatif (${nextIdx + 1}/${candidateChannels.length}) : ${targetChan.name}...`);
       setIsBuffering(true);
       setHasError(false);
       try {
-        const nextSrc = await buildVideoSourceAsync(targetChan, false);
-        setStreamSource(nextSrc);
-        player.replace(nextSrc);
-        try {
-          player.bufferOptions = OPTIMAL_BUFFER_CONFIG;
-        } catch { }
-        player.play();
+        await applySourceToPlayer(targetChan, { useProxy: false });
         setIsPlaying(true);
       } catch {
         setHasError(true);
@@ -492,56 +531,102 @@ export function NativePlayer({
     } else {
       handleRetryWithProxy();
     }
-  }, [candidateChannels, candidateIndex, player, resetControlsTimeout, handleRetryWithProxy]);
+  }, [candidateChannels, candidateIndex, applySourceToPlayer, resetControlsTimeout, handleRetryWithProxy]);
 
-  // Écouter les changements d'état du lecteur expo-video (avec protection anti-boucle 2 secondes)
+  // Procédure graduée de récupération anti-calage / coupure
+  const recoverFromFailureOrStall = useCallback(async (reason: 'error' | 'stall' | 'eof') => {
+    clearBufferingTimers();
+    const now = Date.now();
+    if (now - lastErrorTimeRef.current < 2500) return;
+    lastErrorTimeRef.current = now;
+
+    // Cas EOF sur un direct MPEG-TS (le serveur coupe proprement après un bloc) : reconnexion silencieuse
+    if (reason === 'eof' && !isVodItem && liveReconnectCountRef.current < 3) {
+      liveReconnectCountRef.current += 1;
+      setIsBuffering(true);
+      setStatusMessage('Reconnexion continue du direct...');
+      await applySourceToPlayer(activeCandidate, {
+        useProxy,
+        bypassDns: hasTriedBypassDnsRef.current,
+        forceHls: hasTriedForceHlsRef.current,
+      });
+      return;
+    }
+
+    // Étape 1 : Bascule sur flux de secours si plusieurs sources pour la chaîne
+    if (candidateChannels.length > 1 && !hasAutoSwitchedBackupRef.current) {
+      hasAutoSwitchedBackupRef.current = true;
+      setStatusMessage(`Basculement vers flux plus fluide (${candidateChannels.length} dispo)...`);
+      setIsBuffering(true);
+      setTimeout(() => { handleSwitchBackupStream(); }, 600);
+      return;
+    }
+
+    // Étape 2 : Contournement IP directe si DNS FAI instable (uniquement barrelastv)
+    if (!hasTriedBypassDnsRef.current && (activeCandidate.url || '').includes('barrelastv.ottcst.org')) {
+      hasTriedBypassDnsRef.current = true;
+      setStatusMessage('Optimisation route serveur...');
+      setIsBuffering(true);
+      await applySourceToPlayer(activeCandidate, { useProxy: false, bypassDns: true, forceHls: hasTriedForceHlsRef.current });
+      return;
+    }
+
+    // Étape 3 : Si un flux sans extension redirige vers du HLS (.m3u8), forcer HLS au lieu de TS
+    if (!hasTriedForceHlsRef.current && activeCandidate.type === 'ts' && !(activeCandidate.url || '').includes('.ts')) {
+      hasTriedForceHlsRef.current = true;
+      setStatusMessage('Détection format adaptatif HLS...');
+      setIsBuffering(true);
+      await applySourceToPlayer(activeCandidate, { useProxy, bypassDns: hasTriedBypassDnsRef.current, forceHls: true });
+      return;
+    }
+
+    // Étape 4 : Fallback URL miroir si différente
+    if (autoRetryCountRef.current < 1 && activeCandidate.fallbackUrl && activeCandidate.fallbackUrl !== activeCandidate.url) {
+      autoRetryCountRef.current += 1;
+      setStatusMessage('Reconnexion sur flux miroir...');
+      setIsBuffering(true);
+      setTimeout(() => { handleRetryDirect(); }, 800);
+      return;
+    }
+
+    // Étape 5 : Proxy de secours si non déjà utilisé (pas de proxy sur un flux déjà bloqué pour VOD/TS lourd, sauf ultime recours)
+    if (!useProxy && reason !== 'eof') {
+      setUseProxy(true);
+      setStatusMessage('Essai relais de secours...');
+      setIsBuffering(true);
+      await applySourceToPlayer(activeCandidate, { useProxy: true });
+      return;
+    }
+
+    setHasError(true);
+    setIsBuffering(false);
+    setStatusMessage('Flux momentanément inaccessible. Cliquez sur Réessayer ou changez de chaîne.');
+  }, [clearBufferingTimers, isVodItem, activeCandidate, useProxy, candidateChannels.length, applySourceToPlayer, handleSwitchBackupStream, handleRetryDirect]);
+
+  // Écouter les changements d'état du lecteur expo-video + Watchdog anti-calage 10s + Auto-reconnexion Direct
   useEffect(() => {
+    const startStallWatchdog = () => {
+      if (stallWatchdogRef.current) clearTimeout(stallWatchdogRef.current);
+      stallWatchdogRef.current = setTimeout(() => {
+        if (!concurrencyError && !hasError && isPlayingRef.current) {
+          console.warn('[BOKK TV] Watchdog 10s déclenché (tampon bloqué), récupération automatique...');
+          recoverFromFailureOrStall('stall');
+        }
+      }, 10500);
+    };
+
     const subStatus = player.addListener('statusChange', ({ status, error }) => {
       if (status === 'error' || error) {
-        if (bufferingTimerRef.current) {
-          clearTimeout(bufferingTimerRef.current);
-          bufferingTimerRef.current = null;
+        recoverFromFailureOrStall('error');
+      } else if (status === 'idle') {
+        // Sur un flux direct MPEG-TS, une coupure TCP propre déclenche STATE_ENDED -> 'idle'
+        if (!isVodItem && hasStartedPlayingRef.current && !hasError) {
+          recoverFromFailureOrStall('eof');
         }
-
-        // Anti-boucle : ignorer les rafales d'erreurs consécutives rapides (< 2500ms)
-        const now = Date.now();
-        if (now - lastErrorTimeRef.current < 2500) {
-          return;
-        }
-        lastErrorTimeRef.current = now;
-
-        // ÉTAPE 1 : Si un flux de secours (même nom) est disponible et non testé, basculer UNE SEULE FOIS
-        if (candidateChannels.length > 1 && !hasAutoSwitchedBackupRef.current) {
-          hasAutoSwitchedBackupRef.current = true;
-          setStatusMessage(`Flux principal indisponible, basculement vers flux de secours (${candidateChannels.length} disponibles)...`);
-          setIsBuffering(true);
-          setTimeout(() => {
-            handleSwitchBackupStream();
-          }, 1200);
-          return;
-        }
-
-        // ÉTAPE 2 : Si fallbackUrl direct existe et pas encore retenté
-        if (autoRetryCountRef.current < 1 && channel.fallbackUrl && channel.fallbackUrl !== channel.url) {
-          autoRetryCountRef.current += 1;
-          setStatusMessage('Reconnexion directe sur flux miroir...');
-          setIsBuffering(true);
-          setTimeout(() => {
-            handleRetryDirect();
-          }, 1500);
-          return;
-        }
-
-        // ÉTAPE 3 : Arrêt définitif des tentatives automatiques (Élimine totalement le rechargement toutes les 2s)
-        setHasError(true);
-        setIsBuffering(false);
-        setStatusMessage('Flux momentanément inaccessible. Cliquez sur Réessayer ou changez de chaîne.');
       } else if (status === 'readyToPlay') {
-        if (bufferingTimerRef.current) {
-          clearTimeout(bufferingTimerRef.current);
-          bufferingTimerRef.current = null;
-        }
+        clearBufferingTimers();
         autoRetryCountRef.current = 0;
+        hasStartedPlayingRef.current = true;
         setHasError(false);
         setIsBuffering(false);
         setStatusMessage('');
@@ -549,39 +634,48 @@ export function NativePlayer({
         if (!bufferingTimerRef.current) {
           bufferingTimerRef.current = setTimeout(() => {
             setIsBuffering(true);
-          }, 1500);
+          }, 900);
         }
+        startStallWatchdog();
       }
     });
 
     const subPlaying = player.addListener('playingChange', ({ isPlaying: playing }) => {
       setIsPlaying(playing);
       if (playing) {
-        if (bufferingTimerRef.current) {
-          clearTimeout(bufferingTimerRef.current);
-          bufferingTimerRef.current = null;
-        }
+        clearBufferingTimers();
         autoRetryCountRef.current = 0;
+        liveReconnectCountRef.current = 0;
+        hasStartedPlayingRef.current = true;
         setIsBuffering(false);
+      }
+    });
+
+    const subEnded = player.addListener('playToEnd', () => {
+      if (!isVodItem && !hasError) {
+        recoverFromFailureOrStall('eof');
       }
     });
 
     return () => {
       subStatus.remove();
       subPlaying.remove();
-      if (bufferingTimerRef.current) {
-        clearTimeout(bufferingTimerRef.current);
-        bufferingTimerRef.current = null;
-      }
+      subEnded.remove();
+      clearBufferingTimers();
     };
-  }, [player, useProxy, channel, candidateChannels, candidateIndex, handleSwitchBackupStream, handleRetryDirect, handleRetryWithProxy]);
+  }, [player, isVodItem, hasError, concurrencyError, clearBufferingTimers, recoverFromFailureOrStall]);
 
-  // Recharger le flux UNIQUEMENT si la chaîne change (élimine le double chargement des 3 secondes)
+  // Recharger le flux UNIQUEMENT si la chaîne change (une seule requête HTTP propre)
   useEffect(() => {
     let isCancelled = false;
     autoRetryCountRef.current = 0;
+    liveReconnectCountRef.current = 0;
     hasAutoSwitchedBackupRef.current = false;
+    hasTriedBypassDnsRef.current = false;
+    hasTriedForceHlsRef.current = false;
+    hasStartedPlayingRef.current = false;
     lastErrorTimeRef.current = 0;
+    clearBufferingTimers();
     setUseProxy(false);
     setConcurrencyError(null);
     setHasError(false);
@@ -591,14 +685,9 @@ export function NativePlayer({
     setCandidateIndex(0);
 
     async function initChannelPlayback() {
-      const nextSource = await buildVideoSourceAsync(channel, false);
       if (isCancelled) return;
-      setStreamSource(nextSource);
-      player.replace(nextSource);
-      try {
-        player.bufferOptions = OPTIMAL_BUFFER_CONFIG;
-      } catch { }
-      player.play();
+      await applySourceToPlayer(channel, { useProxy: false });
+      if (isCancelled) return;
       setIsPlaying(true);
       resetControlsTimeout();
     }
@@ -618,10 +707,7 @@ export function NativePlayer({
       isCancelled = true;
       if (previewTimerRef.current) clearTimeout(previewTimerRef.current);
       if (hideControlsTimerRef.current) clearTimeout(hideControlsTimerRef.current);
-      if (bufferingTimerRef.current) {
-        clearTimeout(bufferingTimerRef.current);
-        bufferingTimerRef.current = null;
-      }
+      clearBufferingTimers();
     };
   }, [channel.id]);
 
@@ -668,7 +754,7 @@ export function NativePlayer({
         <View style={styles.bufferingOverlay} pointerEvents="none">
           <View style={styles.spinnerWrap}>
             <ActivityIndicator size="large" color="#e50914" />
-            <Text style={styles.spinnerText}>BOKK TV</Text>
+            <Text style={styles.spinnerText}>{statusMessage || 'BOKK TV'}</Text>
           </View>
         </View>
       )}
@@ -695,6 +781,22 @@ export function NativePlayer({
               </PlayerButton>
 
               <View style={styles.topRightActions}>
+                {/* Plafond Qualité Anti-Calage (Éco 1.5M 480p / HD 720p / Max) */}
+                <PlayerButton
+                  style={styles.streamModePill}
+                  onPress={handleCycleQuality}
+                  accessibilityLabel="Changer la qualité adaptative"
+                >
+                  <Ionicons
+                    name="speedometer-outline"
+                    size={12}
+                    color={qualityPreset === 'eco' ? '#f59e0b' : qualityPreset === 'hd' ? '#38bdf8' : '#22c55e'}
+                  />
+                  <Text style={styles.streamModeText}>
+                    {qualityPreset === 'eco' ? 'Éco 1.5M' : qualityPreset === 'hd' ? '720p' : 'Auto Max'}
+                  </Text>
+                </PlayerButton>
+
                 {/* Mode Secours / Direct */}
                 <PlayerButton
                   style={styles.streamModePill}

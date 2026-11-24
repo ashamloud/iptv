@@ -94,7 +94,9 @@
         <span id="bokk-expiry-banner-text" style="color:#f1f5f9;">Votre abonnement expire bientôt.</span>
     </div>
     <div style="display:flex; align-items:center; gap:10px;">
-        <a href="https://pay.wave.com/m/M_sn_cop5B9UJYF8P/c/sn/?amount=3000" target="_blank" style="background:#e50914; color:#fff; padding:4px 10px; border-radius:6px; text-decoration:none; font-weight:700; font-size:0.75rem;">Renouveler (Wave)</a>
+        <button id="btn-banner-renew-wave" class="btn-wave-plan" data-plan="1m" data-amount="3000" data-days="30" style="background:#e50914; color:#fff; padding:5px 12px; border:none; border-radius:6px; cursor:pointer; font-weight:700; font-size:0.75rem; display:flex; align-items:center; gap:5px;">
+            <span>🌊 Renouveler (Wave)</span>
+        </button>
         <button id="btn-close-expiry-banner" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:1.1rem; line-height:1; padding:0 4px;">✕</button>
     </div>
 </div>
@@ -565,38 +567,40 @@
             <div id="account-view-auth">
                 <div id="account-auth-notice" style="background:rgba(0,112,243,0.08); border:1px solid rgba(0,112,243,0.25); border-radius:12px; padding:10px 14px; margin-bottom:14px;">
                     <p id="account-auth-notice-text" style="font-size:0.82rem; color:#e0e8ff; line-height:1.4;">
-                        🎁 Entrez votre prénom pour obtenir votre ID BOKK TV (1 compte = 1 écran).
+                        🎁 Entrez votre prénom et votre numéro. Votre numéro devient votre ID BOKK TV unique (1 compte = 1 écran).
                     </p>
                 </div>
 
                 <div id="auth-tab-register">
                     <div style="margin-bottom:14px;">
-                        <label style="display:block; font-size:0.8rem; font-weight:600; color:var(--text-muted); margin-bottom:6px;">Votre Prénom</label>
+                        <label style="display:block; font-size:0.8rem; font-weight:600; color:var(--text-muted); margin-bottom:6px;">Votre Prénom *</label>
                         <input type="text" id="input-sub-prenom" placeholder="Ex: Moussa, Fatou, Ibrahima..." style="width:100%; height:44px; background:#0f1118; border:1px solid rgba(255,255,255,0.12); border-radius:10px; color:#fff; padding:0 14px; font-size:0.95rem; outline:none; box-sizing:border-box;">
                     </div>
                     <div style="margin-bottom:18px;">
-                        <label style="display:block; font-size:0.8rem; font-weight:600; color:var(--text-muted); margin-bottom:6px;">Numéro WhatsApp (Optionnel)</label>
-                        <input type="tel" id="input-sub-phone" placeholder="Ex: +221 77 123 45 67" style="width:100%; height:44px; background:#0f1118; border:1px solid rgba(255,255,255,0.12); border-radius:10px; color:#fff; padding:0 14px; font-size:0.95rem; outline:none; box-sizing:border-box;">
+                        <label style="display:block; font-size:0.8rem; font-weight:600; color:var(--text-muted); margin-bottom:6px;">Numéro de Téléphone * (Sénégal 70, 75, 76, 77, 78 ou International)</label>
+                        <input type="tel" id="input-sub-phone" placeholder="Ex: 77 123 45 67" style="width:100%; height:44px; background:#0f1118; border:1px solid rgba(255,255,255,0.12); border-radius:10px; color:#fff; padding:0 14px; font-size:0.95rem; outline:none; box-sizing:border-box;">
+                        <div id="error-sub-phone" style="display:none; color:#ef4444; font-size:0.75rem; margin-top:5px; font-weight:600;"></div>
                     </div>
                     <button id="btn-sub-register" class="btn-primary" style="width:100%; height:44px; font-size:0.92rem; font-weight:700; border-radius:10px; background:var(--brand-gradient, #0070f3); display:flex; align-items:center; justify-content:center; gap:8px;">
-                        <span>Obtenir mon ID BOKK (Gratuit)</span>
+                        <span>Valider mon Compte & ID (Gratuit 30j)</span>
                         <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
                     </button>
                     <div style="text-align:center; margin-top:14px;">
-                        <button id="btn-switch-to-login" style="background:none; border:none; color:var(--brand); font-size:0.8rem; cursor:pointer; text-decoration:underline;">Vous avez déjà un ID ? Connectez-vous ici</button>
+                        <button id="btn-switch-to-login" style="background:none; border:none; color:var(--brand); font-size:0.8rem; cursor:pointer; text-decoration:underline;">Vous avez déjà un compte ? Connectez-vous avec votre numéro</button>
                     </div>
                 </div>
 
                 <div id="auth-tab-login" style="display:none;">
                     <div style="margin-bottom:18px;">
-                        <label style="display:block; font-size:0.8rem; font-weight:600; color:var(--text-muted); margin-bottom:6px;">Votre Identifiant BOKK (ID)</label>
-                        <input type="text" id="input-sub-id" placeholder="Ex: BK-4821" style="width:100%; height:44px; background:#0f1118; border:1px solid rgba(255,255,255,0.12); border-radius:10px; color:#fff; padding:0 14px; font-size:1.05rem; font-weight:700; letter-spacing:1px; text-transform:uppercase; outline:none; box-sizing:border-box;">
+                        <label style="display:block; font-size:0.8rem; font-weight:600; color:var(--text-muted); margin-bottom:6px;">Votre Numéro ou Identifiant (ID)</label>
+                        <input type="text" id="input-sub-id" placeholder="Ex: 77 123 45 67 ou BK-771234567" style="width:100%; height:44px; background:#0f1118; border:1px solid rgba(255,255,255,0.12); border-radius:10px; color:#fff; padding:0 14px; font-size:1.05rem; font-weight:700; letter-spacing:0.5px; outline:none; box-sizing:border-box;">
+                        <div id="error-sub-login" style="display:none; color:#ef4444; font-size:0.75rem; margin-top:5px; font-weight:600;"></div>
                     </div>
                     <button id="btn-sub-login" class="btn-primary" style="width:100%; height:44px; font-size:0.92rem; font-weight:700; border-radius:10px; background:var(--brand-gradient, #0070f3);">
-                        Valider mon ID
+                        Connexion Immédiate
                     </button>
                     <div style="text-align:center; margin-top:14px;">
-                        <button id="btn-switch-to-reg" style="background:none; border:none; color:var(--text-muted); font-size:0.8rem; cursor:pointer;">⬅ Créer un nouvel identifiant</button>
+                        <button id="btn-switch-to-reg" style="background:none; border:none; color:var(--text-muted); font-size:0.8rem; cursor:pointer;">⬅ Créer un nouveau compte</button>
                     </div>
                 </div>
             </div>
@@ -617,8 +621,8 @@
                     </div>
                     <div style="display:flex; justify-content:space-between; align-items:flex-end; border-top:1px solid rgba(255,255,255,0.06); padding-top:12px;">
                         <div>
-                            <span style="font-size:0.7rem; color:var(--text-muted); display:block;">IDENTIFIANT</span>
-                            <span id="sub-profile-id" style="font-size:1.2rem; font-weight:900; letter-spacing:1.5px; color:#fff; font-family:monospace;">BK-0000</span>
+                            <span style="font-size:0.7rem; color:var(--text-muted); display:block;">IDENTIFIANT (LIÉ À VOTRE NUMÉRO)</span>
+                            <span id="sub-profile-id" style="font-size:1.2rem; font-weight:900; letter-spacing:1.5px; color:#fff; font-family:monospace;">BK-770000000</span>
                         </div>
                         <button id="btn-copy-sub-id" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:#fff; border-radius:8px; padding:6px 12px; font-size:0.75rem; cursor:pointer; display:flex; align-items:center; gap:5px;">
                             📋 Copier
@@ -633,25 +637,31 @@
                     </div>
                 </div>
 
-                <!-- Boîte Paiement Wave & 3 Plans -->
+                <!-- Boîte Paiement Wave & 3 Plans (Notification Automatique Admin au Clic) -->
                 <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:14px; margin-bottom:16px;">
-                    <div style="font-size:0.82rem; font-weight:700; color:#fff; margin-bottom:8px; display:flex; align-items:center; justify-content:space-between;">
-                        <span>🌊 Renouvellement avec Wave</span>
-                        <span style="font-size:0.7rem; color:var(--text-muted);">Validation rapide</span>
+                    <div style="font-size:0.82rem; font-weight:700; color:#fff; margin-bottom:4px; display:flex; align-items:center; justify-content:space-between;">
+                        <span>🌊 Payer via Wave</span>
+                        <span style="font-size:0.68rem; color:#38bdf8; background:rgba(56,189,248,0.12); padding:2px 8px; border-radius:12px;">Notification Admin Directe</span>
                     </div>
+                    <p style="font-size:0.72rem; color:var(--text-muted); margin-bottom:10px;">
+                        Cliquez sur votre plan : l'administrateur reçoit immédiatement votre numéro et prépare votre validation dès réception du virement !
+                    </p>
                     <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-bottom:8px;">
-                        <a href="https://pay.wave.com/m/M_sn_cop5B9UJYF8P/c/sn/?amount=3000" target="_blank" style="display:flex; flex-direction:column; align-items:center; justify-content:center; background:#12141c; border:1px solid rgba(229,9,20,0.4); border-radius:10px; padding:8px 4px; text-decoration:none;">
+                        <button type="button" class="btn-wave-plan" data-plan="1m" data-amount="3000" data-days="30" style="display:flex; flex-direction:column; align-items:center; justify-content:center; background:#12141c; border:1px solid rgba(229,9,20,0.5); border-radius:10px; padding:10px 4px; cursor:pointer; transition:all 0.2s;">
                             <span style="font-size:0.68rem; color:var(--text-muted); font-weight:600;">1 Mois</span>
-                            <strong style="font-size:0.85rem; color:#fff; margin-top:2px;">3 000 F</strong>
-                        </a>
-                        <a href="https://pay.wave.com/m/M_sn_cop5B9UJYF8P/c/sn/?amount=7500" target="_blank" style="display:flex; flex-direction:column; align-items:center; justify-content:center; background:#12141c; border:1px solid rgba(0,112,243,0.4); border-radius:10px; padding:8px 4px; text-decoration:none; position:relative;">
+                            <strong style="font-size:0.92rem; color:#fff; margin-top:2px;">3 000 F</strong>
+                            <span style="font-size:0.62rem; color:#e50914; margin-top:3px; font-weight:700;">Wave →</span>
+                        </button>
+                        <button type="button" class="btn-wave-plan" data-plan="3m" data-amount="7500" data-days="90" style="display:flex; flex-direction:column; align-items:center; justify-content:center; background:#12141c; border:1px solid rgba(0,112,243,0.5); border-radius:10px; padding:10px 4px; cursor:pointer; position:relative; transition:all 0.2s;">
                             <span style="font-size:0.68rem; color:var(--text-muted); font-weight:600;">3 Mois</span>
-                            <strong style="font-size:0.85rem; color:#38bdf8; margin-top:2px;">7 500 F</strong>
-                        </a>
-                        <a href="https://pay.wave.com/m/M_sn_cop5B9UJYF8P/c/sn/?amount=25000" target="_blank" style="display:flex; flex-direction:column; align-items:center; justify-content:center; background:#12141c; border:1px solid rgba(245,158,11,0.4); border-radius:10px; padding:8px 4px; text-decoration:none; position:relative;">
+                            <strong style="font-size:0.92rem; color:#38bdf8; margin-top:2px;">7 500 F</strong>
+                            <span style="font-size:0.62rem; color:#38bdf8; margin-top:3px; font-weight:700;">Éco 1 500F</span>
+                        </button>
+                        <button type="button" class="btn-wave-plan" data-plan="12m" data-amount="25000" data-days="365" style="display:flex; flex-direction:column; align-items:center; justify-content:center; background:#12141c; border:1px solid rgba(245,158,11,0.5); border-radius:10px; padding:10px 4px; cursor:pointer; position:relative; transition:all 0.2s;">
                             <span style="font-size:0.68rem; color:var(--text-muted); font-weight:600;">12 Mois</span>
-                            <strong style="font-size:0.85rem; color:#f59e0b; margin-top:2px;">25 000 F</strong>
-                        </a>
+                            <strong style="font-size:0.92rem; color:#f59e0b; margin-top:2px;">25 000 F</strong>
+                            <span style="font-size:0.62rem; color:#f59e0b; margin-top:3px; font-weight:700;">Éco 11 000F</span>
+                        </button>
                     </div>
                 </div>
 
@@ -861,6 +871,6 @@
 <script src="epg-data.js?v=9992"></script>
 <script src="epg.js?v=9992"></script>
 <script src="channels.js?v=9992"></script>
-<script src="app.js?v=9993"></script>
+<script src="app.js?v=9994"></script>
 </body>
 </html>

@@ -16,7 +16,37 @@
     var resolvedChannels = (typeof window !== 'undefined' && Array.isArray(window.channels) && window.channels.length > 0)
         ? window.channels
         : ((typeof window !== 'undefined' && window.channels) || (typeof globalThis !== 'undefined' && globalThis.channels) || []);
-    var channels = Array.isArray(resolvedChannels) ? resolvedChannels : [];
+
+    // ── Déduplication & Liaison des Flux de Secours (Regroupement des chaînes de même nom) ──
+    function groupChannelsWithBackups(rawList) {
+        const map = new Map();
+        for (let i = 0; i < rawList.length; i++) {
+            const ch = rawList[i];
+            if (!ch || !ch.name) continue;
+            const cleanName = ch.name
+                .toLowerCase()
+                .replace(/\b(fhd|hd|hevc|4k|uhd|sd|raw|50fps|h265|h264|1080p|720p)\b/gi, '')
+                .replace(/[\(\)\[\]\-]/g, ' ')
+                .replace(/\s+/g, ' ')
+                .trim();
+            const cat = (ch.category || ch.group || 'general').toLowerCase();
+            const key = cleanName + '__' + cat;
+            const existing = map.get(key);
+            if (!existing) {
+                map.set(key, { ...ch, backupChannels: [] });
+            } else {
+                if (existing.url !== ch.url) {
+                    if (!existing.backupChannels) existing.backupChannels = [];
+                    if (!existing.backupChannels.some(b => b.url === ch.url)) {
+                        existing.backupChannels.push(ch);
+                    }
+                }
+            }
+        }
+        return Array.from(map.values()).map((ch, idx) => ({ ...ch, index: idx }));
+    }
+
+    var channels = Array.isArray(resolvedChannels) ? groupChannelsWithBackups(resolvedChannels) : [];
 
     // ── Métadonnées des catégories (découverte automatique selon les liens) ──
     const CATEGORY_METADATA = {
@@ -50,6 +80,9 @@
     let hlsInstance = null;
     let mpegtsInstance = null;
     let isTryingFallback = false;
+    let webStallWatchdog = null;
+    let channelLoadSeq = 0;
+    const acanDirectUrlCache = new Map();
     let renderedCount = 0;
     const BATCH_SIZE = 80;
     let currentFiltered = [];
@@ -157,6 +190,8 @@
     const btnCloseModal  = document.getElementById('btn-close-modal');
     const btnRetry       = document.getElementById('btn-retry');
     const btnFallback    = document.getElementById('btn-fallback');
+    const btnBackupStream = document.getElementById('btn-backup-stream');
+    const playerStreamSwitchBtn = document.getElementById('player-stream-switch-btn');
 
     // Qualité et réseau
     const qualitySelectorEl = document.getElementById('quality-selector');
@@ -215,10 +250,74 @@
         }, 1000);
     }
 
+    // ── Gestion et commutation des flux de secours ──
+    function handleSwitchBackupStream(channel, idx) {
+        if (!channel) return;
+        const backups = channel.backupChannels || [];
+        if (backups.length === 0) {
+            showToast('Aucun flux alternatif pour cette chaîne.');
+            return;
+        }
+
+        if (!channel._originalUrl) {
+            channel._originalUrl = channel.url;
+            channel._originalFallbackUrl = channel.fallbackUrl || channel.url;
+        }
+
+        const currentSub = channel._activeBackupIndex || 0;
+        const total = backups.length + 1;
+        const nextSub = (currentSub + 1) % total;
+        channel._activeBackupIndex = nextSub;
+
+        if (nextSub === 0) {
+            channel.url = channel._originalUrl;
+            channel.fallbackUrl = channel._originalFallbackUrl;
+        } else {
+            const backup = backups[nextSub - 1];
+            channel.url = backup.url;
+            channel.fallbackUrl = backup.fallbackUrl || backup.url;
+        }
+
+        updateStreamSwitchPill(channel);
+        showToast(`Flux ${nextSub + 1}/${total} en cours...`);
+        clearPlayerOverlays();
+        loadChannel(idx >= 0 ? idx : currentIndex, false, 0);
+    }
+
+    function updateStreamSwitchPill(channel) {
+        if (!playerStreamSwitchBtn) return;
+        if (channel && channel.backupChannels && channel.backupChannels.length > 0) {
+            const total = channel.backupChannels.length + 1;
+            const current = (channel._activeBackupIndex || 0) + 1;
+            playerStreamSwitchBtn.style.display = 'inline-flex';
+            playerStreamSwitchBtn.innerHTML = `<span>Flux ${current}/${total}${current > 1 ? ' (Secours)' : ''}</span>`;
+            playerStreamSwitchBtn.onclick = (e) => {
+                e.stopPropagation();
+                handleSwitchBackupStream(channel, currentIndex);
+            };
+        } else {
+            playerStreamSwitchBtn.style.display = 'none';
+        }
+    }
+
     // Compteur d'échecs par chaîne — on ne supprime qu'après 3 échecs consécutifs
     const _failCount = {};
     function showPlayerError(msg, channel = null, index = -1) {
         hidePlayerLoader();
+        const activeCh = channel || (currentIndex >= 0 ? channels[currentIndex] : null);
+
+        // Activer le bouton "Tester le secours" si un flux alternatif existe
+        if (btnBackupStream) {
+            if (activeCh && activeCh.backupChannels && activeCh.backupChannels.length > 0) {
+                btnBackupStream.style.display = 'inline-flex';
+                btnBackupStream.onclick = () => {
+                    handleSwitchBackupStream(activeCh, index >= 0 ? index : currentIndex);
+                };
+            } else {
+                btnBackupStream.style.display = 'none';
+            }
+        }
+
         if (channel) {
             const cKey = String(channel.id || channel.url);
             _failCount[cKey] = (_failCount[cKey] || 0) + 1;
@@ -244,6 +343,7 @@
         hidePlayerLoader();
         if (errorEl) errorEl.classList.remove('active');
         if (placeholderEl) placeholderEl.style.display = 'none';
+        if (btnBackupStream) btnBackupStream.style.display = 'none';
     }
 
     // ── Destruction propre des instances de lecture actives ──
@@ -292,6 +392,12 @@
 
         isStreamPreviewLocked = true;
 
+        const sub = window.BokkFirebase && typeof window.BokkFirebase.getCurrentSubscriber === 'function'
+            ? window.BokkFirebase.getCurrentSubscriber()
+            : null;
+
+        const isRegisteredButExpired = sub && sub.id && sub.expiresAt && (new Date(sub.expiresAt).getTime() < Date.now());
+
         const accountModal = document.getElementById('account-modal');
         const modalTitle = document.getElementById('account-modal-title');
         const modalSub = document.getElementById('account-modal-sub');
@@ -302,21 +408,37 @@
         const tabRegister = document.getElementById('auth-tab-register');
         const tabLogin = document.getElementById('auth-tab-login');
 
-        if (viewAuth) viewAuth.style.display = 'block';
-        if (viewProfile) viewProfile.style.display = 'none';
-        if (tabRegister) tabRegister.style.display = 'block';
-        if (tabLogin) tabLogin.style.display = 'none';
+        if (isRegisteredButExpired) {
+            // L'utilisateur est DÉJÀ CONNECTÉ, mais son abonnement est expiré.
+            // On affiche son profil avec les 3 options de renouvellement Wave
+            if (viewAuth) viewAuth.style.display = 'none';
+            if (viewProfile) viewProfile.style.display = 'block';
+            if (modalTitle) {
+                modalTitle.innerHTML = '<span style="color:var(--live-red);">⏰</span> Abonnement expiré';
+            }
+            if (modalSub) {
+                modalSub.textContent = 'Renouvelez votre compte pour continuer à regarder';
+            }
+        } else {
+            // L'utilisateur N'EST PAS ENCORE CONNECTÉ.
+            // Inscription 100% GRATUITE sans aucun message ni bouton Wave !
+            if (viewAuth) viewAuth.style.display = 'block';
+            if (viewProfile) viewProfile.style.display = 'none';
+            if (tabRegister) tabRegister.style.display = 'block';
+            if (tabLogin) tabLogin.style.display = 'none';
 
-        if (modalTitle) {
-            modalTitle.innerHTML = '<span style="color:var(--live-red);">🔒</span> Continuer la Lecture en Direct';
-        }
-        if (modalSub) {
-            modalSub.textContent = 'Aperçu gratuit de 3 secondes terminé';
-        }
-        if (noticeBox && noticeText) {
-            noticeBox.style.background = 'rgba(230, 57, 70, 0.12)';
-            noticeBox.style.borderColor = 'rgba(230, 57, 70, 0.35)';
-            noticeText.innerHTML = '⏱️ <strong>Aperçu gratuit de 3 secondes terminé !</strong><br>Pour continuer à regarder cette chaîne en direct, entrez simplement votre prénom ci-dessous pour obtenir votre <strong>ID BOKK TV</strong> personnel.<br>🎁 <strong>1 mois de streaming 100% offert</strong> immédiatement !';
+            if (modalTitle) {
+                modalTitle.innerHTML = '<span style="color:var(--brand);">🎁</span> Créez votre compte gratuit';
+            }
+            if (modalSub) {
+                modalSub.textContent = '30 jours offerts pour débloquer toutes les chaînes';
+            }
+            if (noticeBox && noticeText) {
+                noticeBox.style.background = 'rgba(0, 112, 243, 0.08)';
+                noticeBox.style.borderColor = 'rgba(0, 112, 243, 0.25)';
+                noticeText.innerHTML = '🎁 <strong>Inscription 100% Gratuite (30 jours offerts)</strong><br>' +
+                    'Inscrivez-vous simplement avec votre prénom ci-dessous pour débloquer immédiatement toutes les chaînes en illimité et sans interruption.';
+            }
         }
 
         if (accountModal) {
@@ -360,7 +482,15 @@
         }
     }
 
+    function clearWebStallWatchdog() {
+        if (webStallWatchdog) {
+            clearTimeout(webStallWatchdog);
+            webStallWatchdog = null;
+        }
+    }
+
     function destroyActivePlayer() {
+        clearWebStallWatchdog();
         if (streamPreviewTimer) {
             clearTimeout(streamPreviewTimer);
             streamPreviewTimer = null;
@@ -514,22 +644,42 @@
         netSpeedBadge.style.display = '';
     }
 
-    // ── Contrôle manuel de la qualité HLS & MPEG-TS ──
+    // ── Contrôle manuel de la qualité HLS & MPEG-TS (tri réel par débit) ──
+    function getSortedHlsLevelIndices(levels) {
+        if (!levels || !levels.length) return [];
+        return levels
+            .map((lvl, idx) => ({ idx, bw: lvl.bitrate || 0 }))
+            .sort((a, b) => a.bw - b.bw);
+    }
+
+    function pickBestEcoLevelIndex(levels, maxKbps = 1400) {
+        const sorted = getSortedHlsLevelIndices(levels);
+        if (!sorted.length) return -1;
+        const limitBps = maxKbps * 1000;
+        let best = sorted[0].idx; // Le plus léger garanti en plancher
+        for (const item of sorted) {
+            if (item.bw > 0 && item.bw <= limitBps) {
+                best = item.idx;
+            }
+        }
+        return best;
+    }
+
     function setQualityLevel(levelKey) {
         forcedQuality = levelKey;
         document.querySelectorAll('.quality-btn').forEach(btn => {
             btn.classList.toggle('active', btn.dataset.level === String(levelKey));
         });
 
-        if (mpegtsInstance && currentChannelIndex !== -1) {
-            const ch = channels[currentChannelIndex];
-            if (ch && ch.fallbackUrl) {
+        if (mpegtsInstance && currentIndex !== -1) {
+            const ch = channels[currentIndex];
+            if (ch && ch.fallbackUrl && ch.fallbackUrl !== ch.url) {
                 if (levelKey === 'sd') {
                     showToast('Flux SD / Débit Économique activé');
-                    loadChannel(currentChannelIndex, true, 0);
+                    loadChannel(currentIndex, true, 0);
                 } else {
                     showToast('Flux HD / Haute Définition activé');
-                    loadChannel(currentChannelIndex, false, 0);
+                    loadChannel(currentIndex, false, 0);
                 }
                 return;
             }
@@ -537,30 +687,95 @@
 
         if (!hlsInstance) return;
         const levels = hlsInstance.levels || [];
+        const sorted = getSortedHlsLevelIndices(levels);
+        if (!sorted.length) return;
 
         if (levelKey === -1 || levelKey === '-1') {
-            // Mode AUTO : ABR reprend le contrôle
+            // Mode AUTO : ABR libre mais plafonné si débit mesuré <= 2 Mbps
+            hlsInstance.autoLevelCapping = (estimatedBwKbps <= 2000) ? pickBestEcoLevelIndex(levels, 1450) : -1;
             hlsInstance.currentLevel = -1;
             hlsInstance.nextLevel    = -1;
-            showToast('Qualité : Auto (ABR)');
+            showToast('Qualité : Auto (Adaptatif)');
         } else if (levelKey === 'sd') {
-            // SD : choisir le niveau de plus faible débit
-            const sdIdx = 0;
+            const sdIdx = sorted[0].idx;
+            hlsInstance.autoLevelCapping = sdIdx;
             hlsInstance.currentLevel = sdIdx;
             hlsInstance.loadLevel    = sdIdx;
-            showToast('Qualité forcée : Définition Standard');
+            showToast('Qualité forcée : Éco / Fluide (1.5M)');
         } else if (levelKey === 'hd') {
-            // HD : choisir le niveau de plus haut débit
-            const hdIdx = Math.max(0, levels.length - 1);
+            const hdIdx = sorted[sorted.length - 1].idx;
+            hlsInstance.autoLevelCapping = -1;
             hlsInstance.currentLevel = hdIdx;
             hlsInstance.loadLevel    = hdIdx;
             showToast('Qualité forcée : Haute Définition');
         }
     }
 
-    // Proxy BOKK TV : Serveur Python local ou Vercel Edge API natif (/api/proxy)
-    // Zéro dépendance envers Cloudflare Workers ou Render
+    // ── Domaines HTTPS HLS compatibles CORS directs (zéro latence proxy) ──
+    const DIRECT_CORS_HLS_HOSTS = [
+        'stream.sen-gt.com',
+        'acangroup.org',
+        'acan.group',
+        'amagi.tv',
+        'infomaniak.com',
+        'evrideo.tv',
+        'pro-fhi.net',
+        'goccn.cloud',
+        'streamlock.net',
+        'ottera.tv',
+        'akamaized.net',
+        'secdn.net',
+        'mangomolo.com',
+    ];
 
+    function isDirectCorsHttpsHls(rawUrl) {
+        if (!rawUrl || !rawUrl.startsWith('https://')) return false;
+        const lower = rawUrl.toLowerCase();
+        return DIRECT_CORS_HLS_HOSTS.some(h => lower.includes(h));
+    }
+
+    const ACAN_SHORTCUTS = {
+        rts1: 26, rts2: 32, rts3: 42, rts4: 51, rts5: 52,
+        sentv: 2, '2stv': 29, leraltv: 35, walftv: 33, walf: 33
+    };
+
+    async function resolveDirectAcanUrl(key) {
+        const lower = (key || '').toLowerCase().trim();
+        if (!ACAN_SHORTCUTS[lower]) return null;
+        const cached = acanDirectUrlCache.get(lower);
+        if (cached && (Date.now() - cached.time < 240000)) {
+            return cached.url;
+        }
+        try {
+            const cid = ACAN_SHORTCUTS[lower];
+            const r = await fetch(`https://tveapi.acan.group/myapiv2/directplayback/${cid}/json`, { cache: 'no-store' });
+            if (r.ok) {
+                const d = await r.json();
+                const direct = d.web_url || d.direct_url || d.android_url;
+                if (direct) {
+                    acanDirectUrlCache.set(lower, { url: direct, time: Date.now() });
+                    return direct;
+                }
+            }
+        } catch (e) {}
+        try {
+            const isPort8080 = (window.location.port === '8080');
+            const isLocal = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+            if (!isPort8080 && !isLocal) {
+                const r2 = await fetch(`/api/proxy?url=${encodeURIComponent(lower)}&resolve=1`, { cache: 'no-store' });
+                if (r2.ok) {
+                    const d2 = await r2.json();
+                    if (d2 && d2.url) {
+                        acanDirectUrlCache.set(lower, { url: d2.url, time: Date.now() });
+                        return d2.url;
+                    }
+                }
+            }
+        } catch (e) {}
+        return null;
+    }
+
+    // Proxy BOKK TV : Direct HTTPS CORS prioritaire, puis Vercel Edge API / Serveur Python local
     function resolveStreamUrl(rawUrl, stage = 0, channel = null) {
         if (!rawUrl) return '';
 
@@ -580,24 +795,27 @@
         if (rawUrl.startsWith('data:') || rawUrl.startsWith('blob:')) return rawUrl;
 
         let extraParams = '';
-        const isMegaTv = rawUrl.includes('megatv') || rawUrl.includes(':80/live/') || rawUrl.includes(':8080/live/');
-        const ua = (channel && channel.userAgent) ? channel.userAgent : (isMegaTv ? 'IPTVSmartersPro' : 'IPTVSmartersPro');
+        const ua = (channel && channel.userAgent) ? channel.userAgent : 'IPTVSmartersPro';
         extraParams += `&ua=${encodeURIComponent(ua)}`;
         if (channel && channel.referrer) extraParams += `&ref=${encodeURIComponent(channel.referrer)}`;
 
         const isProduction = !isPort8080 && !isLocalHost && !isFileProtocol;
 
-        // ── EN PRODUCTION : Vercel Edge API Proxy (Zéro dépendance Cloudflare Worker / Render) ──
+        // Pour les flux HTTPS HLS compatibles CORS : jouer EN DIRECT au Stage 0 (évite la surcharge Vercel)
+        if (stage === 0 && isDirectCorsHttpsHls(rawUrl)) {
+            return rawUrl;
+        }
+
+        // ── EN PRODUCTION : Vercel Edge API Proxy ──
         if (isProduction) {
-            // Stage 0 : Proxy interne Vercel même domaine (/api/proxy)
             if (stage === 0) {
                 return `/api/proxy?url=${encodeURIComponent(rawUrl)}${extraParams}`;
             }
-            // Stage 1 : Essai direct (flux compatibles HTTPS/CORS)
             if (stage === 1) {
-                return rawUrl;
+                return isDirectCorsHttpsHls(rawUrl)
+                    ? `/api/proxy?url=${encodeURIComponent(rawUrl)}${extraParams}`
+                    : rawUrl;
             }
-            // Stage 2+ : Fallback /api/proxy
             return `/api/proxy?url=${encodeURIComponent(rawUrl)}${extraParams}`;
         }
 
@@ -605,18 +823,102 @@
         let proxyBase = '/proxy';
         if (!isPort8080) proxyBase = `http://${fallbackLocalHost}:8080/proxy`;
 
-        if (stage === 1) {
-            return rawUrl; // Essai direct
+        if (stage === 1 && !isDirectCorsHttpsHls(rawUrl)) {
+            return rawUrl;
         }
         return `${proxyBase}?url=${encodeURIComponent(rawUrl)}${extraParams}`;
     }
 
-    // ── Chargement d'une chaîne (Support Dual Engine MPEG-TS & HLS) ──
-    function loadChannel(index, useFallback = false, retryStage = 0) {
+    // ── Historique des Dernières Chaînes Regardées ──
+    function addToLastWatched(channelId) {
+        if (!channelId) return;
+        try {
+            const idStr = String(channelId);
+            let list = JSON.parse(localStorage.getItem('bokk_last_watched') || '[]');
+            list = list.filter(id => String(id) !== idStr);
+            list.unshift(idStr);
+            if (list.length > 10) list = list.slice(0, 10);
+            localStorage.setItem('bokk_last_watched', JSON.stringify(list));
+            renderRecentChannels();
+        } catch(e) {}
+    }
+
+    function renderRecentChannels() {
+        const section = document.getElementById('recent-channels-section');
+        const row = document.getElementById('recent-channels-row');
+        if (!section || !row) return;
+        try {
+            const list = JSON.parse(localStorage.getItem('bokk_last_watched') || '[]');
+            if (!list || list.length === 0) {
+                section.style.display = 'none';
+                return;
+            }
+            const recentChs = list.map(id => channels.find(c => String(c.id) === String(id))).filter(Boolean);
+            if (recentChs.length === 0) {
+                section.style.display = 'none';
+                return;
+            }
+            section.style.display = 'block';
+            row.innerHTML = recentChs.slice(0, 8).map(ch => {
+                const idx = channels.indexOf(ch);
+                const logo = ch.logo || 'favicon.png';
+                return `
+                <div class="recent-ch-card" data-index="${idx}" style="flex-shrink:0; width:100px; background:#10131b; border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:8px 6px; text-align:center; cursor:pointer; transition:transform 0.15s, border-color 0.15s;">
+                    <img src="${logo}" alt="" onerror="this.src='favicon.png'" style="width:34px; height:34px; object-fit:contain; border-radius:6px; margin:0 auto 4px; display:block;">
+                    <div style="font-size:0.7rem; font-weight:700; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${ch.name}</div>
+                </div>`;
+            }).join('');
+
+            row.querySelectorAll('.recent-ch-card').forEach(card => {
+                card.onclick = () => {
+                    const idx = parseInt(card.dataset.index, 10);
+                    if (!isNaN(idx)) loadChannel(idx);
+                };
+            });
+        } catch(e) {
+            section.style.display = 'none';
+        }
+    }
+
+    // ── Bannière d'alerte d'expiration (non-bloquante) ──
+    function checkExpiryBanner() {
+        if (sessionStorage.getItem('bokk_expiry_banner_closed') === 'true') return;
+        if (!window.BokkFirebase || typeof window.BokkFirebase.getCurrentSubscriber !== 'function') return;
+        const sub = window.BokkFirebase.getCurrentSubscriber();
+        if (!sub || !sub.expiresAt) return;
+        const exp = new Date(sub.expiresAt).getTime();
+        const now = Date.now();
+        const daysLeft = Math.ceil((exp - now) / (1000 * 60 * 60 * 24));
+        
+        const banner = document.getElementById('bokk-expiry-banner');
+        const bannerText = document.getElementById('bokk-expiry-banner-text');
+        const closeBtn = document.getElementById('btn-close-expiry-banner');
+        if (!banner || !bannerText) return;
+
+        if (daysLeft > 0 && daysLeft <= 3) {
+            bannerText.innerHTML = `⚠️ Votre abonnement BOKK TV expire dans <strong>${daysLeft} jour${daysLeft > 1 ? 's' : ''}</strong>.`;
+            banner.style.display = 'flex';
+        } else if (daysLeft <= 0) {
+            bannerText.innerHTML = `⚠️ Votre abonnement BOKK TV est <strong>expiré</strong>.`;
+            banner.style.display = 'flex';
+        }
+
+        if (closeBtn) {
+            closeBtn.onclick = () => {
+                banner.style.display = 'none';
+                sessionStorage.setItem('bokk_expiry_banner_closed', 'true');
+            };
+        }
+    }
+
+    // ── Chargement d'une chaîne (Support Dual Engine MPEG-TS & HLS Anti-Calage Pro) ──
+    async function loadChannel(index, useFallback = false, retryStage = 0) {
         if (index < 0 || index >= channels.length) return;
+        const loadSeq = ++channelLoadSeq;
         const channel = channels[index];
         currentIndex = index;
         isTryingFallback = useFallback;
+        addToLastWatched(channel.id);
 
         // Révéler le lecteur vidéo dès qu'une chaîne est sélectionnée
         revealPlayer();
@@ -624,7 +926,14 @@
         // Détruire tout lecteur actif (HLS ou MPEG-TS)
         destroyActivePlayer();
 
-        // Arrêter les éléments vidéo/iframe
+        // Nettoyer les anciens gestionnaires sur videoEl pour éviter l'accumulation d'écouteurs
+        videoEl.onplaying = null;
+        videoEl.onloadeddata = null;
+        videoEl.oncanplay = null;
+        videoEl.onwaiting = null;
+        videoEl.onstalled = null;
+        videoEl.onended = null;
+
         videoEl.pause();
         videoEl.removeAttribute('src');
         videoEl.load();
@@ -637,6 +946,7 @@
         showPlayerLoader();
         if (nowPlayingTitle) nowPlayingTitle.textContent = channel.name;
         if (playerName) playerName.textContent = channel.name;
+        updateStreamSwitchPill(channel);
         if (playerLogo) {
             playerLogo.src = getValidChannelLogo(channel);
             playerLogo.onerror = function() {
@@ -673,15 +983,13 @@
 
         updateFavButtons();
         highlightActiveChannel();
-        ensureUnmuted();   // ← Rétablir le son si l'utilisateur avait déjà interagi
+        ensureUnmuted();
 
-        // ── Révéler le lecteur (nouveau design myCANAL) ──
         const playerWrapper = document.getElementById('player-wrapper');
         if (playerWrapper && playerWrapper.style.display === 'none') {
             playerWrapper.style.display = 'block';
         }
 
-        // Activer et révéler le lecteur s'il était minimisé
         revealPlayer();
         const nowPlayingPill = document.getElementById('now-playing-pill');
         if (nowPlayingPill) nowPlayingPill.style.display = 'flex';
@@ -689,11 +997,19 @@
             updateQuickZappingBar();
         }
 
-        const activeUrl = (useFallback && channel.fallbackUrl) ? channel.fallbackUrl : channel.url;
+        let activeUrl = (useFallback && channel.fallbackUrl) ? channel.fallbackUrl : channel.url;
+
+        // Résolution directe ACAN (RTS/SEN TV/2sTV) sans passer par le proxy Vercel pour zéro latence
+        const lowerRaw = (activeUrl || '').toLowerCase().trim();
+        if (ACAN_SHORTCUTS[lowerRaw] && retryStage === 0) {
+            const directAcan = await resolveDirectAcanUrl(lowerRaw);
+            if (loadSeq !== channelLoadSeq) return;
+            if (directAcan) activeUrl = directAcan;
+        }
+
         const lowerUrl = (activeUrl || '').toLowerCase().split('?')[0];
 
-        // Détection ultra-précise du type de flux IPTV :
-        // Les flux se terminant par .ts DOIVENT être lus avec mpegts.js (pas Hls.js !)
+        // Détection précise du type de flux IPTV
         let streamType = 'hls';
         if (activeUrl.includes('embed') || activeUrl.includes('youtube.com') || activeUrl.includes('dailymotion.com')) {
             streamType = 'embed';
@@ -701,16 +1017,26 @@
             streamType = 'ts';
         } else if (lowerUrl.endsWith('.m3u8') || activeUrl.toLowerCase().includes('.m3u8')) {
             streamType = 'hls';
-        } else if (channel.type === 'ts') {
+        } else if (channel.type === 'ts' && !channel._forceHls) {
             streamType = 'ts';
-        } else if (channel.type === 'hls') {
+        } else if (channel.type === 'hls' || channel._forceHls) {
             streamType = 'hls';
         }
 
         const finalUrl = resolveStreamUrl(activeUrl, retryStage, channel);
-        // mpegts.js tourne dans un Web Worker : les URLs relatives sont interdites → forcer absolute
         const absoluteFinalUrl = finalUrl.startsWith('/') ? (window.location.origin + finalUrl) : finalUrl;
         console.log(`[BOKK TV] Chargement chaîne: "${channel.name}" [${streamType.toUpperCase()}] (Stage: ${retryStage}) URL:`, absoluteFinalUrl);
+
+        // Watchdog anti-calage web (8.5s bloqué en waiting/stalled => relance ou bascule automatique)
+        const armStallWatchdog = (onStallFn) => {
+            clearWebStallWatchdog();
+            webStallWatchdog = setTimeout(() => {
+                if (loadSeq === channelLoadSeq && !videoEl.paused) {
+                    console.warn('[BOKK TV Web Watchdog] Tampon figé > 8.5s, récupération automatique...');
+                    onStallFn();
+                }
+            }, 8500);
+        };
 
         if (streamType === 'embed') {
             iframeEl.style.display = 'block';
@@ -719,7 +1045,7 @@
                 clearPlayerOverlays();
             };
         } else if (streamType === 'ts') {
-            // ── LECTEUR MPEG-TS ULTRA-RAPIDE (< 1s) ──
+            // ── LECTEUR MPEG-TS PRO (Tampon 512 KB + Reconnexion transparente Vercel 30s) ──
             videoEl.style.display = 'block';
 
             if (typeof mpegts !== 'undefined' && mpegts.isSupported()) {
@@ -730,22 +1056,21 @@
                 }, {
                     enableWorker: false,
                     lazyLoad: false,
-                    // ── Moteur MPEG-TS Anti-Coupure (fluidité maximale sans calage) ──
-                    liveBufferLatencyChasing: false,     // Désactivé : évite les calages, gels et désynchronisations
-                    liveBufferLatencyMaxLatency: 8.0,    // Tolérance large pour continuité absolue du flux
-                    liveBufferLatencyMinRemain: 1.0,     // 1s de flux continu garanti sans freeze
+                    liveBufferLatencyChasing: false,
+                    liveBufferLatencyMaxLatency: 12.0,
+                    liveBufferLatencyMinRemain: 2.0,
                     enableStashBuffer: true,
-                    stashInitialSize: 128,               // 128 Ko de tampon pour débit stable
+                    stashInitialSize: 512,               // 512 Ko (~3s de tampon réel à 1.5 Mbps → zéro micro-calage)
                     autoCleanupSourceBuffer: true,
-                    autoCleanupMaxBackwardDuration: 30,
-                    autoCleanupMinBackwardDuration: 15
+                    autoCleanupMaxBackwardDuration: 25,
+                    autoCleanupMinBackwardDuration: 12
                 });
 
                 mpegtsInstance.attachMediaElement(videoEl);
                 mpegtsInstance.load();
 
                 if (qualitySelectorEl) {
-                    qualitySelectorEl.style.display = channel.fallbackUrl ? 'flex' : 'none';
+                    qualitySelectorEl.style.display = (channel.fallbackUrl && channel.fallbackUrl !== channel.url) ? 'flex' : 'none';
                     const qHd = document.getElementById('q-hd');
                     const qSd = document.getElementById('q-sd');
                     const qAuto = document.getElementById('q-auto');
@@ -756,101 +1081,151 @@
                     }
                 }
 
-                videoEl.addEventListener('playing', () => { clearPlayerOverlays(); startStreamPreviewTimer(); });
-                videoEl.addEventListener('loadeddata', () => clearPlayerOverlays(), { once: true });
-                videoEl.addEventListener('canplay', () => clearPlayerOverlays(), { once: true });
-
-                attemptAutoPlay(mpegtsInstance);
-
-                mpegtsInstance.on(mpegts.Events.ERROR, (type, detail, info) => {
-                    console.warn(`[BOKK TV] Erreur MPEG-TS (${type}, ${detail}, Stage ${retryStage}) sur ${finalUrl}`);
+                const triggerTsRecovery = () => {
+                    if (loadSeq !== channelLoadSeq) return;
                     destroyActivePlayer();
-
-                    // Fallback M3U8 en priorité
-                    if (channel.fallbackUrl && (channel.fallbackUrl.includes('.m3u8') || channel.fallbackUrl !== channel.url) && !useFallback) {
-                        console.log('[BOKK TV] Bascule MPEG-TS → HLS...');
+                    if (channel.fallbackUrl && channel.fallbackUrl !== channel.url && !useFallback) {
                         loadChannel(index, true, 0);
-                    } else if (retryStage < 3) {
-                        console.log(`[BOKK TV] Stage ${retryStage + 1}...`);
+                    } else if (retryStage < 2) {
                         loadChannel(index, useFallback, retryStage + 1);
+                    } else if (!channel._forceHls && !lowerUrl.endsWith('.ts')) {
+                        // Certains flux Xtream redirigent vers du .m3u8 (chaînes FAST)
+                        channel._forceHls = true;
+                        loadChannel(index, false, 0);
+                    } else if (channel.backupChannels && channel.backupChannels.length > 0 && !channel._triedBackup) {
+                        channel._triedBackup = true;
+                        const backupCh = channel.backupChannels[0];
+                        channel.url = backupCh.url;
+                        channel.fallbackUrl = backupCh.fallbackUrl || backupCh.url;
+                        loadChannel(index, false, 0);
                     } else {
                         showPlayerError('Ce flux est temporairement indisponible.', channel, index);
                     }
+                };
+
+                videoEl.onplaying = () => { clearWebStallWatchdog(); clearPlayerOverlays(); startStreamPreviewTimer(); };
+                videoEl.onloadeddata = () => clearPlayerOverlays();
+                videoEl.oncanplay = () => clearPlayerOverlays();
+                videoEl.onwaiting = () => armStallWatchdog(triggerTsRecovery);
+                videoEl.onstalled = () => armStallWatchdog(triggerTsRecovery);
+                // Vercel coupe les fonctions serverless à 30s -> reconnexion transparente sur flux direct
+                videoEl.onended = () => {
+                    if (loadSeq === channelLoadSeq) {
+                        console.log('[BOKK TV] Flux TS terminé (coupure serveur/proxy), reconnexion continue...');
+                        loadChannel(index, useFallback, 0);
+                    }
+                };
+
+                attemptAutoPlay(mpegtsInstance);
+
+                mpegtsInstance.on(mpegts.Events.LOADING_COMPLETE, () => {
+                    if (loadSeq === channelLoadSeq) {
+                        console.log('[BOKK TV] Flux TS fermé par le serveur/proxy, reconnexion transparente...');
+                        loadChannel(index, useFallback, 0);
+                    }
+                });
+
+                mpegtsInstance.on(mpegts.Events.ERROR, (type, detail) => {
+                    console.warn(`[BOKK TV] Erreur MPEG-TS (${type}, ${detail}, Stage ${retryStage}) sur ${finalUrl}`);
+                    triggerTsRecovery();
                 });
             } else {
                 videoEl.src = finalUrl;
                 videoEl.play().catch(() => {});
             }
         } else {
-            // ── LECTEUR HLS (.M3U8) INSTANT ZAPPING (< 2s) ──
+            // ── LECTEUR HLS (.M3U8) ANTI-CALAGE 1.5 MBPS ──
             videoEl.style.display = 'block';
 
             if (typeof Hls !== 'undefined' && Hls.isSupported()) {
                 hlsInstance = new Hls({
                     enableWorker: true,
                     lowLatencyMode: false,
-                    startLevel: 0,                     // Démarre sur le profil le plus fluide pour affichage immédiat
+                    startLevel: -1,                    // Sélectionné proprement par débit réel dans MANIFEST_PARSED
                     capLevelToPlayerSize: true,
-                    // ── Coussin de sécurité anti-calage (flux continu et fluide) ──
-                    liveSyncDurationCount: 3,          // 3 segments d'avance : absorbe les variations réseau
-                    liveMaxLatencyDurationCount: 8,    // Tolère les légères variations sans caler ni couper
-                    backBufferLength: 15,
-                    maxBufferLength: 30,               // 30s de buffer optimal anti-freeze
-                    maxMaxBufferLength: 60,
-                    maxBufferSize: 40 * 1000 * 1000,
-                    maxBufferHole: 1.0,                // Tolère les micro-trous sans bloquer
+                    liveSyncDurationCount: 3,          // ~8-12s de coussin stable anti-calage
+                    liveMaxLatencyDurationCount: 8,
+                    backBufferLength: 12,
+                    maxBufferLength: 25,               // 25s d'avance tampon pour absorber 100% des baisses 1.5 Mbps
+                    maxMaxBufferLength: 45,
+                    maxBufferSize: 50 * 1000 * 1000,
+                    maxBufferHole: 1.0,
                     highBufferWatchdogPeriod: 2,
-                    // ── Timeouts et tolérance aux débits variables ──
-                    manifestLoadingTimeOut: 8000,
+                    manifestLoadingTimeOut: 9000,
                     manifestLoadingMaxRetry: 4,
                     manifestLoadingRetryDelay: 500,
-                    levelLoadingTimeOut: 8000,
+                    levelLoadingTimeOut: 9000,
                     levelLoadingMaxRetry: 4,
-                    fragLoadingTimeOut: 10000,
-                    fragLoadingMaxRetry: 5,
+                    fragLoadingTimeOut: 12000,
+                    fragLoadingMaxRetry: 6,
                     fragLoadingRetryDelay: 500,
-                    // ── Headers requis pour certains serveurs IPTV ──
                     xhrSetup: function(xhr) {
                         xhr.setRequestHeader('Accept', '*/*');
                     },
-                    // ── ABR fluide ──
-                    abrEwmaDefaultEstimate: 1200000,
-                    abrBandWidthFactor: 0.75,
+                    abrEwmaDefaultEstimate: 950000,    // Calibré prudent (950 kbps) pour éviter le choix 1080p 5Mbps au départ
+                    abrBandWidthFactor: 0.65,
+                    abrBandWidthUpFactor: 0.5,
                     startFragPrefetch: true,
                     progressive: true,
-                    nudgeMaxRetry: 5,
-                    nudgeOffset: 0.1,
+                    nudgeMaxRetry: 8,
+                    nudgeOffset: 0.2,
                     maxStarvationDelay: 4
                 });
 
-                videoEl.addEventListener('loadeddata', () => clearPlayerOverlays(), { once: true });
-                videoEl.addEventListener('canplay', () => clearPlayerOverlays(), { once: true });
+                const triggerHlsRecovery = () => {
+                    if (loadSeq !== channelLoadSeq) return;
+                    destroyActivePlayer();
+                    if (channel.fallbackUrl && !useFallback && channel.fallbackUrl !== channel.url) {
+                        loadChannel(index, true, 0);
+                    } else if (retryStage < 3) {
+                        loadChannel(index, useFallback, retryStage + 1);
+                    } else if (channel.backupChannels && channel.backupChannels.length > 0 && !channel._triedBackup) {
+                        channel._triedBackup = true;
+                        const backupCh = channel.backupChannels[0];
+                        channel.url = backupCh.url;
+                        channel.fallbackUrl = backupCh.fallbackUrl || backupCh.url;
+                        loadChannel(index, false, 0);
+                    } else {
+                        showPlayerError('Ce flux est temporairement indisponible.', channel, index);
+                    }
+                };
+
+                videoEl.onloadeddata = () => clearPlayerOverlays();
+                videoEl.oncanplay = () => clearPlayerOverlays();
+                videoEl.onplaying = () => { clearWebStallWatchdog(); clearPlayerOverlays(); startStreamPreviewTimer(); };
+                videoEl.onwaiting = () => armStallWatchdog(triggerHlsRecovery);
+                videoEl.onstalled = () => armStallWatchdog(triggerHlsRecovery);
 
                 hlsInstance.loadSource(finalUrl);
                 hlsInstance.attachMedia(videoEl);
 
                 hlsInstance.on(Hls.Events.MANIFEST_PARSED, (_, data) => {
                     clearPlayerOverlays();
+                    const levels = data.levels || [];
 
-                    // Afficher le sélecteur de qualité si plusieurs niveaux disponibles
                     if (qualitySelectorEl) {
-                        qualitySelectorEl.style.display = data.levels && data.levels.length > 1 ? 'flex' : 'none';
+                        qualitySelectorEl.style.display = levels.length > 1 ? 'flex' : 'none';
                     }
 
-                    // Appliquer la qualité précédemment choisie sur la nouvelle source
                     if (forcedQuality !== -1) {
-                        setTimeout(() => setQualityLevel(forcedQuality), 200);
-                    } else {
-                        // En auto, donner à HLS.js notre estimation réseau mesurée
-                        if (estimatedBwKbps < 2000) {
-                            hlsInstance.bandwidthEstimate = estimatedBwKbps * 1000;
+                        setTimeout(() => setQualityLevel(forcedQuality), 150);
+                    } else if (levels.length > 1) {
+                        // Toujours démarrer sur la piste <= 1.4 Mbps la mieux adaptée (évite 1080p 4.2 Mbps en index 0)
+                        const ecoIdx = pickBestEcoLevelIndex(levels, Math.min(estimatedBwKbps || 1400, 1450));
+                        if (ecoIdx !== -1) {
+                            hlsInstance.startLevel = ecoIdx;
+                            hlsInstance.currentLevel = ecoIdx;
+                            // Si débit <= 2 Mbps, plafonner l'ABR pour ne pas sauter en 1080p puis caler
+                            if (estimatedBwKbps <= 2000) {
+                                hlsInstance.autoLevelCapping = ecoIdx;
+                            }
                         }
+                        hlsInstance.bandwidthEstimate = Math.min(estimatedBwKbps || 1200, 1400) * 1000;
                     }
 
                     attemptAutoPlay(videoEl);
                 });
 
-                // ── Sélection automatique de la piste audio compatible (ex: TF1 FHD avec Dolby/E-AC3) ──
                 hlsInstance.on(Hls.Events.AUDIO_TRACKS_UPDATED, (_, data) => {
                     if (data && data.audioTracks && data.audioTracks.length > 1) {
                         const tracks = data.audioTracks;
@@ -860,21 +1235,20 @@
                             return c.includes('mp4a') || c.includes('aac') || n.includes('stereo') || n.includes('aac') || (!n.includes('dolby') && !n.includes('5.1') && !c.includes('ec-3') && !c.includes('ac-3'));
                         });
                         if (aacIndex !== -1 && aacIndex !== hlsInstance.audioTrack) {
-                            console.log(`[BOKK TV] Bascule automatique piste audio compatible (index ${aacIndex}, ${tracks[aacIndex].name || tracks[aacIndex].audioCodec})`);
                             hlsInstance.audioTrack = aacIndex;
                         }
                     }
                 });
 
                 hlsInstance.on(Hls.Events.ERROR, (_, data) => {
-                    // Récupération automatique sur calage ou micro-coupure de connexion (anti-freeze)
                     if (data.details === 'bufferStalledError' || data.details === 'bufferNudgeOnStall') {
-                        console.warn('[BOKK TV Anti-Freeze] Tampon en cours de chargement...');
                         if (hlsInstance) {
+                            // Baisser vers le niveau de débit immédiatement inférieur selon le tri réel
                             if (hlsInstance.autoLevelEnabled && hlsInstance.levels && hlsInstance.levels.length > 1) {
-                                const currentLvl = hlsInstance.currentLevel;
-                                if (currentLvl > 0) {
-                                    hlsInstance.currentLevel = currentLvl - 1;
+                                const sorted = getSortedHlsLevelIndices(hlsInstance.levels);
+                                const pos = sorted.findIndex(x => x.idx === hlsInstance.currentLevel);
+                                if (pos > 0) {
+                                    hlsInstance.currentLevel = sorted[pos - 1].idx;
                                 }
                             }
                             hlsInstance.startLoad();
@@ -882,61 +1256,33 @@
                         return;
                     }
 
-                    // Si le navigateur rejette un codec audio spécifique (ex: E-AC3 Dolby)
                     if (data.details === 'bufferAddCodecError' && data.mimeType && data.mimeType.includes('audio')) {
-                        console.warn('[BOKK TV] Codec audio incompatible avec le navigateur, essai piste alternative...');
                         if (hlsInstance.audioTracks && hlsInstance.audioTracks.length > 1) {
-                            const nextTrack = (hlsInstance.audioTrack + 1) % hlsInstance.audioTracks.length;
-                            hlsInstance.audioTrack = nextTrack;
+                            hlsInstance.audioTrack = (hlsInstance.audioTrack + 1) % hlsInstance.audioTracks.length;
                             return;
                         }
                     }
 
                     if (data.fatal) {
-                        switch (data.type) {
-                            case Hls.ErrorTypes.NETWORK_ERROR:
-                                console.warn(`[BOKK TV] Erreur réseau HLS (Stage ${retryStage}) sur ${finalUrl}`);
-                                destroyActivePlayer();
-                                if (channel.fallbackUrl && !useFallback && channel.fallbackUrl !== channel.url) {
-                                    loadChannel(index, true, 0);
-                                } else if (retryStage < 4) {
-                                    loadChannel(index, useFallback, retryStage + 1);
-                                } else {
-                                    showPlayerError('Ce flux est temporairement indisponible.', channel, index);
-                                }
-                                break;
-                            case Hls.ErrorTypes.MEDIA_ERROR:
-                                console.warn('[BOKK TV] Erreur média HLS, récupération...');
+                        if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
+                            try {
+                                hlsInstance.recoverMediaError();
+                            } catch (e) {
                                 try {
+                                    hlsInstance.swapAudioCodec();
                                     hlsInstance.recoverMediaError();
-                                } catch (e) {
-                                    try {
-                                        hlsInstance.swapAudioCodec();
-                                        hlsInstance.recoverMediaError();
-                                    } catch (e2) {
-                                        destroyActivePlayer();
-                                        showPlayerError('Ce flux est temporairement indisponible.', channel, index);
-                                    }
+                                } catch (e2) {
+                                    triggerHlsRecovery();
                                 }
-                                break;
-                            default:
-                                destroyActivePlayer();
-                                if (channel.fallbackUrl && !useFallback && channel.fallbackUrl !== channel.url) {
-                                    loadChannel(index, true, 0);
-                                } else if (retryStage < 4) {
-                                    loadChannel(index, useFallback, retryStage + 1);
-                                } else {
-                                    showPlayerError('Ce flux est temporairement indisponible.', channel, index);
-                                }
-                                break;
+                            }
+                        } else {
+                            triggerHlsRecovery();
                         }
                     }
                 });
             } else if (videoEl.canPlayType('application/vnd.apple.mpegurl')) {
                 videoEl.src = finalUrl;
-                videoEl.addEventListener('loadedmetadata', () => {
-                    attemptAutoPlay(videoEl);
-                }, { once: true });
+                videoEl.onloadedmetadata = () => attemptAutoPlay(videoEl);
             } else {
                 showPlayerError('Votre navigateur ne prend pas en charge la lecture de ce flux.');
             }
@@ -1334,6 +1680,7 @@
                 <div class="card-top">
                     <span class="card-title" title="${ch.name}">${ch.name}</span>
                     <span class="card-badge">${ch.badge || 'HD'}</span>
+                    ${ch.backupChannels && ch.backupChannels.length > 0 ? `<span style="background:rgba(56,189,248,0.18); border:1px solid rgba(56,189,248,0.4); color:#38bdf8; font-size:0.65rem; font-weight:700; padding:1px 5px; border-radius:4px; margin-left:4px;">${ch.backupChannels.length + 1} flux</span>` : ''}
                 </div>
                 <div class="card-subtitle" title="${subText}">${subText}</div>
             </div>
@@ -1819,6 +2166,8 @@
         userManuallySelectedCategory = true;
         renderCategories();
         renderChannelList(true);
+        renderRecentChannels();
+        checkExpiryBanner();
         updateM3uModalStatus();
         showToast(`${newChannels.length.toLocaleString('fr-FR')} chaîne(s) importée(s) avec succès`);
         closeM3uModal();
@@ -3381,40 +3730,170 @@
     // Source : API Officielle ESPN Sports (Mondial, Fiable, Temps Réel)
     // ═══════════════════════════════════════════════════════════════
 
-    // Mapping chaînes BOKK TV pour les grandes compétitions
-    const COMPETITION_CHANNELS = {
-        'UEFA Champions League': [
-            { id: 2770, name: 'Canal+ Foot HD', badge: 'FHD' },
-            { id: 3724, name: 'beIN Sports 1',  badge: '4K' },
-            { id: 3704, name: 'M+ Liga Campeones', badge: 'HD' }
-        ],
-        'LaLiga': [
-            { id: 5245, name: 'M+ LaLiga 4K',   badge: '4K' },
-            { id: 5293, name: 'DAZN LaLiga',    badge: 'HD' },
-            { id: 3724, name: 'beIN Sports 1',  badge: 'HD' }
-        ],
-        'Ligue 1': [
-            { id: 2770, name: 'Canal+ Foot HD', badge: 'FHD' },
-            { id: 2767, name: 'Canal+ Sport',   badge: 'FHD' },
-            { id: 3724, name: 'beIN Sports 1',  badge: 'HD' }
-        ],
-        'Premier League': [
-            { id: 2774, name: 'Canal+ Premier League', badge: 'FHD' },
-            { id: 3724, name: 'beIN Sports 1',         badge: 'HD' }
-        ],
-        'Serie A': [
-            { id: 3724, name: 'beIN Sports 1',  badge: 'HD' },
-            { id: 2767, name: 'Canal+ Sport',   badge: 'FHD' }
-        ],
-        'Bundesliga': [
-            { id: 3724, name: 'beIN Sports 1',  badge: 'HD' },
-            { id: 2767, name: 'Canal+ Sport',   badge: 'FHD' }
-        ],
-        'default': [
-            { id: 2770, name: 'Canal+ Foot HD', badge: 'FHD' },
-            { id: 3724, name: 'beIN Sports 1',  badge: 'HD' }
-        ]
-    };
+    // ── Mapping dynamique et intelligent des chaînes BOKK TV ──
+    // Synchronisé avec les IDs réels du catalogue 2 056 chaînes actives
+    function getDynamicMatchChannels(leagueName, matchIndex = 0, teamA = '', teamB = '') {
+        const tUpper = `${teamA} ${teamB}`.toUpperCase();
+
+        if (leagueName === 'UEFA Champions League') {
+            const uclChannels = [
+                // Match 0 (Choc 1 : Arsenal vs Dortmund, etc.)
+                [
+                    { id: 98,  name: 'Canal+ Foot HD',        badge: 'FHD' },
+                    { id: 109, name: 'beIN Sports 1 HD',     badge: 'FHD' },
+                    { id: 89,  name: 'M+ Liga de Campeones', badge: 'HD'  },
+                    { id: 136, name: 'beIN Sports 8K',       badge: '4K'  }
+                ],
+                // Match 1 (Choc 2 : Man City vs Napoli, etc.)
+                [
+                    { id: 97,  name: 'Canal+ 360 HD',        badge: 'FHD' },
+                    { id: 110, name: 'beIN Sports 2 HD',     badge: 'FHD' },
+                    { id: 90,  name: 'M+ Liga Campeones 2',  badge: 'HD'  },
+                    { id: 137, name: 'Canal+ 8K',            badge: '4K'  }
+                ],
+                // Match 2 (Feyenoord vs Porto, etc.)
+                [
+                    { id: 99,  name: 'Canal+ Live 1',        badge: 'HD'  },
+                    { id: 111, name: 'beIN Sports 3 HD',     badge: 'FHD' },
+                    { id: 91,  name: 'M+ Liga Campeones 3',  badge: 'HD'  }
+                ],
+                // Match 3 (RB Leipzig vs Lens, etc.)
+                [
+                    { id: 100, name: 'Canal+ Live 2',        badge: 'HD'  },
+                    { id: 112, name: 'beIN Sports 4 HD',     badge: 'FHD' },
+                    { id: 92,  name: 'M+ Liga Campeones 4',  badge: 'HD'  }
+                ],
+                // Match 4 (Como vs AEK Athens, etc.)
+                [
+                    { id: 101, name: 'Canal+ Live 3',        badge: 'HD'  },
+                    { id: 113, name: 'beIN Sports 5 HD',     badge: 'FHD' },
+                    { id: 93,  name: 'M+ Liga Campeones 5',  badge: 'HD'  }
+                ],
+                // Match 5 (Galatasaray vs Aston Villa, etc.)
+                [
+                    { id: 102, name: 'Canal+ Live 4',        badge: 'HD'  },
+                    { id: 114, name: 'beIN Sports 6 HD',     badge: 'FHD' },
+                    { id: 94,  name: 'M+ Liga Campeones 6',  badge: 'HD'  }
+                ],
+                // Match 6
+                [
+                    { id: 103, name: 'Canal+ Live 5',        badge: 'HD'  },
+                    { id: 115, name: 'beIN Sports 7 HD',     badge: 'FHD' },
+                    { id: 95,  name: 'M+ Liga Campeones 7',  badge: 'HD'  }
+                ],
+                // Match 7
+                [
+                    { id: 104, name: 'Canal+ Live 6',        badge: 'HD'  },
+                    { id: 116, name: 'beIN Sports 8 HD',     badge: 'FHD' },
+                    { id: 96,  name: 'M+ Liga Campeones 8',  badge: 'HD'  }
+                ]
+            ];
+            // Priorité absolue sur Canal+ Foot / Canal+ 360 si club français engagé
+            if (/PSG|PARIS|LENS|BREST|MONACO|LILLE|MARSEILLE|LYON/.test(tUpper)) {
+                return [
+                    { id: 98,  name: 'Canal+ Foot HD',        badge: 'FHD' },
+                    { id: 97,  name: 'Canal+ 360 HD',        badge: 'FHD' },
+                    { id: 109, name: 'beIN Sports 1 HD',     badge: 'FHD' },
+                    { id: 89,  name: 'M+ Liga de Campeones', badge: 'HD'  }
+                ];
+            }
+            return uclChannels[matchIndex % uclChannels.length];
+        }
+
+        if (leagueName === 'LaLiga') {
+            const laligaChannels = [
+                // Match 0 (Clasico, Real Madrid, Barça, Atletico)
+                [
+                    { id: 1559, name: 'M+ LaLiga 4K',    badge: '4K'  },
+                    { id: 1607, name: 'DAZN LaLiga 4K',  badge: '4K'  },
+                    { id: 109,  name: 'beIN Sports 1 HD', badge: 'FHD' }
+                ],
+                // Match 1
+                [
+                    { id: 1560, name: 'M+ LaLiga HD',    badge: 'FHD' },
+                    { id: 1608, name: 'DAZN LaLiga HD',  badge: 'HD'  },
+                    { id: 110,  name: 'beIN Sports 2 HD', badge: 'FHD' }
+                ],
+                // Match 2
+                [
+                    { id: 1564, name: 'M+ LaLiga 2 4K',  badge: '4K'  },
+                    { id: 1610, name: 'DAZN LaLiga 2 4K', badge: '4K' },
+                    { id: 111,  name: 'beIN Sports 3 HD', badge: 'FHD' }
+                ],
+                // Match 3
+                [
+                    { id: 1566, name: 'M+ LaLiga 3 4K',  badge: '4K'  },
+                    { id: 1612, name: 'DAZN 1 4K',       badge: '4K'  }
+                ]
+            ];
+            return laligaChannels[matchIndex % laligaChannels.length];
+        }
+
+        if (leagueName === 'Premier League') {
+            const plChannels = [
+                [
+                    { id: 97,  name: 'Canal+ 360 HD',      badge: 'FHD' },
+                    { id: 109, name: 'beIN Sports 1 HD',   badge: 'FHD' },
+                    { id: 120, name: 'Sky Sport Football', badge: 'FHD' }
+                ],
+                [
+                    { id: 98,  name: 'Canal+ Foot HD',      badge: 'FHD' },
+                    { id: 110, name: 'beIN Sports 2 HD',   badge: 'FHD' },
+                    { id: 119, name: 'Sky Sport Uno',      badge: 'FHD' }
+                ],
+                [
+                    { id: 99,  name: 'Canal+ Live 1',      badge: 'HD'  },
+                    { id: 111, name: 'beIN Sports 3 HD',   badge: 'FHD' }
+                ]
+            ];
+            return plChannels[matchIndex % plChannels.length];
+        }
+
+        if (leagueName === 'Serie A') {
+            const saChannels = [
+                [
+                    { id: 119, name: 'Sky Sport Uno',      badge: 'FHD' },
+                    { id: 110, name: 'beIN Sports 2 HD',   badge: 'FHD' },
+                    { id: 97,  name: 'Canal+ 360 HD',      badge: 'FHD' }
+                ],
+                [
+                    { id: 120, name: 'Sky Sport Football', badge: 'FHD' },
+                    { id: 111, name: 'beIN Sports 3 HD',   badge: 'FHD' },
+                    { id: 98,  name: 'Canal+ Foot HD',      badge: 'FHD' }
+                ]
+            ];
+            return saChannels[matchIndex % saChannels.length];
+        }
+
+        if (leagueName === 'Bundesliga') {
+            const blChannels = [
+                [
+                    { id: 110, name: 'beIN Sports 2 HD',   badge: 'FHD' },
+                    { id: 97,  name: 'Canal+ 360 HD',      badge: 'FHD' },
+                    { id: 118, name: 'Sky Sport Action',   badge: 'FHD' }
+                ],
+                [
+                    { id: 111, name: 'beIN Sports 3 HD',   badge: 'FHD' },
+                    { id: 98,  name: 'Canal+ Foot HD',      badge: 'FHD' }
+                ]
+            ];
+            return blChannels[matchIndex % blChannels.length];
+        }
+
+        if (leagueName === 'Ligue 1') {
+            return [
+                { id: 98,  name: 'Canal+ Foot HD',   badge: 'FHD' },
+                { id: 97,  name: 'Canal+ 360 HD',   badge: 'FHD' },
+                { id: 109, name: 'beIN Sports 1 HD', badge: 'FHD' }
+            ];
+        }
+
+        return [
+            { id: 98,  name: 'Canal+ Foot HD',   badge: 'FHD' },
+            { id: 109, name: 'beIN Sports 1 HD', badge: 'FHD' },
+            { id: 97,  name: 'Canal+ 360 HD',   badge: 'FHD' }
+        ];
+    }
 
     // Poster de match cinématique par compétition
     function getMatchPoster(competition) {
@@ -3468,7 +3947,7 @@
                     const data = await res.json();
                     const events = data.events || [];
 
-                    events.forEach(ev => {
+                    events.forEach((ev, evIdx) => {
                         const comp = (ev.competitions && ev.competitions[0]) ? ev.competitions[0] : null;
                         if (!comp || !comp.competitors || comp.competitors.length < 2) return;
 
@@ -3490,7 +3969,7 @@
                             scoreText = `${home.score} - ${away.score}`;
                         }
 
-                        const channels = COMPETITION_CHANNELS[league.name] || COMPETITION_CHANNELS['default'];
+                        const channels = getDynamicMatchChannels(league.name, evIdx, home.team.displayName, away.team.displayName);
 
                         // Calcul précis Aujourd'hui / Demain / Date
                         const isEvToday = (evDate.getDate() === now.getDate() && evDate.getMonth() === now.getMonth() && evDate.getFullYear() === now.getFullYear());
@@ -3870,6 +4349,8 @@
 
                 if (profilePrenom) profilePrenom.textContent = sub.prenom || 'Abonne';
                 if (profileId) profileId.textContent = sub.id;
+                const profileAvatar = document.getElementById('sub-profile-avatar');
+                if (profileAvatar) profileAvatar.textContent = ((sub.prenom || 'A')[0] || 'A').toUpperCase();
 
                 let daysText = '30 jours restants';
                 if (sub.expiresAt) {
@@ -3894,7 +4375,7 @@
                 if (profileExpiry) profileExpiry.textContent = daysText;
 
                 if (btnWhatsapp) {
-                    btnWhatsapp.href = 'https://wa.me/?text=' + encodeURIComponent('Bonjour, mon ID BOKK TV est ' + sub.id + ' (' + (sub.prenom || '') + ').');
+                    btnWhatsapp.href = 'https://wa.me/221783055520?text=' + encodeURIComponent('Bonjour BOKK TV, mon compte est lié à l\'identifiant ' + sub.id + ' (' + (sub.prenom || '') + '). Je vous contacte au sujet de mon abonnement.');
                 }
             } else {
                 if (navAccountText) navAccountText.textContent = 'Mon ID';
@@ -3985,28 +4466,136 @@
             };
         }
 
+        // ── Gestion des Boutons de Paiement Wave (Notification Immédiate à l'Admin) ──
+        function setupWavePaymentButtons() {
+            const waveBtns = document.querySelectorAll('.btn-wave-plan');
+            waveBtns.forEach(btn => {
+                btn.onclick = async (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+
+                    const curSub = (window.BokkFirebase && typeof window.BokkFirebase.getCurrentSubscriber === 'function')
+                        ? window.BokkFirebase.getCurrentSubscriber()
+                        : null;
+
+                    // Si l'utilisateur n'est pas encore inscrit/connecté, lui demander d'abord son numéro pour lier son compte
+                    if (!curSub || !curSub.id) {
+                        showToast('ℹ️ Veuillez d\'abord entrer votre numéro pour associer votre paiement.');
+                        openModal();
+                        if (tabRegister) tabRegister.style.display = 'block';
+                        if (tabLogin) tabLogin.style.display = 'none';
+                        if (viewAuth) viewAuth.style.display = 'block';
+                        if (viewProfile) viewProfile.style.display = 'none';
+                        return;
+                    }
+
+                    const plan = btn.getAttribute('data-plan') || '1m';
+                    const amount = Number(btn.getAttribute('data-amount')) || 3000;
+                    const days = Number(btn.getAttribute('data-days')) || 30;
+
+                    const subId = curSub.id;
+                    const subName = curSub.prenom || 'Abonné';
+                    const payerPhone = curSub.phone || curSub.phoneDisplay || curSub.id;
+
+                    // 1. Notification automatique et instantanée enregistrée dans Firestore (pour l'admin dans /adminee)
+                    if (window.BokkFirebase && typeof window.BokkFirebase.submitPaymentClaim === 'function') {
+                        window.BokkFirebase.submitPaymentClaim({
+                            subscriberId: subId,
+                            subscriberName: subName,
+                            payerPhone: payerPhone,
+                            plan: plan,
+                            amount: amount,
+                            days: days,
+                            autoCreated: true
+                        }).then(res => {
+                            console.log('[BOKK TV] 🔔 Notification de paiement envoyée à l\'admin:', res);
+                        }).catch(err => {
+                            console.warn('[BOKK TV] Erreur submitPaymentClaim:', err);
+                        });
+                    }
+
+                    // 2. Feedback rassurant pour l'utilisateur
+                    showToast('🚀 Demande transmise à l\'administrateur ! Ouverture de Wave...');
+
+                    // 3. Ouverture du lien officiel Wave correspondant au montant
+                    const waveUrl = `https://pay.wave.com/m/M_sn_cop5B9UJYF8P/c/sn/?amount=${amount}`;
+                    setTimeout(() => {
+                        window.open(waveUrl, '_blank');
+                    }, 250);
+                };
+            });
+        }
+        setupWavePaymentButtons();
+
+        // ── Validation du Numéro & Inscription (Règle 1 Compte = 1 Numéro) ──
+        const errorSubPhone = document.getElementById('error-sub-phone');
+        const errorSubLogin = document.getElementById('error-sub-login');
+
+        if (inputPhone) {
+            inputPhone.addEventListener('input', () => {
+                if (errorSubPhone) errorSubPhone.style.display = 'none';
+            });
+        }
+        if (inputId) {
+            inputId.addEventListener('input', () => {
+                if (errorSubLogin) errorSubLogin.style.display = 'none';
+            });
+        }
+
         if (btnRegister) {
             btnRegister.onclick = async () => {
                 const prenom = (inputPrenom ? inputPrenom.value : '').trim();
                 const phone = (inputPhone ? inputPhone.value : '').trim();
+
                 if (!prenom) {
-                    showToast('Veuillez entrer votre prenom');
+                    showToast('Veuillez entrer votre prénom.');
                     if (inputPrenom) inputPrenom.focus();
                     return;
                 }
 
+                if (!phone) {
+                    if (errorSubPhone) {
+                        errorSubPhone.style.display = 'block';
+                        errorSubPhone.textContent = 'Le numéro de téléphone est obligatoire.';
+                    }
+                    if (inputPhone) inputPhone.focus();
+                    showToast('Veuillez entrer votre numéro de téléphone.');
+                    return;
+                }
+
+                // Validation stricte du numéro
+                if (window.BokkFirebase && typeof window.BokkFirebase.validatePhone === 'function') {
+                    const check = window.BokkFirebase.validatePhone(phone);
+                    if (!check.valid) {
+                        if (errorSubPhone) {
+                            errorSubPhone.style.display = 'block';
+                            errorSubPhone.textContent = check.error;
+                        }
+                        if (inputPhone) inputPhone.focus();
+                        showToast(check.error);
+                        return;
+                    }
+                }
+
+                if (errorSubPhone) errorSubPhone.style.display = 'none';
                 btnRegister.disabled = true;
-                btnRegister.textContent = 'Creation en cours...';
+                btnRegister.textContent = 'Vérification du compte...';
 
                 if (window.BokkFirebase && typeof window.BokkFirebase.registerSubscriber === 'function') {
                     const res = await window.BokkFirebase.registerSubscriber(prenom, phone);
                     btnRegister.disabled = false;
-                    btnRegister.textContent = 'Obtenir mon ID BOKK';
+                    btnRegister.textContent = 'Valider mon Compte & ID (Gratuit 30j)';
 
                     if (res.success && res.subscriber) {
                         updateAccountUI(res.subscriber);
                         startLiveSubscriberSync(res.subscriber.id);
-                        showToast('🎉 Félicitations ' + prenom + ' ! Votre ID est ' + res.subscriber.id + ' (1 mois offert)');
+
+                        if (res.alreadyExists) {
+                            showToast('🎉 Bon retour ' + (res.subscriber.prenom || prenom) + ' ! Votre compte (' + res.subscriber.id + ') a été retrouvé et connecté.');
+                        } else {
+                            showToast('🎉 Bienvenue ' + prenom + ' ! Votre identifiant est ' + res.subscriber.id + ' (30 jours offerts).');
+                        }
+
                         isStreamPreviewLocked = false;
                         closeModal(true);
                         // Reprise immédiate du flux
@@ -4017,11 +4606,16 @@
                             videoEl.play().catch(() => {});
                         }
                     } else {
-                        showToast('Erreur lors de la creation de l ID');
+                        const errMsg = res.error || 'Erreur lors de la validation du numéro.';
+                        if (errorSubPhone) {
+                            errorSubPhone.style.display = 'block';
+                            errorSubPhone.textContent = errMsg;
+                        }
+                        showToast(errMsg);
                     }
                 } else {
                     btnRegister.disabled = false;
-                    btnRegister.textContent = 'Obtenir mon ID BOKK';
+                    btnRegister.textContent = 'Valider mon Compte & ID (Gratuit 30j)';
                     showToast('Service non disponible pour le moment');
                 }
             };
@@ -4031,18 +4625,23 @@
             btnLogin.onclick = async () => {
                 const id = (inputId ? inputId.value : '').trim();
                 if (!id) {
-                    showToast('Entrez votre ID (ex: BK-4821)');
+                    if (errorSubLogin) {
+                        errorSubLogin.style.display = 'block';
+                        errorSubLogin.textContent = 'Veuillez entrer votre numéro ou ID.';
+                    }
                     if (inputId) inputId.focus();
+                    showToast('Entrez votre numéro ou identifiant');
                     return;
                 }
 
+                if (errorSubLogin) errorSubLogin.style.display = 'none';
                 btnLogin.disabled = true;
-                btnLogin.textContent = 'Verification...';
+                btnLogin.textContent = 'Vérification...';
 
                 if (window.BokkFirebase && typeof window.BokkFirebase.loginSubscriber === 'function') {
                     const res = await window.BokkFirebase.loginSubscriber(id);
                     btnLogin.disabled = false;
-                    btnLogin.textContent = 'Valider mon ID';
+                    btnLogin.textContent = 'Connexion Immédiate';
 
                     if (res.success && res.subscriber) {
                         updateAccountUI(res.subscriber);
@@ -4058,11 +4657,15 @@
                             videoEl.play().catch(() => {});
                         }
                     } else {
-                        showToast('ID introuvable. Verifiez la saisie.');
+                        if (errorSubLogin) {
+                            errorSubLogin.style.display = 'block';
+                            errorSubLogin.textContent = 'Numéro ou ID introuvable. Vérifiez votre saisie ou créez un compte.';
+                        }
+                        showToast('Numéro ou ID introuvable. Vérifiez la saisie.');
                     }
                 } else {
                     btnLogin.disabled = false;
-                    btnLogin.textContent = 'Valider mon ID';
+                    btnLogin.textContent = 'Connexion Immédiate';
                 }
             };
         }
@@ -4073,7 +4676,7 @@
                 if (!id) return;
                 try {
                     await navigator.clipboard.writeText(id);
-                    showToast('ID ' + id + ' copie !');
+                    showToast('ID ' + id + ' copié !');
                 } catch(e) {
                     showToast('Votre ID : ' + id);
                 }
@@ -4087,11 +4690,127 @@
                     window.BokkFirebase.logoutSubscriber();
                 }
                 updateAccountUI(null);
-                showToast('Deconnecte.');
+                showToast('Déconnecté.');
+            };
+        }
+
+        // ── Déclaration de paiement Wave Manuelle (Option C) ──
+        const btnSubmitClaim = document.getElementById('btn-submit-claim');
+        const inputClaimPayerPhone = document.getElementById('input-claim-payer-phone');
+        const selectClaimPlan = document.getElementById('select-claim-plan');
+        const inputClaimRef = document.getElementById('input-claim-ref');
+        const claimFeedback = document.getElementById('claim-feedback');
+
+        if (btnSubmitClaim) {
+            btnSubmitClaim.onclick = async () => {
+                const sub = (window.BokkFirebase && typeof window.BokkFirebase.getCurrentSubscriber === 'function')
+                    ? window.BokkFirebase.getCurrentSubscriber()
+                    : null;
+                const subId = sub ? sub.id : (profileId ? profileId.textContent : '');
+                const subName = sub ? sub.prenom : (profilePrenom ? profilePrenom.textContent : '');
+
+                const payerPhone = (inputClaimPayerPhone ? inputClaimPayerPhone.value : '').trim();
+                const plan = (selectClaimPlan ? selectClaimPlan.value : '1m');
+                const waveRef = (inputClaimRef ? inputClaimRef.value : '').trim();
+
+                if (!payerPhone) {
+                    if (claimFeedback) {
+                        claimFeedback.style.display = 'block';
+                        claimFeedback.style.background = 'rgba(230,57,70,0.15)';
+                        claimFeedback.style.color = '#e63946';
+                        claimFeedback.textContent = 'Veuillez saisir le numéro Wave ayant effectué le paiement.';
+                    }
+                    if (inputClaimPayerPhone) inputClaimPayerPhone.focus();
+                    return;
+                }
+
+                btnSubmitClaim.disabled = true;
+                btnSubmitClaim.textContent = 'Envoi de la déclaration...';
+
+                const amounts = { '1m': 3000, '3m': 7500, '12m': 25000 };
+                const daysMap = { '1m': 30, '3m': 90, '12m': 365 };
+                const amount = amounts[plan] || 3000;
+                const days = daysMap[plan] || 30;
+
+                if (window.BokkFirebase && typeof window.BokkFirebase.submitPaymentClaim === 'function') {
+                    const res = await window.BokkFirebase.submitPaymentClaim({
+                        subscriberId: subId,
+                        subscriberName: subName,
+                        payerPhone: payerPhone,
+                        plan: plan,
+                        amount: amount,
+                        days: days,
+                        waveRef: waveRef,
+                        autoCreated: false
+                    });
+                    btnSubmitClaim.disabled = false;
+                    btnSubmitClaim.textContent = 'Valider ma déclaration';
+
+                    if (res && res.success) {
+                        if (claimFeedback) {
+                            claimFeedback.style.display = 'block';
+                            claimFeedback.style.background = 'rgba(16,185,129,0.15)';
+                            claimFeedback.style.color = '#10b981';
+                            claimFeedback.textContent = '✅ Déclaration transmise ! Votre compte sera validé dès réception.';
+                        }
+                        showToast('Déclaration Wave envoyée ! Validation en cours...');
+                        if (inputClaimRef) inputClaimRef.value = '';
+                    } else {
+                        if (claimFeedback) {
+                            claimFeedback.style.display = 'block';
+                            claimFeedback.style.background = 'rgba(230,57,70,0.15)';
+                            claimFeedback.style.color = '#e63946';
+                            claimFeedback.textContent = 'Erreur: ' + ((res && res.error) || 'Impossible de transmettre la déclaration.');
+                        }
+                    }
+                } else {
+                    btnSubmitClaim.disabled = false;
+                    btnSubmitClaim.textContent = 'Valider ma déclaration';
+                    showToast('Service temporairement indisponible');
+                }
             };
         }
     }
 
+    // ── Gestion Masquage / Affichage du Ticker de Matchs ──
+    function initMatchToggle() {
+        const btnToggleMatches = document.getElementById('btn-toggle-matches');
+        const toggleIcon = document.getElementById('toggle-matches-icon');
+        const toggleLabel = document.getElementById('toggle-matches-label');
+        const sec = document.getElementById('section-matchs');
+        if (!btnToggleMatches || !sec) return;
+
+        const STORAGE_KEY = 'bokktv_hide_matches';
+        let isHidden = false;
+        try {
+            isHidden = localStorage.getItem(STORAGE_KEY) === 'true';
+        } catch {}
+
+        function updateUI() {
+            if (isHidden) {
+                sec.classList.add('matches-hidden');
+                if (toggleLabel) toggleLabel.textContent = 'Afficher les matchs';
+                if (toggleIcon) {
+                    toggleIcon.innerHTML = '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line>';
+                }
+            } else {
+                sec.classList.remove('matches-hidden');
+                if (toggleLabel) toggleLabel.textContent = 'Masquer';
+                if (toggleIcon) {
+                    toggleIcon.innerHTML = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle>';
+                }
+            }
+        }
+
+        updateUI();
+
+        btnToggleMatches.onclick = (e) => {
+            e.stopPropagation();
+            isHidden = !isHidden;
+            try { localStorage.setItem(STORAGE_KEY, String(isHidden)); } catch {}
+            updateUI();
+        };
+    }
 
 function init() {
         // ── Initialisation Signalements & Abonnés Firebase Cloud ──
@@ -4121,6 +4840,8 @@ function init() {
         populateBouquetFilter();
         renderCategories();
         renderChannelList(true);
+        renderRecentChannels();
+        checkExpiryBanner();
 
         // ── Synchronisation des chaînes M3U ajoutées par l'administrateur ──
         if (window.BokkFirebase && typeof window.BokkFirebase.listenActiveM3uChannels === 'function') {
@@ -4148,6 +4869,7 @@ function init() {
         renderLiveLogosRow();
         renderUneCards();
         renderMatchesScrollRow();
+        initMatchToggle();
         renderHomeCarousels();
 
         // ── Match Center & carousels ──
@@ -4211,7 +4933,9 @@ function init() {
                 }
             } else if (window.location.protocol === 'https:') {
                 window.addEventListener('load', () => {
-                    navigator.serviceWorker.register('/sw.js?v=4').catch(() => {});
+                    navigator.serviceWorker.register('/sw.js?v=16').then((reg) => {
+                        reg.update();
+                    }).catch(() => {});
                 });
             }
         }
