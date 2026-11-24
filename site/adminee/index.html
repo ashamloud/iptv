@@ -720,7 +720,7 @@
     (function () {
         'use strict';
 
-        const ADMIN_PIN = '2010';
+        const VALID_PINS = ['1234', '2010'];
         let disabledIdsSet = new Set();
         let reportedList = [];
         let hlsInstance = null;
@@ -736,7 +736,7 @@
         }
 
         function checkPin() {
-            if (pinInput.value === ADMIN_PIN) {
+            if (VALID_PINS.includes((pinInput.value || '').trim())) {
                 sessionStorage.setItem('bokk_admin_auth', 'true');
                 loginScreen.style.display = 'none';
                 initAdmin();

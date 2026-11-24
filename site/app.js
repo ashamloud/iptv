@@ -16,7 +16,37 @@
     var resolvedChannels = (typeof window !== 'undefined' && Array.isArray(window.channels) && window.channels.length > 0)
         ? window.channels
         : ((typeof window !== 'undefined' && window.channels) || (typeof globalThis !== 'undefined' && globalThis.channels) || []);
-    var channels = Array.isArray(resolvedChannels) ? resolvedChannels : [];
+
+    // ── Déduplication & Liaison des Flux de Secours (Regroupement des chaînes de même nom) ──
+    function groupChannelsWithBackups(rawList) {
+        const map = new Map();
+        for (let i = 0; i < rawList.length; i++) {
+            const ch = rawList[i];
+            if (!ch || !ch.name) continue;
+            const cleanName = ch.name
+                .toLowerCase()
+                .replace(/\b(fhd|hd|hevc|4k|uhd|sd|raw|50fps|h265|h264|1080p|720p)\b/gi, '')
+                .replace(/[\(\)\[\]\-]/g, ' ')
+                .replace(/\s+/g, ' ')
+                .trim();
+            const cat = (ch.category || ch.group || 'general').toLowerCase();
+            const key = cleanName + '__' + cat;
+            const existing = map.get(key);
+            if (!existing) {
+                map.set(key, { ...ch, backupChannels: [] });
+            } else {
+                if (existing.url !== ch.url) {
+                    if (!existing.backupChannels) existing.backupChannels = [];
+                    if (!existing.backupChannels.some(b => b.url === ch.url)) {
+                        existing.backupChannels.push(ch);
+                    }
+                }
+            }
+        }
+        return Array.from(map.values()).map((ch, idx) => ({ ...ch, index: idx }));
+    }
+
+    var channels = Array.isArray(resolvedChannels) ? groupChannelsWithBackups(resolvedChannels) : [];
 
     // ── Métadonnées des catégories (découverte automatique selon les liens) ──
     const CATEGORY_METADATA = {
@@ -1006,6 +1036,13 @@
                                     loadChannel(index, true, 0);
                                 } else if (retryStage < 4) {
                                     loadChannel(index, useFallback, retryStage + 1);
+                                } else if (channel.backupChannels && channel.backupChannels.length > 0 && !channel._triedBackup) {
+                                    channel._triedBackup = true;
+                                    const backupCh = channel.backupChannels[0];
+                                    console.warn('[BOKK TV Web] Essai du flux de secours :', backupCh.name);
+                                    channel.url = backupCh.url;
+                                    channel.fallbackUrl = backupCh.fallbackUrl || backupCh.url;
+                                    loadChannel(index, false, 0);
                                 } else {
                                     showPlayerError('Ce flux est temporairement indisponible.', channel, index);
                                 }
@@ -1030,6 +1067,13 @@
                                     loadChannel(index, true, 0);
                                 } else if (retryStage < 4) {
                                     loadChannel(index, useFallback, retryStage + 1);
+                                } else if (channel.backupChannels && channel.backupChannels.length > 0 && !channel._triedBackup) {
+                                    channel._triedBackup = true;
+                                    const backupCh = channel.backupChannels[0];
+                                    console.warn('[BOKK TV Web] Essai du flux de secours :', backupCh.name);
+                                    channel.url = backupCh.url;
+                                    channel.fallbackUrl = backupCh.fallbackUrl || backupCh.url;
+                                    loadChannel(index, false, 0);
                                 } else {
                                     showPlayerError('Ce flux est temporairement indisponible.', channel, index);
                                 }
@@ -1439,6 +1483,7 @@
                 <div class="card-top">
                     <span class="card-title" title="${ch.name}">${ch.name}</span>
                     <span class="card-badge">${ch.badge || 'HD'}</span>
+                    ${ch.backupChannels && ch.backupChannels.length > 0 ? `<span style="background:rgba(56,189,248,0.18); border:1px solid rgba(56,189,248,0.4); color:#38bdf8; font-size:0.65rem; font-weight:700; padding:1px 5px; border-radius:4px; margin-left:4px;">${ch.backupChannels.length + 1} flux</span>` : ''}
                 </div>
                 <div class="card-subtitle" title="${subText}">${subText}</div>
             </div>

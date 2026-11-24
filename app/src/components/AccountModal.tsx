@@ -13,6 +13,7 @@ import {
   ScrollView,
   Image,
   Platform,
+  useWindowDimensions,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -38,8 +39,9 @@ export function AccountModal({
   const [showProlongInfo, setShowProlongInfo] = useState(false);
   const [tvQrPlan, setTvQrPlan] = useState<null | { url: string; label: string }>(null);
 
-  // Détection Smart TV (Android TV ou grand écran paysage)
-  const isTvDevice = Platform.isTV;
+  // Détection Smart TV & TV Box (Android TV ou grand écran paysage)
+  const { width, height } = useWindowDimensions();
+  const isTvDevice = Platform.isTV || (width >= 850 && width > height);
 
   const deviceName = StorageService.getDeviceName();
 
@@ -299,8 +301,8 @@ export function AccountModal({
                         <Text style={styles.tvQrInstruction}>
                           Ouvrez l'appareil photo de votre téléphone et pointez-le vers ce QR code pour payer avec Wave.
                         </Text>
-                        <TouchableOpacity style={styles.tvQrClose} onPress={() => setTvQrPlan(null)}>
-                          <Text style={styles.tvQrCloseText}>✕ Fermer</Text>
+                        <TouchableOpacity focusable={true} style={styles.tvQrClose} onPress={() => setTvQrPlan(null)}>
+                          <Text style={styles.tvQrCloseText}>✕ Fermer le QR Code</Text>
                         </TouchableOpacity>
                       </View>
                     )}
