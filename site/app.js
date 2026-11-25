@@ -27,8 +27,9 @@
             if (!ch || !ch.name) continue;
             const cleanName = ch.name
                 .toLowerCase()
+                .replace(/\|[^|]+\|/g, ' ') // Nettoyer les balises comme |UEFA|, |AR|, |FR|, |8K|
                 .replace(/\b(fhd|hd|hevc|4k|uhd|sd|raw|50fps|h265|h264|1080p|720p)\b/gi, '')
-                .replace(/[\(\)\[\]\-]/g, ' ')
+                .replace(/[\|\(\)\[\]\-_]/g, ' ')
                 .replace(/\s+/g, ' ')
                 .trim();
             const cat = (ch.category || ch.group || 'general').toLowerCase();
@@ -1059,16 +1060,16 @@
                     isLive: true,
                     url: absoluteFinalUrl
                 }, {
-                    enableWorker: false,
+                    enableWorker: true,
                     lazyLoad: false,
-                    liveBufferLatencyChasing: false,
-                    liveBufferLatencyMaxLatency: 12.0,
-                    liveBufferLatencyMinRemain: 2.0,
+                    liveBufferLatencyChasing: true,
+                    liveBufferLatencyMaxLatency: 8.0,
+                    liveBufferLatencyMinRemain: 1.5,
                     enableStashBuffer: true,
-                    stashInitialSize: 512,               // 512 Ko (~3s de tampon réel à 1.5 Mbps → zéro micro-calage)
+                    stashInitialSize: 128,               // 128 Ko pour démarrage immédiat sans attendre 512 Ko
                     autoCleanupSourceBuffer: true,
-                    autoCleanupMaxBackwardDuration: 25,
-                    autoCleanupMinBackwardDuration: 12
+                    autoCleanupMaxBackwardDuration: 30,
+                    autoCleanupMinBackwardDuration: 15
                 });
 
                 mpegtsInstance.attachMediaElement(videoEl);

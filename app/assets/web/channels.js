@@ -1610,7 +1610,7 @@ var channels = [
     "desc": "|UEFA| BEIN SPORTS 1 HD |AR| • UEFA CHAMPIONS LEAGUE",
     "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/france/bein-sports-1-french-fr.png",
     "url": "http://barrelastv.ottcst.org:80/Pecomarica/1YBFBGI1GQ/1784937",
-    "fallbackUrl": "http://barrelastv.ottcst.org:80/Pecomarica/1YBFBGI1GQ/1784937",
+    "fallbackUrl": "http://novatv.xyz:80/live/LWF147B/Y4P48XQ/56580.ts",
     "type": "ts",
     "userAgent": "IPTVSmartersPro"
   },
@@ -33579,9 +33579,6 @@ var channels = [
 ];
 
 if (typeof window !== 'undefined') {
-  window.channels = channels;
-  window.CHANNELS = channels;
-}
-if (typeof module !== 'undefined') {
-  module.exports = channels;
+    window.channels = channels;
+    window.CHANNELS = channels;
 }
