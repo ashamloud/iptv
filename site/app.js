@@ -437,7 +437,7 @@
                 noticeBox.style.background = 'rgba(0, 112, 243, 0.08)';
                 noticeBox.style.borderColor = 'rgba(0, 112, 243, 0.25)';
                 noticeText.innerHTML = '🎁 <strong>Inscription 100% Gratuite (30 jours offerts)</strong><br>' +
-                    'Inscrivez-vous simplement avec votre prénom ci-dessous pour débloquer immédiatement toutes les chaînes en illimité et sans interruption.';
+                    'Renseignez votre prénom et votre numéro de téléphone (Sénégal 70, 75, 76, 77, 78 ou International). Votre numéro devient votre identifiant BOKK TV unique (1 compte = 1 écran).';
             }
         }
 
@@ -474,7 +474,7 @@
         if (noticeBox && noticeText) {
             noticeBox.style.background = 'rgba(0, 112, 243, 0.08)';
             noticeBox.style.borderColor = 'rgba(0, 112, 243, 0.25)';
-            noticeText.innerHTML = '🎁 <strong>1 Mois de Streaming 100% Offert !</strong><br>Entrez simplement votre prénom ci-dessous pour recevoir votre ID d\'accès gratuit et débloquer toutes les chaînes sans interruption.';
+            noticeText.innerHTML = '🎁 <strong>1 Mois de Streaming 100% Offert !</strong><br>Entrez votre prénom et votre numéro de téléphone (Sénégal 70, 75, 76, 77, 78 ou International). Votre numéro devient votre ID personnel unique.';
         }
 
         if (accountModal) {
@@ -4531,9 +4531,80 @@
         const errorSubPhone = document.getElementById('error-sub-phone');
         const errorSubLogin = document.getElementById('error-sub-login');
 
+        function validateLocalPhone(raw) {
+            const clean = (raw || '').replace(/[\s\-\.\(\)]/g, '');
+            if (!clean) {
+                return { valid: false, error: 'Le numéro de téléphone est obligatoire.' };
+            }
+            if (clean.length < 8) {
+                return { valid: false, error: 'Numéro trop court (saisissez un numéro sénégalais ou international complet).' };
+            }
+            // Détection suites suspectes ou bidon (ex: 56789, 123456789, répétitions)
+            if (/^(\d)\1{5,}$/.test(clean)) {
+                return { valid: false, error: 'Numéro suspect (chiffres répétés).' };
+            }
+            if (/^(012345678|123456789|987654321|56789)$/.test(clean)) {
+                return { valid: false, error: 'Numéro invalide (suite de chiffres non valide).' };
+            }
+
+            // Cas Sénégal : 9 chiffres (70, 75, 76, 77, 78)
+            let national = '';
+            if (clean.startsWith('+221')) national = clean.slice(4);
+            else if (clean.startsWith('00221')) national = clean.slice(5);
+            else if (clean.startsWith('221') && clean.length === 12) national = clean.slice(3);
+            else if (/^(70|75|76|77|78)\d{7}$/.test(clean)) national = clean;
+
+            if (national) {
+                if (!/^(70|75|76|77|78)\d{7}$/.test(national)) {
+                    return { valid: false, error: 'Numéro sénégalais invalide (doit commencer par 70, 75, 76, 77 ou 78 et comporter 9 chiffres).' };
+                }
+                return {
+                    valid: true,
+                    isSenegal: true,
+                    national: national,
+                    e164: '+221' + national,
+                    id: 'BK-' + national,
+                    display: national.replace(/(\d{2})(\d{3})(\d{2})(\d{2})/, '$1 $2 $3 $4')
+                };
+            }
+
+            // Cas International avec + ou 00 (8 à 15 chiffres)
+            if (/^(\+|00)[1-9]\d{7,14}$/.test(clean)) {
+                const digits = clean.replace(/\D/g, '');
+                return {
+                    valid: true,
+                    isSenegal: false,
+                    national: digits,
+                    e164: clean.startsWith('00') ? '+' + clean.slice(2) : clean,
+                    id: 'BK-' + digits,
+                    display: clean
+                };
+            }
+
+            return {
+                valid: false,
+                error: 'Format invalide. Entrez un numéro sénégalais (ex: 77 123 45 67) ou international (ex: +33 6 12 34 56 78).'
+            };
+        }
+
         if (inputPhone) {
             inputPhone.addEventListener('input', () => {
-                if (errorSubPhone) errorSubPhone.style.display = 'none';
+                const raw = inputPhone.value.trim();
+                if (!raw) {
+                    if (errorSubPhone) errorSubPhone.style.display = 'none';
+                    return;
+                }
+                const check = validateLocalPhone(raw);
+                if (errorSubPhone) {
+                    errorSubPhone.style.display = 'block';
+                    if (check.valid) {
+                        errorSubPhone.style.color = '#10b981';
+                        errorSubPhone.textContent = `✓ Numéro valide — Votre ID sera : ${check.id}`;
+                    } else {
+                        errorSubPhone.style.color = '#ef4444';
+                        errorSubPhone.textContent = check.error;
+                    }
+                }
             });
         }
         if (inputId) {
@@ -4556,6 +4627,7 @@
                 if (!phone) {
                     if (errorSubPhone) {
                         errorSubPhone.style.display = 'block';
+                        errorSubPhone.style.color = '#ef4444';
                         errorSubPhone.textContent = 'Le numéro de téléphone est obligatoire.';
                     }
                     if (inputPhone) inputPhone.focus();
@@ -4563,21 +4635,24 @@
                     return;
                 }
 
-                // Validation stricte du numéro
-                if (window.BokkFirebase && typeof window.BokkFirebase.validatePhone === 'function') {
-                    const check = window.BokkFirebase.validatePhone(phone);
-                    if (!check.valid) {
-                        if (errorSubPhone) {
-                            errorSubPhone.style.display = 'block';
-                            errorSubPhone.textContent = check.error;
-                        }
-                        if (inputPhone) inputPhone.focus();
-                        showToast(check.error);
-                        return;
+                // Validation stricte du numéro avant toute soumission
+                const check = validateLocalPhone(phone);
+                if (!check.valid) {
+                    if (errorSubPhone) {
+                        errorSubPhone.style.display = 'block';
+                        errorSubPhone.style.color = '#ef4444';
+                        errorSubPhone.textContent = check.error;
                     }
+                    if (inputPhone) inputPhone.focus();
+                    showToast(check.error);
+                    return;
                 }
 
-                if (errorSubPhone) errorSubPhone.style.display = 'none';
+                if (errorSubPhone) {
+                    errorSubPhone.style.display = 'block';
+                    errorSubPhone.style.color = '#38bdf8';
+                    errorSubPhone.textContent = `Validation en cours pour l'ID ${check.id}...`;
+                }
                 btnRegister.disabled = true;
                 btnRegister.textContent = 'Vérification du compte...';
 

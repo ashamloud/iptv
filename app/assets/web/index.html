@@ -11,11 +11,14 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="BOKK TV">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <link rel="apple-touch-icon" href="favicon.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=9975">
+    <link rel="stylesheet" href="style.css?v=9990">
 </head>
 <body>
 
@@ -84,6 +87,20 @@
     </div>
 </header>
 
+<!-- Bannière d'expiration proactive (discrète et non-bloquante) -->
+<div id="bokk-expiry-banner" style="display:none; background:#12141c; border-bottom:1px solid rgba(229,9,20,0.3); padding:8px 16px; align-items:center; justify-content:space-between; font-size:0.8rem; z-index:90;">
+    <div style="display:flex; align-items:center; gap:8px;">
+        <span style="color:#e50914; font-size:1rem;">⚠️</span>
+        <span id="bokk-expiry-banner-text" style="color:#f1f5f9;">Votre abonnement expire bientôt.</span>
+    </div>
+    <div style="display:flex; align-items:center; gap:10px;">
+        <button id="btn-banner-renew-wave" class="btn-wave-plan" data-plan="1m" data-amount="3000" data-days="30" style="background:#e50914; color:#fff; padding:5px 12px; border:none; border-radius:6px; cursor:pointer; font-weight:700; font-size:0.75rem; display:flex; align-items:center; gap:5px;">
+            <span>🌊 Renouveler (Wave)</span>
+        </button>
+        <button id="btn-close-expiry-banner" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:1.1rem; line-height:1; padding:0 4px;">✕</button>
+    </div>
+</div>
+
 <!-- ══════════════════════════════════════════════════════
      LECTEUR VIDÉO (MASQUÉ PAR DÉFAUT, RÉVÉLÉ AU CLIC)
 ══════════════════════════════════════════════════════ -->
@@ -122,6 +139,10 @@
                 <p id="error-message-text" class="error-desc">Le diffuseur ne répond pas.</p>
                 <div class="error-actions">
                     <button id="btn-retry" class="btn-primary">Réessayer</button>
+                    <button id="btn-backup-stream" class="btn-secondary btn-backup-stream" style="display:none;" title="Basculer sur le flux alternatif de secours">
+                        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+                        <span>Tester le secours</span>
+                    </button>
                     <button id="btn-report-broken" class="btn-secondary btn-report-hs" title="Signaler cette chaîne comme HS">
                         <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"></polygon><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
                         <span>Signaler HS</span>
@@ -144,6 +165,9 @@
                         <div class="channel-name-row">
                             <h2 id="player-channel-name">Chaîne en direct</h2>
                             <span id="player-channel-badge" class="badge-tag">HD</span>
+                            <button id="player-stream-switch-btn" class="stream-switch-pill" style="display:none;" title="Basculer vers le flux de secours">
+                                <span>Flux 1/2</span>
+                            </button>
                         </div>
                         <div id="player-epg-box" class="player-epg-box" style="display:none;">
                             <div class="player-epg-title" id="player-epg-title">Programme en cours</div>
@@ -314,7 +338,13 @@
                 <button class="match-filter-pill" data-filter="ucl">Champions League</button>
                 <button class="match-filter-pill" data-filter="laliga">LaLiga</button>
             </div>
-            <button class="see-all-btn" data-view="sport">Tout voir →</button>
+            <div class="match-header-actions">
+                <button class="btn-toggle-matches" id="btn-toggle-matches" title="Masquer / Afficher les matchs">
+                    <svg id="toggle-matches-icon" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                    <span id="toggle-matches-label">Masquer</span>
+                </button>
+                <button class="see-all-btn" data-view="sport">Tout voir →</button>
+            </div>
         </div>
         <div class="matches-scroll-row" id="matches-scroll-row">
             <!-- Rempli par JS -->
@@ -420,6 +450,15 @@
             </div>
         </div>
     </div>
+
+    <!-- Section Vues Récemment (Minimaliste) -->
+    <div id="recent-channels-section" style="display:none; padding:10px 16px; margin:0 14px 12px; background:rgba(255,255,255,0.02); border-radius:12px; border:1px solid rgba(255,255,255,0.06);">
+        <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.8px; margin-bottom:8px; display:flex; align-items:center; gap:6px;">
+            <span style="color:#e50914;">▶</span> Vues récemment
+        </div>
+        <div id="recent-channels-row" style="display:flex; gap:10px; overflow-x:auto; padding-bottom:6px; scrollbar-width:thin;"></div>
+    </div>
+
     <div class="channel-list-scroll" id="channel-list"></div>
 </main>
 
@@ -526,81 +565,141 @@
         <div class="modal-body" style="padding:20px;">
             <!-- Vue 1: Formulaire Inscription / Connexion (si non connecté) -->
             <div id="account-view-auth">
-                <div id="account-auth-notice" style="background:rgba(0,112,243,0.08); border:1px solid rgba(0,112,243,0.25); border-radius:12px; padding:12px 14px; margin-bottom:18px;">
-                    <p id="account-auth-notice-text" style="font-size:0.82rem; color:#e0e8ff; line-height:1.45;">
-                        🎁 <strong>Accès 100% Gratuit !</strong> Entrez simplement votre prénom pour obtenir votre ID personnel et profiter de 1 mois de stream offert.
+                <div id="account-auth-notice" style="background:rgba(0,112,243,0.08); border:1px solid rgba(0,112,243,0.25); border-radius:12px; padding:10px 14px; margin-bottom:14px;">
+                    <p id="account-auth-notice-text" style="font-size:0.82rem; color:#e0e8ff; line-height:1.4;">
+                        🎁 Entrez votre prénom et votre numéro. Votre numéro devient votre ID BOKK TV unique (1 compte = 1 écran).
                     </p>
                 </div>
 
                 <div id="auth-tab-register">
                     <div style="margin-bottom:14px;">
-                        <label style="display:block; font-size:0.8rem; font-weight:600; color:var(--text-muted); margin-bottom:6px;">Votre Prénom</label>
+                        <label style="display:block; font-size:0.8rem; font-weight:600; color:var(--text-muted); margin-bottom:6px;">Votre Prénom *</label>
                         <input type="text" id="input-sub-prenom" placeholder="Ex: Moussa, Fatou, Ibrahima..." style="width:100%; height:44px; background:#0f1118; border:1px solid rgba(255,255,255,0.12); border-radius:10px; color:#fff; padding:0 14px; font-size:0.95rem; outline:none; box-sizing:border-box;">
                     </div>
                     <div style="margin-bottom:18px;">
-                        <label style="display:block; font-size:0.8rem; font-weight:600; color:var(--text-muted); margin-bottom:6px;">Numéro WhatsApp (Optionnel)</label>
-                        <input type="tel" id="input-sub-phone" placeholder="Ex: +221 77 123 45 67" style="width:100%; height:44px; background:#0f1118; border:1px solid rgba(255,255,255,0.12); border-radius:10px; color:#fff; padding:0 14px; font-size:0.95rem; outline:none; box-sizing:border-box;">
+                        <label style="display:block; font-size:0.8rem; font-weight:600; color:var(--text-muted); margin-bottom:6px;">Numéro de Téléphone * (Sénégal 70, 75, 76, 77, 78 ou International)</label>
+                        <input type="tel" id="input-sub-phone" placeholder="Ex: 77 123 45 67" style="width:100%; height:44px; background:#0f1118; border:1px solid rgba(255,255,255,0.12); border-radius:10px; color:#fff; padding:0 14px; font-size:0.95rem; outline:none; box-sizing:border-box;">
+                        <div id="error-sub-phone" style="display:none; color:#ef4444; font-size:0.75rem; margin-top:5px; font-weight:600;"></div>
                     </div>
                     <button id="btn-sub-register" class="btn-primary" style="width:100%; height:44px; font-size:0.92rem; font-weight:700; border-radius:10px; background:var(--brand-gradient, #0070f3); display:flex; align-items:center; justify-content:center; gap:8px;">
-                        <span>Obtenir mon ID BOKK</span>
+                        <span>Valider mon Compte & ID (Gratuit 30j)</span>
                         <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
                     </button>
                     <div style="text-align:center; margin-top:14px;">
-                        <button id="btn-switch-to-login" style="background:none; border:none; color:var(--brand); font-size:0.8rem; cursor:pointer; text-decoration:underline;">Vous avez déjà un ID ? Connectez-vous ici</button>
+                        <button id="btn-switch-to-login" style="background:none; border:none; color:var(--brand); font-size:0.8rem; cursor:pointer; text-decoration:underline;">Vous avez déjà un compte ? Connectez-vous avec votre numéro</button>
                     </div>
                 </div>
 
                 <div id="auth-tab-login" style="display:none;">
                     <div style="margin-bottom:18px;">
-                        <label style="display:block; font-size:0.8rem; font-weight:600; color:var(--text-muted); margin-bottom:6px;">Votre Identifiant BOKK (ID)</label>
-                        <input type="text" id="input-sub-id" placeholder="Ex: BK-4821" style="width:100%; height:44px; background:#0f1118; border:1px solid rgba(255,255,255,0.12); border-radius:10px; color:#fff; padding:0 14px; font-size:1.05rem; font-weight:700; letter-spacing:1px; text-transform:uppercase; outline:none; box-sizing:border-box;">
+                        <label style="display:block; font-size:0.8rem; font-weight:600; color:var(--text-muted); margin-bottom:6px;">Votre Numéro ou Identifiant (ID)</label>
+                        <input type="text" id="input-sub-id" placeholder="Ex: 77 123 45 67 ou BK-771234567" style="width:100%; height:44px; background:#0f1118; border:1px solid rgba(255,255,255,0.12); border-radius:10px; color:#fff; padding:0 14px; font-size:1.05rem; font-weight:700; letter-spacing:0.5px; outline:none; box-sizing:border-box;">
+                        <div id="error-sub-login" style="display:none; color:#ef4444; font-size:0.75rem; margin-top:5px; font-weight:600;"></div>
                     </div>
                     <button id="btn-sub-login" class="btn-primary" style="width:100%; height:44px; font-size:0.92rem; font-weight:700; border-radius:10px; background:var(--brand-gradient, #0070f3);">
-                        Valider mon ID
+                        Connexion Immédiate
                     </button>
                     <div style="text-align:center; margin-top:14px;">
-                        <button id="btn-switch-to-reg" style="background:none; border:none; color:var(--text-muted); font-size:0.8rem; cursor:pointer;">⬅ Créer un nouvel identifiant</button>
+                        <button id="btn-switch-to-reg" style="background:none; border:none; color:var(--text-muted); font-size:0.8rem; cursor:pointer;">⬅ Créer un nouveau compte</button>
                     </div>
                 </div>
             </div>
 
             <!-- Vue 2: Profil & Carte Abonné (si connecté) -->
             <div id="account-view-profile" style="display:none;">
-                <div class="subscriber-vip-card" style="background:linear-gradient(135deg, #131722 0%, #1a2035 100%); border:1px solid rgba(0,112,243,0.3); border-radius:16px; padding:20px; box-shadow:0 8px 24px rgba(0,0,0,0.4); margin-bottom:18px; position:relative; overflow:hidden;">
-                    <div style="position:absolute; top:-20px; right:-20px; width:90px; height:90px; background:radial-gradient(circle, rgba(0,112,243,0.3) 0%, transparent 70%); border-radius:50%;"></div>
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-                        <span style="font-size:0.7rem; font-weight:800; letter-spacing:1.5px; text-transform:uppercase; color:var(--brand);">PASS MEMBRE BOKK TV</span>
-                        <span id="sub-badge-status" style="font-size:0.7rem; font-weight:700; padding:3px 10px; border-radius:20px; background:rgba(16,185,129,0.2); color:#10b981; border:1px solid rgba(16,185,129,0.3);">● ACTIF</span>
+                <div class="subscriber-vip-card" style="background:linear-gradient(135deg, #10121a 0%, #161a26 100%); border:1px solid rgba(255,255,255,0.08); border-radius:16px; padding:20px; box-shadow:0 8px 24px rgba(0,0,0,0.5); margin-bottom:16px; position:relative; overflow:hidden;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+                        <span style="font-size:0.7rem; font-weight:800; letter-spacing:1.5px; text-transform:uppercase; color:#e50914;">MEMBRE BOKK TV</span>
+                        <span id="sub-badge-status" style="font-size:0.7rem; font-weight:700; padding:3px 10px; border-radius:20px; background:rgba(16,185,129,0.15); color:#10b981; border:1px solid rgba(16,185,129,0.3);">● ACTIF</span>
                     </div>
-                    <div style="margin-bottom:14px;">
-                        <span style="font-size:0.75rem; color:var(--text-muted); display:block;">TITULAIRE</span>
-                        <strong id="sub-profile-prenom" style="font-size:1.15rem; color:#fff;">Moussa</strong>
-                    </div>
-                    <div style="display:flex; justify-content:space-between; align-items:flex-end;">
+                    <div style="display:flex; align-items:center; gap:12px; margin-bottom:14px;">
+                        <div id="sub-profile-avatar" style="width:46px; height:46px; border-radius:50%; background:#e50914; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:1.2rem; color:#fff; flex-shrink:0;">A</div>
                         <div>
-                            <span style="font-size:0.75rem; color:var(--text-muted); display:block;">VOTRE ID UNIQUE</span>
-                            <span id="sub-profile-id" style="font-size:1.4rem; font-weight:900; letter-spacing:2px; color:#fff; font-family:monospace;">BK-0000</span>
+                            <span style="font-size:0.7rem; color:var(--text-muted); display:block; text-transform:uppercase;">Titulaire</span>
+                            <strong id="sub-profile-prenom" style="font-size:1.15rem; color:#fff;">Abonné</strong>
                         </div>
-                        <button id="btn-copy-sub-id" style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); color:#fff; border-radius:8px; padding:6px 12px; font-size:0.75rem; cursor:pointer; display:flex; align-items:center; gap:5px;">
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:flex-end; border-top:1px solid rgba(255,255,255,0.06); padding-top:12px;">
+                        <div>
+                            <span style="font-size:0.7rem; color:var(--text-muted); display:block;">IDENTIFIANT (LIÉ À VOTRE NUMÉRO)</span>
+                            <span id="sub-profile-id" style="font-size:1.2rem; font-weight:900; letter-spacing:1.5px; color:#fff; font-family:monospace;">BK-770000000</span>
+                        </div>
+                        <button id="btn-copy-sub-id" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:#fff; border-radius:8px; padding:6px 12px; font-size:0.75rem; cursor:pointer; display:flex; align-items:center; gap:5px;">
                             📋 Copier
                         </button>
                     </div>
                 </div>
 
-                <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:12px; padding:12px 16px; margin-bottom:18px;">
-                    <div style="display:flex; justify-content:space-between; font-size:0.82rem; margin-bottom:6px;">
+                <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:12px; padding:12px 16px; margin-bottom:14px;">
+                    <div style="display:flex; justify-content:space-between; font-size:0.82rem;">
                         <span style="color:var(--text-muted);">Période de validité :</span>
                         <strong id="sub-profile-expiry" style="color:#fff;">30 jours restants</strong>
                     </div>
-                    <div style="display:flex; justify-content:space-between; font-size:0.82rem;">
-                        <span style="color:var(--text-muted);">Mode actuel :</span>
-                        <span style="color:var(--live-green); font-weight:600;">Accès Gratuit Illimité</span>
+                </div>
+
+                <!-- Boîte Paiement Wave & 3 Plans (Notification Automatique Admin au Clic) -->
+                <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:14px; margin-bottom:16px;">
+                    <div style="font-size:0.82rem; font-weight:700; color:#fff; margin-bottom:4px; display:flex; align-items:center; justify-content:space-between;">
+                        <span>🌊 Payer via Wave</span>
+                        <span style="font-size:0.68rem; color:#38bdf8; background:rgba(56,189,248,0.12); padding:2px 8px; border-radius:12px;">Notification Admin Directe</span>
+                    </div>
+                    <p style="font-size:0.72rem; color:var(--text-muted); margin-bottom:10px;">
+                        Cliquez sur votre plan : l'administrateur reçoit immédiatement votre numéro et prépare votre validation dès réception du virement !
+                    </p>
+                    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-bottom:8px;">
+                        <button type="button" class="btn-wave-plan" data-plan="1m" data-amount="3000" data-days="30" style="display:flex; flex-direction:column; align-items:center; justify-content:center; background:#12141c; border:1px solid rgba(229,9,20,0.5); border-radius:10px; padding:10px 4px; cursor:pointer; transition:all 0.2s;">
+                            <span style="font-size:0.68rem; color:var(--text-muted); font-weight:600;">1 Mois</span>
+                            <strong style="font-size:0.92rem; color:#fff; margin-top:2px;">3 000 F</strong>
+                            <span style="font-size:0.62rem; color:#e50914; margin-top:3px; font-weight:700;">Wave →</span>
+                        </button>
+                        <button type="button" class="btn-wave-plan" data-plan="3m" data-amount="7500" data-days="90" style="display:flex; flex-direction:column; align-items:center; justify-content:center; background:#12141c; border:1px solid rgba(0,112,243,0.5); border-radius:10px; padding:10px 4px; cursor:pointer; position:relative; transition:all 0.2s;">
+                            <span style="font-size:0.68rem; color:var(--text-muted); font-weight:600;">3 Mois</span>
+                            <strong style="font-size:0.92rem; color:#38bdf8; margin-top:2px;">7 500 F</strong>
+                            <span style="font-size:0.62rem; color:#38bdf8; margin-top:3px; font-weight:700;">Éco 1 500F</span>
+                        </button>
+                        <button type="button" class="btn-wave-plan" data-plan="12m" data-amount="25000" data-days="365" style="display:flex; flex-direction:column; align-items:center; justify-content:center; background:#12141c; border:1px solid rgba(245,158,11,0.5); border-radius:10px; padding:10px 4px; cursor:pointer; position:relative; transition:all 0.2s;">
+                            <span style="font-size:0.68rem; color:var(--text-muted); font-weight:600;">12 Mois</span>
+                            <strong style="font-size:0.92rem; color:#f59e0b; margin-top:2px;">25 000 F</strong>
+                            <span style="font-size:0.62rem; color:#f59e0b; margin-top:3px; font-weight:700;">Éco 11 000F</span>
+                        </button>
                     </div>
                 </div>
 
+                <!-- Déclaration de paiement Wave (Option C) -->
+                <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(0,112,243,0.25); border-radius:12px; padding:14px; margin-bottom:16px;">
+                    <div style="font-size:0.82rem; font-weight:700; color:#38bdf8; margin-bottom:8px; display:flex; align-items:center; gap:6px;">
+                        <span>📝 Déclarer un paiement Wave effectué</span>
+                    </div>
+                    <p style="font-size:0.75rem; color:var(--text-muted); margin-bottom:10px; line-height:1.4;">
+                        Vous avez payé via Wave ? Renseignez votre numéro pour activer votre compte immédiatement.
+                    </p>
+                    <div style="margin-bottom:8px;">
+                        <label style="display:block; font-size:0.75rem; color:var(--text-muted); margin-bottom:4px;">Numéro Wave ayant effectué le paiement</label>
+                        <input type="tel" id="input-claim-payer-phone" placeholder="Ex: 77 123 45 67" style="width:100%; height:38px; background:#0f1118; border:1px solid rgba(255,255,255,0.12); border-radius:8px; color:#fff; padding:0 12px; font-size:0.85rem; outline:none; box-sizing:border-box;">
+                    </div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px;">
+                        <div>
+                            <label style="display:block; font-size:0.75rem; color:var(--text-muted); margin-bottom:4px;">Plan payé</label>
+                            <select id="select-claim-plan" style="width:100%; height:38px; background:#0f1118; border:1px solid rgba(255,255,255,0.12); border-radius:8px; color:#fff; padding:0 8px; font-size:0.82rem; outline:none;">
+                                <option value="1m">1 Mois (3 000 F)</option>
+                                <option value="3m">3 Mois (7 500 F)</option>
+                                <option value="12m">12 Mois (25 000 F)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label style="display:block; font-size:0.75rem; color:var(--text-muted); margin-bottom:4px;">Réf. Wave (optionnel)</label>
+                            <input type="text" id="input-claim-ref" placeholder="Ex: W-98214" style="width:100%; height:38px; background:#0f1118; border:1px solid rgba(255,255,255,0.12); border-radius:8px; color:#fff; padding:0 10px; font-size:0.82rem; outline:none; box-sizing:border-box;">
+                        </div>
+                    </div>
+                    <button id="btn-submit-claim" class="btn-primary" style="width:100%; height:38px; font-size:0.82rem; font-weight:700; border-radius:8px; background:linear-gradient(135deg, #0284c7 0%, #0070f3 100%); display:flex; align-items:center; justify-content:center; gap:6px; cursor:pointer;">
+                        <span>Valider ma déclaration</span>
+                    </button>
+                    <div id="claim-feedback" style="display:none; margin-top:8px; font-size:0.78rem; text-align:center; padding:6px; border-radius:6px;"></div>
+                </div>
+
                 <div style="display:flex; gap:10px;">
-                    <a id="btn-whatsapp-support" href="https://wa.me/?text=Bonjour%2C%20mon%20ID%20BOKK%20TV%20est%20" target="_blank" class="btn-secondary" style="flex:1; height:40px; font-size:0.82rem; display:flex; align-items:center; justify-content:center; gap:6px; text-decoration:none; border-color:rgba(37,211,102,0.3); color:#25d366;">
-                        💬 Support WhatsApp
+                    <a id="btn-whatsapp-support" href="https://wa.me/221783055520?text=Bonjour%2C%20je%20vous%20contacte%20au%20sujet%20de%20mon%20compte%20BOKK%20TV" target="_blank" class="btn-secondary" style="flex:1; height:40px; font-size:0.82rem; display:flex; align-items:center; justify-content:center; gap:6px; text-decoration:none; border-color:rgba(37,211,102,0.3); color:#25d366;">
+                        💬 WhatsApp (+221 78 305 55 20)
                     </a>
                     <button id="btn-sub-logout" class="btn-secondary" style="height:40px; padding:0 14px; font-size:0.82rem; color:var(--live-red); border-color:rgba(230,57,70,0.3);">
                         Déconnexion
@@ -763,15 +862,15 @@
 <!-- Firebase Cloud Firestore SDK (Compat) -->
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
-<script src="firebase-service.js?v=9978"></script>
+<script src="firebase-service.js?v=9992"></script>
 
 <!-- Scripts -->
 <script src="mpegts.js"></script>
 <script src="hls.min.js"></script>
-<script src="matches.js?v=9978"></script>
-<script src="epg-data.js?v=9978"></script>
-<script src="epg.js?v=9978"></script>
-<script src="channels.js?v=9978"></script>
-<script src="app.js?v=9994"></script>
+<script src="matches.js?v=9993"></script>
+<script src="epg-data.js?v=9992"></script>
+<script src="epg.js?v=9992"></script>
+<script src="channels.js?v=9992"></script>
+<script src="app.js?v=9995"></script>
 </body>
 </html>
