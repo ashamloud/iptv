@@ -1112,28 +1112,41 @@
                 videoEl.onplaying = () => { clearWebStallWatchdog(); clearPlayerOverlays(); startStreamPreviewTimer(); };
                 videoEl.onloadeddata = () => clearPlayerOverlays();
                 videoEl.oncanplay = () => clearPlayerOverlays();
-                videoEl.onwaiting = () => armStallWatchdog(triggerTsRecovery);
-                videoEl.onstalled = () => armStallWatchdog(triggerTsRecovery);
-                // Vercel coupe les fonctions serverless à 30s -> reconnexion transparente sur flux direct
-                videoEl.onended = () => {
-                    if (loadSeq === channelLoadSeq) {
-                        console.log('[BOKK TV] Flux TS terminé (coupure serveur/proxy), reconnexion continue...');
-                        loadChannel(index, useFallback, 0);
-                    }
+                // Ne pas détruire le lecteur sur une simple mise en mémoire tampon passagère
+                videoEl.onwaiting = () => {
+                    // Si bloqué plus de 15s en attente continue, alors tenter la récupération
+                    clearWebStallWatchdog();
+                    webStallWatchdog = setTimeout(() => {
+                        console.warn('[BOKK TV] Attente tampon prolongée (>15s), bascule flux de secours...');
+                        triggerTsRecovery();
+                    }, 15000);
                 };
+                videoEl.onstalled = () => {};
 
                 attemptAutoPlay(mpegtsInstance);
 
+                // Pour un flux live continu, ne pas relancer le lecteur sur simple fin de paquet
                 mpegtsInstance.on(mpegts.Events.LOADING_COMPLETE, () => {
-                    if (loadSeq === channelLoadSeq) {
-                        console.log('[BOKK TV] Flux TS fermé par le serveur/proxy, reconnexion transparente...');
-                        loadChannel(index, useFallback, 0);
-                    }
+                    // Ne rien faire : mpegts continue de lire le tampon existant
                 });
 
                 mpegtsInstance.on(mpegts.Events.ERROR, (type, detail) => {
-                    console.warn(`[BOKK TV] Erreur MPEG-TS (${type}, ${detail}, Stage ${retryStage}) sur ${finalUrl}`);
-                    triggerTsRecovery();
+                    console.warn(`[BOKK TV] Info MPEG-TS (${type}, ${detail}, Stage ${retryStage})`);
+                    // Ignorer les micro-erreurs de synchronisation ou de décalage d'horloge TS
+                    if (type === 'NetworkError' && (detail === 'networkTimeout' || detail === 'networkError')) {
+                        console.warn('[BOKK TV] Déconnexion réseau MPEG-TS détectée, bascule secours...');
+                        triggerTsRecovery();
+                    } else if (type === 'MediaError') {
+                        // Erreur de décodage non fatale : rattraper le direct sans couper la vidéo
+                        try {
+                            if (videoEl.buffered && videoEl.buffered.length > 0) {
+                                const end = videoEl.buffered.end(videoEl.buffered.length - 1);
+                                if (Math.abs(videoEl.currentTime - end) > 3.0) {
+                                    videoEl.currentTime = end - 0.5;
+                                }
+                            }
+                        } catch (e) {}
+                    }
                 });
             } else {
                 videoEl.src = finalUrl;
