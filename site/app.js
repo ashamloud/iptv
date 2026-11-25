@@ -1060,16 +1060,12 @@
                     isLive: true,
                     url: absoluteFinalUrl
                 }, {
-                    enableWorker: true,
+                    enableWorker: false,
                     lazyLoad: false,
-                    liveBufferLatencyChasing: true,
-                    liveBufferLatencyMaxLatency: 8.0,
-                    liveBufferLatencyMinRemain: 1.5,
+                    liveBufferLatencyChasing: false,     // DÉSACTIVÉ : Ne jamais forcer de saut vers le direct (source principale des calages 1s/2s/8s)
                     enableStashBuffer: true,
-                    stashInitialSize: 128,               // 128 Ko pour démarrage immédiat sans attendre 512 Ko
-                    autoCleanupSourceBuffer: true,
-                    autoCleanupMaxBackwardDuration: 30,
-                    autoCleanupMinBackwardDuration: 15
+                    stashInitialSize: 384,               // Tampon initial 384 Ko (~1.5s de vidéo stable avant de lancer)
+                    autoCleanupSourceBuffer: false       // Ne pas vider le tampon en continu (évite les micro-gels du décodeur)
                 });
 
                 mpegtsInstance.attachMediaElement(videoEl);
@@ -1132,21 +1128,11 @@
 
                 mpegtsInstance.on(mpegts.Events.ERROR, (type, detail) => {
                     console.warn(`[BOKK TV] Info MPEG-TS (${type}, ${detail}, Stage ${retryStage})`);
-                    // Ignorer les micro-erreurs de synchronisation ou de décalage d'horloge TS
                     if (type === 'NetworkError' && (detail === 'networkTimeout' || detail === 'networkError')) {
-                        console.warn('[BOKK TV] Déconnexion réseau MPEG-TS détectée, bascule secours...');
+                        console.warn('[BOKK TV] Déconnexion réseau MPEG-TS prolongée, bascule secours...');
                         triggerTsRecovery();
-                    } else if (type === 'MediaError') {
-                        // Erreur de décodage non fatale : rattraper le direct sans couper la vidéo
-                        try {
-                            if (videoEl.buffered && videoEl.buffered.length > 0) {
-                                const end = videoEl.buffered.end(videoEl.buffered.length - 1);
-                                if (Math.abs(videoEl.currentTime - end) > 3.0) {
-                                    videoEl.currentTime = end - 0.5;
-                                }
-                            }
-                        } catch (e) {}
                     }
+                    // Pour toute erreur média (PTS jitter, décalage frame) : laisser le décodeur continuer naturellement
                 });
             } else {
                 videoEl.src = finalUrl;
