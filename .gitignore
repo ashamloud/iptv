@@ -5,3 +5,6 @@ LoudStreamtv.apk
 xmltv_cache.zip
 __pycache__/
 *.pyc
+
+*.apk
+build-output/

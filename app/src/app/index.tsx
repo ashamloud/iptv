@@ -678,21 +678,62 @@ export default function NativeBokkApp() {
   // Utilisateur enregistré et actif ?
   const isRegisteredUser = Boolean(subscriber && subscriber.status === 'active');
 
-  // Clic sur un choc sportif du Header Ticker -> Lancement direct de la chaîne sportive
+  // Clic sur un choc sportif du Header Ticker -> Lancement direct et précis de la chaîne sportive ciblée
   const handleSelectMatch = useCallback(
     (match: MatchItem) => {
       const matchQuery = (match.channels || '').toLowerCase();
-      let found = allChannels.find((c) => {
-        const name = c.name.toLowerCase();
-        if (matchQuery.includes('canal+') && (name.includes('canal+ sport') || name.includes('canal+ foot') || name.includes('canal+ 360'))) {
-          return true;
-        }
-        if (matchQuery.includes('bein') && (name.includes('bein') || name.includes('bei̇n'))) {
-          return true;
-        }
-        return false;
-      });
+      let found: Channel | undefined;
 
+      // 1. Recherche ultra-ciblée selon les diffuseurs réels
+      if (matchQuery.includes('foot')) {
+        found = allChannels.find((c) => {
+          const n = c.name.toLowerCase();
+          return (n.includes('canal') && n.includes('foot')) || (c.id === 98);
+        });
+      } else if (matchQuery.includes('360')) {
+        found = allChannels.find((c) => {
+          const n = c.name.toLowerCase();
+          return (n.includes('canal') && (n.includes('360') || n.includes('sport 360'))) || (c.id === 97);
+        });
+      } else if (matchQuery.includes('bein') && (matchQuery.includes('1') || matchQuery.includes('one'))) {
+        found = allChannels.find((c) => {
+          const n = c.name.toLowerCase();
+          return (n.includes('bein') && n.includes('1') && !n.includes('10')) || (c.id === 109) || (c.id === 2195);
+        });
+      } else if (matchQuery.includes('bein') && matchQuery.includes('2')) {
+        found = allChannels.find((c) => {
+          const n = c.name.toLowerCase();
+          return (n.includes('bein') && n.includes('2')) || (c.id === 110) || (c.id === 2198);
+        });
+      } else if (matchQuery.includes('campeones') || matchQuery.includes('liga de campeones')) {
+        found = allChannels.find((c) => {
+          const n = c.name.toLowerCase();
+          return n.includes('campeones') || (c.id === 89);
+        });
+      } else if (matchQuery.includes('canal')) {
+        found = allChannels.find((c) => {
+          const n = c.name.toLowerCase();
+          return n.includes('canal+ sport') || n.includes('canal+ foot') || n.includes('canal+ 360') || (c.id === 2342);
+        });
+      } else if (matchQuery.includes('bein')) {
+        found = allChannels.find((c) => {
+          const n = c.name.toLowerCase();
+          return n.includes('bein sports') || n.includes('bein');
+        });
+      }
+
+      // 2. Si non trouvé par règle précise, recherche par inclusion de nom
+      if (!found && matchQuery) {
+        found = allChannels.find((c) => {
+          const n = c.name.toLowerCase();
+          return matchQuery.split(/[\/,]/).some(part => {
+            const p = part.trim().toLowerCase();
+            return p.length > 3 && n.includes(p);
+          });
+        });
+      }
+
+      // 3. Repli de secours sur le premier canal de sport
       if (!found) {
         found = allChannels.find((c) => (c.category || '').toLowerCase() === 'sport');
       }

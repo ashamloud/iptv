@@ -8,6 +8,9 @@ on:
       - '.github/workflows/build-apk.yml'
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build-apk:
     name: Compiler APK Android (Mobile & TV)
@@ -23,10 +26,10 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: 🟢 Configurer Node.js 20
+      - name: 🟢 Configurer Node.js 22
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
           cache-dependency-path: app/package-lock.json
 
@@ -57,3 +60,19 @@ jobs:
           name: BOKK-TV-Android-APK
           path: build-output/BOKK-TV-v2.0.0.apk
           retention-days: 30
+
+      - name: 🌟 Publier la Release GitHub avec lien direct APK
+        uses: softprops/action-gh-release@v2
+        if: github.ref == 'refs/heads/main'
+        with:
+          tag_name: v2.0.0
+          name: "BOKK TV v2.0.0 — Application Android (Mobile & TV)"
+          body: |
+            ### 📺 BOKK TV v2.0.0 — Nouvelle Version Officielle
+            - **Application universelle Android** (Smartphones, Tablettes, Android TV, Google TV, Fire TV).
+            - Téléchargement direct sans extraction : cliquez sur `BOKK-TV-v2.0.0.apk` ci-dessous pour installer l'application.
+          files: build-output/BOKK-TV-v2.0.0.apk
+          prerelease: false
+          draft: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
