@@ -21,22 +21,80 @@ const withAndroidTvBanner = (config, props = {}) => {
     },
   ]);
 
-  // 2. Définir android:banner et usesCleartextTraffic dans AndroidManifest.xml
+  // 2. Configurer le Manifest pour Android TV + Mobile (Compatibilité Universelle)
   config = withAndroidManifest(config, async (config) => {
     const manifest = config.modResults.manifest;
+
+    // Déclarer les fonctionnalités matérielles non requises (OBLIGATOIRE pour Android TV / Google TV)
+    // Sans touchscreen=false, Android TV masque complètement l'application du lanceur d'accueil !
+    if (!manifest['uses-feature']) {
+      manifest['uses-feature'] = [];
+    }
+
+    const optionalFeatures = [
+      'android.software.leanback',
+      'android.hardware.touchscreen',
+      'android.hardware.faketouch',
+      'android.hardware.telephony',
+      'android.hardware.camera',
+      'android.hardware.camera.autofocus',
+      'android.hardware.bluetooth',
+      'android.hardware.wifi',
+      'android.hardware.microphone',
+      'android.hardware.location',
+      'android.hardware.location.gps'
+    ];
+
+    for (const feat of optionalFeatures) {
+      const existing = manifest['uses-feature'].find(
+        (f) => f.$ && f.$['android:name'] === feat
+      );
+      if (existing) {
+        existing.$['android:required'] = 'false';
+      } else {
+        manifest['uses-feature'].push({
+          $: {
+            'android:name': feat,
+            'android:required': 'false'
+          }
+        });
+      }
+    }
+
     const application = manifest.application?.[0];
     if (application) {
       application.$['android:banner'] = '@drawable/tv_banner';
       application.$['android:usesCleartextTraffic'] = 'true';
+      application.$['android:hardwareAccelerated'] = 'true';
+      application.$['android:largeHeap'] = 'true';
+
       if (Array.isArray(application.activity)) {
         const mainActivity = application.activity.find(
           (a) => a.$ && (a.$['android:name'] === '.MainActivity' || a.$['android:name'] === 'com.ashamloud.bokktv.MainActivity')
         );
-        if (mainActivity && mainActivity.$) {
+        if (mainActivity) {
           mainActivity.$['android:banner'] = '@drawable/tv_banner';
+          mainActivity.$['android:screenOrientation'] = 'unspecified';
+
+          if (!mainActivity['intent-filter']) {
+            mainActivity['intent-filter'] = [];
+          }
+
+          // Nettoyer les filtres : s'assurer qu'un intent-filter LEANBACK_LAUNCHER dédié existe
+          const hasLeanback = mainActivity['intent-filter'].some((filter) =>
+            filter.category?.some((c) => c.$ && c.$['android:name'] === 'android.intent.category.LEANBACK_LAUNCHER')
+          );
+
+          if (!hasLeanback) {
+            mainActivity['intent-filter'].push({
+              action: [{ $: { 'android:name': 'android.intent.action.MAIN' } }],
+              category: [{ $: { 'android:name': 'android.intent.category.LEANBACK_LAUNCHER' } }]
+            });
+          }
         }
       }
     }
+
     return config;
   });
 

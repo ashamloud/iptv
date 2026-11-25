@@ -45,14 +45,14 @@ jobs:
         working-directory: ./app/android
         run: chmod +x gradlew
 
-      - name: 🔨 Compiler l'APK Android (Debug universel installable sans signature)
+      - name: 🔨 Compiler l'APK Android Release Optimisé (Mobile & Android TV)
         working-directory: ./app/android
-        run: ./gradlew assembleDebug --no-daemon --stacktrace
+        run: ./gradlew assembleRelease --no-daemon --stacktrace
 
       - name: 📦 Renommer et préparer l'APK
         run: |
           mkdir -p build-output
-          cp app/android/app/build/outputs/apk/debug/app-debug.apk build-output/BOKK-TV-v2.0.0.apk
+          cp app/android/app/build/outputs/apk/release/app-release.apk build-output/BOKK-TV-v2.0.0.apk
 
       - name: 🚀 Mettre à disposition l'APK (Artifact)
         uses: actions/upload-artifact@v4

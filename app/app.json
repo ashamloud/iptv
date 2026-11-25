@@ -23,16 +23,6 @@
       "permissions": [
         "INTERNET",
         "ACCESS_NETWORK_STATE"
-      ],
-      "intentFilters": [
-        {
-          "action": "MAIN",
-          "category": [
-            "DEFAULT",
-            "LAUNCHER",
-            "LEANBACK_LAUNCHER"
-          ]
-        }
       ]
     },
     "web": {
