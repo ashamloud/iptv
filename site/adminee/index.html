@@ -819,10 +819,10 @@
     <!-- Scripts -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
-    <script src="/firebase-service.js?v=9995"></script>
+    <script src="/firebase-service.js?v=10006"></script>
     <script src="/mpegts.js"></script>
     <script src="/hls.min.js"></script>
-    <script src="/channels.js?v=9995"></script>
+    <script src="/channels.js?v=10006"></script>
 
     <script>
     (function () {
@@ -886,7 +886,7 @@
 
         // ── Init Admin ──
         async function initAdmin() {
-            // Attendre que Firebase soit prêt
+            // Attendre que Firebase ET channels soient prêts
             let fbWait = 0;
             while (!window.BokkFirebase || !window.BokkFirebase.isReady()) {
                 await new Promise(r => setTimeout(r, 300));
@@ -894,7 +894,15 @@
                 if (fbWait > 5000) break;
             }
 
-            const allChannels = window.channels || [];
+            // Attendre que window.channels soit peuplé (chargement asynchrone)
+            let chWait = 0;
+            while ((!window.channels || window.channels.length === 0) && (!window.CHANNELS || window.CHANNELS.length === 0)) {
+                await new Promise(r => setTimeout(r, 200));
+                chWait += 200;
+                if (chWait > 6000) break;
+            }
+
+            const allChannels = window.channels || window.CHANNELS || [];
             document.getElementById('stat-total').textContent = allChannels.length.toLocaleString('fr-FR');
 
             const fbStatus = window.BokkFirebase && window.BokkFirebase.isReady();
@@ -1491,7 +1499,7 @@
 
                 btnScan.disabled = true;
                 btnScan.textContent = `⏳ Scan en cours (0/${reportedList.length})...`;
-                const allChannels = window.channels || [];
+                const allChannels = window.channels || window.CHANNELS || [];
                 let done = 0;
 
                 for (const r of reportedList) {
@@ -1647,7 +1655,7 @@
                 const srcFilter = document.getElementById('ch-filter-source')?.value || '';
                 const catFilter = document.getElementById('ch-filter-cat')?.value || '';
 
-                const allChannels = window.channels || [];
+                const allChannels = window.channels || window.CHANNELS || [];
                 const filtered = allChannels.filter(c => {
                     if (q && !String(c.id).includes(q) && !(c.name || '').toLowerCase().includes(q) && !(c.group || '').toLowerCase().includes(q)) return false;
                     if (srcFilter) {
@@ -1712,7 +1720,7 @@
         // ── Rendu Chaînes Masquées ──
         function renderDisabledChannels() {
             const container = document.getElementById('disabled-channels-list');
-            const allChannels = window.channels || [];
+            const allChannels = window.channels || window.CHANNELS || [];
 
             if (disabledIdsSet.size === 0) {
                 container.innerHTML = '<p style="text-align:center; color:var(--text-muted); padding:30px;">Aucune chaîne masquée pour le moment.</p>';
@@ -2330,7 +2338,7 @@
         const btnClosePlayer = document.getElementById('btn-close-player');
 
         function testChannel(id, name, url) {
-            const allChannels = window.channels || [];
+            const allChannels = window.channels || window.CHANNELS || [];
             const ch = allChannels.find(c => String(c.id) === String(id));
             const streamUrl = (ch && ch.url) ? ch.url : url;
             if (!streamUrl) {

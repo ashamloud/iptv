@@ -52,26 +52,27 @@ jobs:
       - name: 📦 Renommer et préparer l'APK
         run: |
           mkdir -p build-output
-          cp app/android/app/build/outputs/apk/release/app-release.apk build-output/BOKK-TV-v2.0.0.apk
+          cp app/android/app/build/outputs/apk/release/app-release.apk build-output/BOKK-TV-v2.0.${{ github.run_number }}.apk
 
       - name: 🚀 Mettre à disposition l'APK (Artifact)
         uses: actions/upload-artifact@v4
         with:
-          name: BOKK-TV-Android-APK
-          path: build-output/BOKK-TV-v2.0.0.apk
+          name: BOKK-TV-Android-APK-v2.0.${{ github.run_number }}
+          path: build-output/BOKK-TV-v2.0.${{ github.run_number }}.apk
           retention-days: 30
 
       - name: 🌟 Publier la Release GitHub avec lien direct APK
         uses: softprops/action-gh-release@v2
         if: github.ref == 'refs/heads/main'
         with:
-          tag_name: v2.0.0
-          name: "BOKK TV v2.0.0 — Application Android (Mobile & TV)"
+          tag_name: v2.0.${{ github.run_number }}
+          name: "BOKK TV v2.0.${{ github.run_number }} — Application Android (Mobile & TV)"
           body: |
-            ### 📺 BOKK TV v2.0.0 — Nouvelle Version Officielle
+            ### 📺 BOKK TV v2.0.${{ github.run_number }} — Build #${{ github.run_number }}
             - **Application universelle Android** (Smartphones, Tablettes, Android TV, Google TV, Fire TV).
-            - Téléchargement direct sans extraction : cliquez sur `BOKK-TV-v2.0.0.apk` ci-dessous pour installer l'application.
-          files: build-output/BOKK-TV-v2.0.0.apk
+            - Téléchargement direct : cliquez sur `BOKK-TV-v2.0.${{ github.run_number }}.apk` ci-dessous.
+            - Build GitHub Actions Run #${{ github.run_number }}
+          files: build-output/BOKK-TV-v2.0.${{ github.run_number }}.apk
           prerelease: false
           draft: false
         env:
