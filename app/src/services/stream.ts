@@ -118,6 +118,17 @@ export function resolveStreamUrl(
     finalUrl = rewriteMegaTvUrl(finalUrl);
   }
 
+  // 2b. Normalisation des flux novatv vers MPEG-TS live direct
+  if (finalUrl.includes('novatv.xyz') && !finalUrl.includes('/live/') && !finalUrl.endsWith('.ts')) {
+    try {
+      const u = new URL(finalUrl);
+      const parts = u.pathname.replace(/^\/+/, '').split('/');
+      if (parts.length >= 3) {
+        finalUrl = `http://${u.host}/live/${parts[0]}/${parts[1]}/${parts[2]}.ts`;
+      }
+    } catch (_) {}
+  }
+
   // 3. Contournement DNS uniquement si demandé en secours ou blocage opérateur (avec Host header associé)
   if (bypassDnsIp && finalUrl.includes('barrelastv.ottcst.org')) {
     finalUrl = finalUrl.replace('barrelastv.ottcst.org', '103.205.17.108');
