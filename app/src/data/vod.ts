@@ -27,18 +27,18 @@ export interface VodCategory {
 }
 
 export const VOD_CATEGORIES: VodCategory[] = [
-  { key: 'tous',       label: 'Tout le Cinéma', icon: 'sparkles' },
-  { key: 'recents',    label: '🔥 Récents & Populaires', icon: 'flame' },
-  { key: 'netflix',    label: '🔴 Netflix', icon: 'film' },
-  { key: 'disney',     label: '✨ Disney+', icon: 'star' },
-  { key: 'prime',      label: '📦 Prime Video', icon: 'play' },
-  { key: 'apple',      label: '🍏 Apple TV+', icon: 'tv' },
-  { key: 'hbo',        label: '💜 HBO Max', icon: 'videocam' },
-  { key: 'series',     label: '📺 Séries', icon: 'layers' },
-  { key: 'action',     label: '💥 Action', icon: 'flash' },
-  { key: 'comedie',    label: '😂 Comédie', icon: 'happy' },
-  { key: 'scifi',      label: '🚀 Sci-Fi', icon: 'planet' },
-  { key: 'animation',  label: '🎨 Animation', icon: 'color-palette' },
+  { key: 'tous',       label: 'Tout le Cinéma',         icon: 'sparkles' },
+  { key: 'recents',    label: 'Récents & Populaires',   icon: 'flame' },
+  { key: 'netflix',    label: 'Netflix',                icon: 'film' },
+  { key: 'disney',     label: 'Disney+',                icon: 'star' },
+  { key: 'prime',      label: 'Prime Video',            icon: 'play' },
+  { key: 'apple',      label: 'Apple TV+',              icon: 'tv' },
+  { key: 'hbo',        label: 'HBO Max',                icon: 'videocam' },
+  { key: 'series',     label: 'Séries',                 icon: 'layers' },
+  { key: 'action',     label: 'Action',                 icon: 'flash' },
+  { key: 'comedie',    label: 'Comédie',                icon: 'happy' },
+  { key: 'scifi',      label: 'Sci-Fi',                 icon: 'planet' },
+  { key: 'animation',  label: 'Animation',              icon: 'color-palette' },
 ];
 
 import vodRaw from './vodData.json';

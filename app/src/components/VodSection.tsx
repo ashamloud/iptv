@@ -29,16 +29,16 @@ interface VodSectionProps {
   isTvMode?: boolean;
 }
 
-// ── Données des chaînes phares pour le rail "Live TV" (Style Carte Broadcast) ──
-const LIVE_TV_TOP_PICKS = [
-  { name: 'RTS 1 SÉNÉGAL', label: '🇸🇳 Sénégal Officiel', bg: '#831843', query: 'rts 1' },
-  { name: 'beIN SPORTS 1', label: '⚽ UEFA & Direct', bg: '#1e3a8a', query: 'bein sports 1' },
-  { name: 'CANAL+ SPORT', label: '🏆 Premier League', bg: '#0f172a', query: 'canal+ sport' },
-  { name: 'TF1 DIRECT', label: '🇫🇷 Divertissement', bg: '#1d4ed8', query: 'tf1' },
-  { name: 'CANAL+ FOOT', label: '⚽ Ligue 1 & Europe', bg: '#14532d', query: 'canal+ foot' },
-  { name: '2sTV SÉNÉGAL', label: '🇸🇳 Direct Dakar', bg: '#701a75', query: '2stv' },
-  { name: 'DAZN 1 VIP', label: '🥊 Combat & Liga', bg: '#78350f', query: 'dazn' },
-  { name: 'RMC SPORT 1', label: '🔥 UEFA Champions', bg: '#991b1b', query: 'rmc sport 1' },
+// ── Filtre des films & séries par plateforme de streaming avec logos officiels ──
+const STREAMING_PLATFORMS = [
+  { key: 'netflix', name: 'Netflix', color: '#e50914', bg: '#1f1315', logo: 'https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/netflix-us.png' },
+  { key: 'prime', name: 'Prime Video', color: '#00a8e1', bg: '#0d1b2a', logo: 'https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/amazon-prime-video-us.png' },
+  { key: 'disney', name: 'Disney+', color: '#113ccf', bg: '#09142b', logo: 'https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/disney-plus-us.png' },
+  { key: 'apple', name: 'Apple TV+', color: '#ffffff', bg: '#171717', logo: 'https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/apple-tv-plus-us.png' },
+  { key: 'hbo', name: 'HBO Max', color: '#9933ff', bg: '#160d26', logo: 'https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/max-us.png' },
+  { key: 'series', name: 'Séries TV', color: '#38bdf8', bg: '#0c1a2e', logo: null },
+  { key: 'recents', name: 'Nouveautés', color: '#f59e0b', bg: '#241a0b', logo: null },
+  { key: 'animation', name: 'Animation', color: '#ec4899', bg: '#260f1b', logo: null },
 ];
 
 export const VodSection = memo(function VodSection({
@@ -114,11 +114,11 @@ export const VodSection = memo(function VodSection({
     [channels, onPlayChannel, onNavigateToTv]
   );
 
-  // Dimensions adaptatives
-  const cardWidth = isTvMode ? 170 : 135;
-  const cardHeight = isTvMode ? 255 : 200;
-  const liveCardWidth = isTvMode ? 210 : 155;
-  const liveCardHeight = isTvMode ? 115 : 88;
+  // Dimensions adaptatives optimisées (Hauteurs réduites pour un affichage plus aéré)
+  const cardWidth = isTvMode ? 140 : 110;
+  const cardHeight = isTvMode ? 210 : 165;
+  const platformCardWidth = isTvMode ? 160 : 125;
+  const platformCardHeight = isTvMode ? 82 : 68;
 
   return (
     <ScrollView
@@ -228,7 +228,7 @@ export const VodSection = memo(function VodSection({
                Inspiré de l'image de référence
           ══════════════════════════════════════════════════════ */}
           {currentHero && (
-            <View style={[styles.heroContainer, { height: isTvMode ? 360 : 310 }]}>
+            <View style={[styles.heroContainer, { height: isTvMode ? 250 : 200 }]}>
               {/* Image de fond en pleine largeur */}
               <Image
                 source={{ uri: currentHero.backdrop || currentHero.poster }}
@@ -320,17 +320,17 @@ export const VodSection = memo(function VodSection({
           )}
 
           {/* ══════════════════════════════════════════════════════
-               RAIL 1 : "Live TV" (Exactement comme sur la photo)
-               Cartes colorées avec logo d'antenne radio 📶
+               RAIL 1 : "Plateformes de Streaming" (Logos officiels)
+               Remplace les chaînes TV par le filtre des plateformes
           ══════════════════════════════════════════════════════ */}
           <View style={styles.railSection}>
             <View style={styles.railHeaderRow}>
               <View style={styles.railTitleGroup}>
-                <Ionicons name="radio" size={16} color="#e50914" />
-                <Text style={styles.railTitle}>Live TV</Text>
+                <Ionicons name="film-outline" size={16} color="#e50914" />
+                <Text style={styles.railTitle}>Plateformes de Streaming</Text>
               </View>
-              <Pressable onPress={onNavigateToTv} style={styles.viewAllBtn}>
-                <Text style={styles.viewAllText}>Voir tout</Text>
+              <Pressable onPress={() => setSelectedCategory('tous')} style={styles.viewAllBtn}>
+                <Text style={styles.viewAllText}>Tout voir</Text>
                 <Ionicons name="chevron-forward" size={13} color="#94a3b8" />
               </Pressable>
             </View>
@@ -340,37 +340,44 @@ export const VodSection = memo(function VodSection({
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.railScroll}
             >
-              {LIVE_TV_TOP_PICKS.map((item, idx) => {
-                const isFocused = focusedCardId === `live_${idx}`;
+              {STREAMING_PLATFORMS.map((item, idx) => {
+                const isFocused = focusedCardId === `platform_${idx}`;
+                const isSelected = selectedCategory === item.key;
                 return (
                   <Pressable
-                    key={`live_pick_${idx}`}
+                    key={`platform_${item.key}`}
                     focusable={true}
                     accessible={true}
-                    onFocus={() => setFocusedCardId(`live_${idx}`)}
+                    onFocus={() => setFocusedCardId(`platform_${idx}`)}
                     onBlur={() => setFocusedCardId(null)}
-                    onPress={() => handleLiveTvCardPress(item.query)}
+                    onPress={() => setSelectedCategory(item.key)}
                     style={({ pressed }) => [
                       styles.liveChannelCard,
-                      { width: liveCardWidth, height: liveCardHeight, backgroundColor: item.bg },
+                      {
+                        width: platformCardWidth,
+                        height: platformCardHeight,
+                        backgroundColor: item.bg,
+                        borderColor: isSelected ? item.color : 'rgba(255,255,255,0.08)',
+                        borderWidth: isSelected ? 2 : 1,
+                      },
                       isFocused && styles.liveChannelCardFocused,
                       pressed && { opacity: 0.85 },
                     ]}
                   >
-                    {/* Badge Icône Antenne Broadcast en haut à gauche */}
-                    <View style={styles.liveAntennaBadge}>
-                      <Ionicons name="radio-outline" size={13} color="#ffffff" />
-                    </View>
-
-                    {/* Titre et sous-titre de la chaîne */}
-                    <View style={styles.liveCardContent}>
-                      <Text style={styles.liveCardName} numberOfLines={1}>
-                        {item.name}
-                      </Text>
-                      <Text style={styles.liveCardLabel} numberOfLines={1}>
-                        {item.label}
-                      </Text>
-                    </View>
+                    {item.logo ? (
+                      <Image
+                        source={{ uri: item.logo }}
+                        style={{ width: '80%', height: 32 }}
+                        contentFit="contain"
+                      />
+                    ) : (
+                      <View style={{ alignItems: 'center', justifyContent: 'center' }}>
+                        <Ionicons name="layers-outline" size={20} color={item.color} />
+                        <Text style={[styles.liveCardName, { marginTop: 4, color: item.color }]}>
+                          {item.name}
+                        </Text>
+                      </View>
+                    )}
                   </Pressable>
                 );
               })}

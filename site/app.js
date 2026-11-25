@@ -4949,6 +4949,37 @@ function init() {
         // ── Configuration du switcher de vues (home / catalogue) ──
         setupViewSwitching();
 
+        // ── Vérification & Résolution robuste du catalogue (Anti-interface noire) ──
+        if (!channels || channels.length === 0) {
+            const fresh = (typeof window !== 'undefined' && Array.isArray(window.channels) && window.channels.length > 0)
+                ? window.channels
+                : ((typeof window !== 'undefined' && Array.isArray(window.CHANNELS) && window.CHANNELS.length > 0) ? window.CHANNELS : []);
+            if (fresh.length > 0) {
+                channels = groupChannelsWithBackups(fresh);
+                console.log(`[BOKK TV] Catalogue chargé avec succès (${channels.length} chaînes).`);
+            } else {
+                let checkTries = 0;
+                const checkInterval = setInterval(() => {
+                    checkTries++;
+                    const laterFresh = (typeof window !== 'undefined' && Array.isArray(window.channels) && window.channels.length > 0)
+                        ? window.channels
+                        : ((typeof window !== 'undefined' && Array.isArray(window.CHANNELS) && window.CHANNELS.length > 0) ? window.CHANNELS : []);
+                    if (laterFresh.length > 0) {
+                        clearInterval(checkInterval);
+                        channels = groupChannelsWithBackups(laterFresh);
+                        console.log(`[BOKK TV] Catalogue synchronisé en différé : ${channels.length} chaînes.`);
+                        populateBouquetFilter();
+                        renderCategories();
+                        renderChannelList(true);
+                        renderLiveLogosRow();
+                        renderHomeCarousels();
+                    } else if (checkTries >= 25) {
+                        clearInterval(checkInterval);
+                    }
+                }, 200);
+            }
+        }
+
         // ── Catalogue ──
         currentCategory = 'tous';
         applyCustomChannels();
@@ -5063,3 +5094,4 @@ function init() {
         init();
     }
 })();
+
