@@ -1,7 +1,7 @@
 /**
  * BOKK TV — Match Center & Grands Rendez-Vous Sportifs À VENIR
  * Généré automatiquement chaque jour via API ESPN & flux officiels
- * Date de mise à jour : 2026-11-24 22:12:19
+ * Date de mise à jour : 2026-11-25 00:45:08
  */
 
 const FEATURED_MATCHES = [
@@ -21,7 +21,7 @@ const FEATURED_MATCHES = [
         },
         "poster": "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1400&q=80",
         "score": "VS",
-        "date": "Demain",
+        "date": "Aujourd'hui",
         "time": "18:45",
         "isLive": false,
         "isFinished": false,
@@ -72,7 +72,7 @@ const FEATURED_MATCHES = [
         },
         "poster": "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1400&q=80",
         "score": "VS",
-        "date": "Demain",
+        "date": "Aujourd'hui",
         "time": "18:45",
         "isLive": false,
         "isFinished": false,
@@ -123,7 +123,7 @@ const FEATURED_MATCHES = [
         },
         "poster": "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1400&q=80",
         "score": "VS",
-        "date": "Demain",
+        "date": "Aujourd'hui",
         "time": "21:00",
         "isLive": false,
         "isFinished": false,
@@ -168,7 +168,7 @@ const FEATURED_MATCHES = [
         },
         "poster": "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1400&q=80",
         "score": "VS",
-        "date": "Demain",
+        "date": "Aujourd'hui",
         "time": "21:00",
         "isLive": false,
         "isFinished": false,
@@ -213,7 +213,7 @@ const FEATURED_MATCHES = [
         },
         "poster": "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1400&q=80",
         "score": "VS",
-        "date": "Demain",
+        "date": "Aujourd'hui",
         "time": "21:00",
         "isLive": false,
         "isFinished": false,
@@ -258,7 +258,7 @@ const FEATURED_MATCHES = [
         },
         "poster": "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1400&q=80",
         "score": "VS",
-        "date": "Demain",
+        "date": "Aujourd'hui",
         "time": "21:00",
         "isLive": false,
         "isFinished": false,
@@ -309,7 +309,7 @@ const FEATURED_MATCHES = [
         },
         "poster": "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1400&q=80",
         "score": "VS",
-        "date": "Demain",
+        "date": "Aujourd'hui",
         "time": "21:00",
         "isLive": false,
         "isFinished": false,
@@ -360,7 +360,7 @@ const FEATURED_MATCHES = [
         },
         "poster": "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1400&q=80",
         "score": "VS",
-        "date": "Demain",
+        "date": "Aujourd'hui",
         "time": "21:00",
         "isLive": false,
         "isFinished": false,
@@ -405,7 +405,7 @@ const FEATURED_MATCHES = [
         },
         "poster": "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1400&q=80",
         "score": "VS",
-        "date": "Demain",
+        "date": "Aujourd'hui",
         "time": "21:00",
         "isLive": false,
         "isFinished": false,
@@ -456,7 +456,7 @@ const FEATURED_MATCHES = [
         },
         "poster": "https://images.unsplash.com/photo-1522778119026-d647f0596c20?auto=format&fit=crop&w=1400&q=80",
         "score": "VS",
-        "date": "Jeu. 26 Nov.",
+        "date": "Demain",
         "time": "18:45",
         "isLive": false,
         "isFinished": false,
@@ -495,7 +495,7 @@ const FEATURED_MATCHES = [
         },
         "poster": "https://images.unsplash.com/photo-1522778119026-d647f0596c20?auto=format&fit=crop&w=1400&q=80",
         "score": "VS",
-        "date": "Jeu. 26 Nov.",
+        "date": "Demain",
         "time": "18:45",
         "isLive": false,
         "isFinished": false,
@@ -534,7 +534,7 @@ const FEATURED_MATCHES = [
         },
         "poster": "https://images.unsplash.com/photo-1522778119026-d647f0596c20?auto=format&fit=crop&w=1400&q=80",
         "score": "VS",
-        "date": "Jeu. 26 Nov.",
+        "date": "Demain",
         "time": "18:45",
         "isLive": false,
         "isFinished": false,
@@ -573,7 +573,7 @@ const FEATURED_MATCHES = [
         },
         "poster": "https://images.unsplash.com/photo-1522778119026-d647f0596c20?auto=format&fit=crop&w=1400&q=80",
         "score": "VS",
-        "date": "Jeu. 26 Nov.",
+        "date": "Demain",
         "time": "18:45",
         "isLive": false,
         "isFinished": false,
@@ -612,7 +612,7 @@ const FEATURED_MATCHES = [
         },
         "poster": "https://images.unsplash.com/photo-1522778119026-d647f0596c20?auto=format&fit=crop&w=1400&q=80",
         "score": "VS",
-        "date": "Jeu. 26 Nov.",
+        "date": "Demain",
         "time": "18:45",
         "isLive": false,
         "isFinished": false,
@@ -651,7 +651,7 @@ const FEATURED_MATCHES = [
         },
         "poster": "https://images.unsplash.com/photo-1522778119026-d647f0596c20?auto=format&fit=crop&w=1400&q=80",
         "score": "VS",
-        "date": "Jeu. 26 Nov.",
+        "date": "Demain",
         "time": "18:45",
         "isLive": false,
         "isFinished": false,
@@ -690,7 +690,7 @@ const FEATURED_MATCHES = [
         },
         "poster": "https://images.unsplash.com/photo-1522778119026-d647f0596c20?auto=format&fit=crop&w=1400&q=80",
         "score": "VS",
-        "date": "Jeu. 26 Nov.",
+        "date": "Demain",
         "time": "18:45",
         "isLive": false,
         "isFinished": false,
@@ -729,7 +729,7 @@ const FEATURED_MATCHES = [
         },
         "poster": "https://images.unsplash.com/photo-1522778119026-d647f0596c20?auto=format&fit=crop&w=1400&q=80",
         "score": "VS",
-        "date": "Jeu. 26 Nov.",
+        "date": "Demain",
         "time": "18:45",
         "isLive": false,
         "isFinished": false,
@@ -768,7 +768,7 @@ const FEATURED_MATCHES = [
         },
         "poster": "https://images.unsplash.com/photo-1522778119026-d647f0596c20?auto=format&fit=crop&w=1400&q=80",
         "score": "VS",
-        "date": "Jeu. 26 Nov.",
+        "date": "Demain",
         "time": "21:00",
         "isLive": false,
         "isFinished": false,
@@ -807,7 +807,7 @@ const FEATURED_MATCHES = [
         },
         "poster": "https://images.unsplash.com/photo-1522778119026-d647f0596c20?auto=format&fit=crop&w=1400&q=80",
         "score": "VS",
-        "date": "Jeu. 26 Nov.",
+        "date": "Demain",
         "time": "21:00",
         "isLive": false,
         "isFinished": false,
@@ -846,7 +846,7 @@ const FEATURED_MATCHES = [
         },
         "poster": "https://images.unsplash.com/photo-1522778119026-d647f0596c20?auto=format&fit=crop&w=1400&q=80",
         "score": "VS",
-        "date": "Jeu. 26 Nov.",
+        "date": "Demain",
         "time": "21:00",
         "isLive": false,
         "isFinished": false,
@@ -885,7 +885,7 @@ const FEATURED_MATCHES = [
         },
         "poster": "https://images.unsplash.com/photo-1522778119026-d647f0596c20?auto=format&fit=crop&w=1400&q=80",
         "score": "VS",
-        "date": "Jeu. 26 Nov.",
+        "date": "Demain",
         "time": "21:00",
         "isLive": false,
         "isFinished": false,
@@ -924,7 +924,7 @@ const FEATURED_MATCHES = [
         },
         "poster": "https://images.unsplash.com/photo-1522778119026-d647f0596c20?auto=format&fit=crop&w=1400&q=80",
         "score": "VS",
-        "date": "Jeu. 26 Nov.",
+        "date": "Demain",
         "time": "21:00",
         "isLive": false,
         "isFinished": false,
@@ -963,7 +963,7 @@ const FEATURED_MATCHES = [
         },
         "poster": "https://images.unsplash.com/photo-1522778119026-d647f0596c20?auto=format&fit=crop&w=1400&q=80",
         "score": "VS",
-        "date": "Jeu. 26 Nov.",
+        "date": "Demain",
         "time": "21:00",
         "isLive": false,
         "isFinished": false,
@@ -1002,7 +1002,7 @@ const FEATURED_MATCHES = [
         },
         "poster": "https://images.unsplash.com/photo-1522778119026-d647f0596c20?auto=format&fit=crop&w=1400&q=80",
         "score": "VS",
-        "date": "Jeu. 26 Nov.",
+        "date": "Demain",
         "time": "21:00",
         "isLive": false,
         "isFinished": false,
@@ -1041,7 +1041,7 @@ const FEATURED_MATCHES = [
         },
         "poster": "https://images.unsplash.com/photo-1522778119026-d647f0596c20?auto=format&fit=crop&w=1400&q=80",
         "score": "VS",
-        "date": "Jeu. 26 Nov.",
+        "date": "Demain",
         "time": "21:00",
         "isLive": false,
         "isFinished": false,
@@ -1080,7 +1080,7 @@ const FEATURED_MATCHES = [
         },
         "poster": "https://images.unsplash.com/photo-1522778119026-d647f0596c20?auto=format&fit=crop&w=1400&q=80",
         "score": "VS",
-        "date": "Jeu. 26 Nov.",
+        "date": "Demain",
         "time": "21:00",
         "isLive": false,
         "isFinished": false,
@@ -1119,7 +1119,7 @@ const FEATURED_MATCHES = [
         },
         "poster": "https://images.unsplash.com/photo-1522778119026-d647f0596c20?auto=format&fit=crop&w=1400&q=80",
         "score": "VS",
-        "date": "Jeu. 26 Nov.",
+        "date": "Demain",
         "time": "21:00",
         "isLive": false,
         "isFinished": false,
@@ -3334,6 +3334,456 @@ const FEATURED_MATCHES = [
             }
         ],
         "rawDate": 1796155200
+    },
+    {
+        "id": "espn-401882698",
+        "title": "Real Sociedad vs Real Madrid",
+        "competition": "LaLiga",
+        "competitionBadge": "LALIGA",
+        "category": "football",
+        "teamA": {
+            "name": "Real Sociedad",
+            "logo": "https://a.espncdn.com/i/teamlogos/soccer/500/89.png"
+        },
+        "teamB": {
+            "name": "Real Madrid",
+            "logo": "https://a.espncdn.com/i/teamlogos/soccer/500/86.png"
+        },
+        "poster": "https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=1400&q=80",
+        "score": "VS",
+        "date": "Mer. 2 Déc.",
+        "time": "19:00",
+        "isLive": false,
+        "isFinished": false,
+        "liveMinute": null,
+        "stage": "LaLiga",
+        "description": "Real Sociedad contre Real Madrid en direct sur BOKK TV.",
+        "channels": [
+            {
+                "id": 1559,
+                "name": "M+ LaLiga 4K",
+                "badge": "4K UHD",
+                "quality": "4K"
+            },
+            {
+                "id": 1607,
+                "name": "DAZN LaLiga 4K",
+                "badge": "4K UHD",
+                "quality": "4K"
+            },
+            {
+                "id": 109,
+                "name": "beIN Sports 1 HD",
+                "badge": "FHD",
+                "quality": "1080p"
+            }
+        ],
+        "rawDate": 1796234400
+    },
+    {
+        "id": "espn-401879222",
+        "title": "Chelsea vs Crystal Palace",
+        "competition": "Premier League",
+        "competitionBadge": "PREMIER LEAGUE",
+        "category": "football",
+        "teamA": {
+            "name": "Chelsea",
+            "logo": "https://a.espncdn.com/i/teamlogos/soccer/500/363.png"
+        },
+        "teamB": {
+            "name": "Crystal Palace",
+            "logo": "https://a.espncdn.com/i/teamlogos/soccer/500/384.png"
+        },
+        "poster": "https://images.unsplash.com/photo-1522778119026-d647f0596c20?auto=format&fit=crop&w=1400&q=80",
+        "score": "VS",
+        "date": "Mer. 2 Déc.",
+        "time": "20:30",
+        "isLive": false,
+        "isFinished": false,
+        "liveMinute": null,
+        "stage": "Premier League",
+        "description": "Chelsea contre Crystal Palace en direct sur BOKK TV.",
+        "channels": [
+            {
+                "id": 97,
+                "name": "Canal+ 360 HD",
+                "badge": "FHD",
+                "quality": "1080p"
+            },
+            {
+                "id": 109,
+                "name": "beIN Sports 1 HD",
+                "badge": "FHD",
+                "quality": "1080p"
+            },
+            {
+                "id": 120,
+                "name": "Sky Sport Football",
+                "badge": "FHD",
+                "quality": "1080p"
+            }
+        ],
+        "rawDate": 1796239800
+    },
+    {
+        "id": "espn-401879220",
+        "title": "Hull City vs Nottingham Forest",
+        "competition": "Premier League",
+        "competitionBadge": "PREMIER LEAGUE",
+        "category": "football",
+        "teamA": {
+            "name": "Hull City",
+            "logo": "https://a.espncdn.com/i/teamlogos/soccer/500/306.png"
+        },
+        "teamB": {
+            "name": "Nottingham Forest",
+            "logo": "https://a.espncdn.com/i/teamlogos/soccer/500/393.png"
+        },
+        "poster": "https://images.unsplash.com/photo-1522778119026-d647f0596c20?auto=format&fit=crop&w=1400&q=80",
+        "score": "VS",
+        "date": "Mer. 2 Déc.",
+        "time": "20:30",
+        "isLive": false,
+        "isFinished": false,
+        "liveMinute": null,
+        "stage": "Premier League",
+        "description": "Hull City contre Nottingham Forest en direct sur BOKK TV.",
+        "channels": [
+            {
+                "id": 97,
+                "name": "Canal+ 360 HD",
+                "badge": "FHD",
+                "quality": "1080p"
+            },
+            {
+                "id": 109,
+                "name": "beIN Sports 1 HD",
+                "badge": "FHD",
+                "quality": "1080p"
+            },
+            {
+                "id": 120,
+                "name": "Sky Sport Football",
+                "badge": "FHD",
+                "quality": "1080p"
+            }
+        ],
+        "rawDate": 1796239800
+    },
+    {
+        "id": "espn-401879219",
+        "title": "Liverpool vs Sunderland",
+        "competition": "Premier League",
+        "competitionBadge": "PREMIER LEAGUE",
+        "category": "football",
+        "teamA": {
+            "name": "Liverpool",
+            "logo": "https://a.espncdn.com/i/teamlogos/soccer/500/364.png"
+        },
+        "teamB": {
+            "name": "Sunderland",
+            "logo": "https://a.espncdn.com/i/teamlogos/soccer/500/366.png"
+        },
+        "poster": "https://images.unsplash.com/photo-1522778119026-d647f0596c20?auto=format&fit=crop&w=1400&q=80",
+        "score": "VS",
+        "date": "Mer. 2 Déc.",
+        "time": "20:30",
+        "isLive": false,
+        "isFinished": false,
+        "liveMinute": null,
+        "stage": "Premier League",
+        "description": "Liverpool contre Sunderland en direct sur BOKK TV.",
+        "channels": [
+            {
+                "id": 97,
+                "name": "Canal+ 360 HD",
+                "badge": "FHD",
+                "quality": "1080p"
+            },
+            {
+                "id": 109,
+                "name": "beIN Sports 1 HD",
+                "badge": "FHD",
+                "quality": "1080p"
+            },
+            {
+                "id": 120,
+                "name": "Sky Sport Football",
+                "badge": "FHD",
+                "quality": "1080p"
+            }
+        ],
+        "rawDate": 1796239800
+    },
+    {
+        "id": "espn-401879218",
+        "title": "Manchester City vs Leeds United",
+        "competition": "Premier League",
+        "competitionBadge": "PREMIER LEAGUE",
+        "category": "football",
+        "teamA": {
+            "name": "Manchester City",
+            "logo": "https://a.espncdn.com/i/teamlogos/soccer/500/382.png"
+        },
+        "teamB": {
+            "name": "Leeds United",
+            "logo": "https://a.espncdn.com/i/teamlogos/soccer/500/357.png"
+        },
+        "poster": "https://images.unsplash.com/photo-1522778119026-d647f0596c20?auto=format&fit=crop&w=1400&q=80",
+        "score": "VS",
+        "date": "Mer. 2 Déc.",
+        "time": "20:30",
+        "isLive": false,
+        "isFinished": false,
+        "liveMinute": null,
+        "stage": "Premier League",
+        "description": "Manchester City contre Leeds United en direct sur BOKK TV.",
+        "channels": [
+            {
+                "id": 97,
+                "name": "Canal+ 360 HD",
+                "badge": "FHD",
+                "quality": "1080p"
+            },
+            {
+                "id": 109,
+                "name": "beIN Sports 1 HD",
+                "badge": "FHD",
+                "quality": "1080p"
+            },
+            {
+                "id": 120,
+                "name": "Sky Sport Football",
+                "badge": "FHD",
+                "quality": "1080p"
+            }
+        ],
+        "rawDate": 1796239800
+    },
+    {
+        "id": "espn-401879223",
+        "title": "AFC Bournemouth vs Brighton & Hove Albion",
+        "competition": "Premier League",
+        "competitionBadge": "PREMIER LEAGUE",
+        "category": "football",
+        "teamA": {
+            "name": "AFC Bournemouth",
+            "logo": "https://a.espncdn.com/i/teamlogos/soccer/500/349.png"
+        },
+        "teamB": {
+            "name": "Brighton & Hove Albion",
+            "logo": "https://a.espncdn.com/i/teamlogos/soccer/500/331.png"
+        },
+        "poster": "https://images.unsplash.com/photo-1522778119026-d647f0596c20?auto=format&fit=crop&w=1400&q=80",
+        "score": "VS",
+        "date": "Mer. 2 Déc.",
+        "time": "21:15",
+        "isLive": false,
+        "isFinished": false,
+        "liveMinute": null,
+        "stage": "Premier League",
+        "description": "AFC Bournemouth contre Brighton & Hove Albion en direct sur BOKK TV.",
+        "channels": [
+            {
+                "id": 97,
+                "name": "Canal+ 360 HD",
+                "badge": "FHD",
+                "quality": "1080p"
+            },
+            {
+                "id": 109,
+                "name": "beIN Sports 1 HD",
+                "badge": "FHD",
+                "quality": "1080p"
+            },
+            {
+                "id": 120,
+                "name": "Sky Sport Football",
+                "badge": "FHD",
+                "quality": "1080p"
+            }
+        ],
+        "rawDate": 1796242500
+    },
+    {
+        "id": "espn-401878751",
+        "title": "Aston Villa vs Everton",
+        "competition": "Premier League",
+        "competitionBadge": "PREMIER LEAGUE",
+        "category": "football",
+        "teamA": {
+            "name": "Aston Villa",
+            "logo": "https://a.espncdn.com/i/teamlogos/soccer/500/362.png"
+        },
+        "teamB": {
+            "name": "Everton",
+            "logo": "https://a.espncdn.com/i/teamlogos/soccer/500/368.png"
+        },
+        "poster": "https://images.unsplash.com/photo-1522778119026-d647f0596c20?auto=format&fit=crop&w=1400&q=80",
+        "score": "VS",
+        "date": "Mer. 2 Déc.",
+        "time": "21:15",
+        "isLive": false,
+        "isFinished": false,
+        "liveMinute": null,
+        "stage": "Premier League",
+        "description": "Aston Villa contre Everton en direct sur BOKK TV.",
+        "channels": [
+            {
+                "id": 97,
+                "name": "Canal+ 360 HD",
+                "badge": "FHD",
+                "quality": "1080p"
+            },
+            {
+                "id": 109,
+                "name": "beIN Sports 1 HD",
+                "badge": "FHD",
+                "quality": "1080p"
+            },
+            {
+                "id": 120,
+                "name": "Sky Sport Football",
+                "badge": "FHD",
+                "quality": "1080p"
+            }
+        ],
+        "rawDate": 1796242500
+    },
+    {
+        "id": "espn-401878750",
+        "title": "Brentford vs Arsenal",
+        "competition": "Premier League",
+        "competitionBadge": "PREMIER LEAGUE",
+        "category": "football",
+        "teamA": {
+            "name": "Brentford",
+            "logo": "https://a.espncdn.com/i/teamlogos/soccer/500/337.png"
+        },
+        "teamB": {
+            "name": "Arsenal",
+            "logo": "https://a.espncdn.com/i/teamlogos/soccer/500/359.png"
+        },
+        "poster": "https://images.unsplash.com/photo-1522778119026-d647f0596c20?auto=format&fit=crop&w=1400&q=80",
+        "score": "VS",
+        "date": "Mer. 2 Déc.",
+        "time": "21:15",
+        "isLive": false,
+        "isFinished": false,
+        "liveMinute": null,
+        "stage": "Premier League",
+        "description": "Brentford contre Arsenal en direct sur BOKK TV.",
+        "channels": [
+            {
+                "id": 97,
+                "name": "Canal+ 360 HD",
+                "badge": "FHD",
+                "quality": "1080p"
+            },
+            {
+                "id": 109,
+                "name": "beIN Sports 1 HD",
+                "badge": "FHD",
+                "quality": "1080p"
+            },
+            {
+                "id": 120,
+                "name": "Sky Sport Football",
+                "badge": "FHD",
+                "quality": "1080p"
+            }
+        ],
+        "rawDate": 1796242500
+    },
+    {
+        "id": "espn-401879217",
+        "title": "Newcastle United vs Manchester United",
+        "competition": "Premier League",
+        "competitionBadge": "PREMIER LEAGUE",
+        "category": "football",
+        "teamA": {
+            "name": "Newcastle United",
+            "logo": "https://a.espncdn.com/i/teamlogos/soccer/500/361.png"
+        },
+        "teamB": {
+            "name": "Manchester United",
+            "logo": "https://a.espncdn.com/i/teamlogos/soccer/500/360.png"
+        },
+        "poster": "https://images.unsplash.com/photo-1522778119026-d647f0596c20?auto=format&fit=crop&w=1400&q=80",
+        "score": "VS",
+        "date": "Mer. 2 Déc.",
+        "time": "21:15",
+        "isLive": false,
+        "isFinished": false,
+        "liveMinute": null,
+        "stage": "Premier League",
+        "description": "Newcastle United contre Manchester United en direct sur BOKK TV.",
+        "channels": [
+            {
+                "id": 97,
+                "name": "Canal+ 360 HD",
+                "badge": "FHD",
+                "quality": "1080p"
+            },
+            {
+                "id": 109,
+                "name": "beIN Sports 1 HD",
+                "badge": "FHD",
+                "quality": "1080p"
+            },
+            {
+                "id": 120,
+                "name": "Sky Sport Football",
+                "badge": "FHD",
+                "quality": "1080p"
+            }
+        ],
+        "rawDate": 1796242500
+    },
+    {
+        "id": "espn-401882700",
+        "title": "Barcelona vs Atlético Madrid",
+        "competition": "LaLiga",
+        "competitionBadge": "LALIGA",
+        "category": "football",
+        "teamA": {
+            "name": "Barcelona",
+            "logo": "https://a.espncdn.com/i/teamlogos/soccer/500/83.png"
+        },
+        "teamB": {
+            "name": "Atlético Madrid",
+            "logo": "https://a.espncdn.com/i/teamlogos/soccer/500/1068.png"
+        },
+        "poster": "https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=1400&q=80",
+        "score": "VS",
+        "date": "Mer. 2 Déc.",
+        "time": "21:30",
+        "isLive": false,
+        "isFinished": false,
+        "liveMinute": null,
+        "stage": "LaLiga",
+        "description": "Barcelona contre Atlético Madrid en direct sur BOKK TV.",
+        "channels": [
+            {
+                "id": 1560,
+                "name": "M+ LaLiga HD",
+                "badge": "FHD",
+                "quality": "1080p"
+            },
+            {
+                "id": 1608,
+                "name": "DAZN LaLiga HD",
+                "badge": "HD",
+                "quality": "720p"
+            },
+            {
+                "id": 110,
+                "name": "beIN Sports 2 HD",
+                "badge": "FHD",
+                "quality": "1080p"
+            }
+        ],
+        "rawDate": 1796243400
     }
 ];
 
