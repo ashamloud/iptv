@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
     <title>BOKK TV — Panneau d'Administration</title>
-    <link rel="icon" type="image/png" href="../favicon.png">
+    <link rel="icon" type="image/png" href="/favicon.png">
     
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -278,6 +278,73 @@
         }
         .m3u-sample-row:last-child { border-bottom: none; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* ── Analytics Block ── */
+        #analytics-block {
+            margin-bottom: 20px;
+        }
+        .analytics-title {
+            font-family: 'Outfit', sans-serif; font-size: 0.8rem; font-weight: 800;
+            color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em;
+            margin-bottom: 10px;
+        }
+        .analytics-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 10px; margin-bottom: 14px;
+        }
+        .analytics-card {
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: 12px; padding: 14px;
+            display: flex; flex-direction: column; gap: 4px;
+        }
+        .analytics-card .a-val {
+            font-family: 'Outfit', sans-serif; font-size: 1.5rem; font-weight: 900;
+        }
+        .analytics-card .a-lbl {
+            font-size: 0.72rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase;
+        }
+        .svg-chart-wrap {
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: 12px; padding: 16px;
+        }
+        .svg-chart-title {
+            font-size: 0.78rem; color: var(--text-muted); font-weight: 700; margin-bottom: 10px;
+        }
+
+        /* ── Sub filter bar ── */
+        .sub-filter-bar {
+            display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; align-items: center;
+        }
+        .sub-filter-btn {
+            padding: 6px 14px; border-radius: 8px; font-size: 0.8rem; font-weight: 700;
+            border: 1px solid var(--border); cursor: pointer; transition: 0.15s;
+            background: rgba(255,255,255,0.05); color: var(--text-muted);
+        }
+        .sub-filter-btn:hover { color: #fff; background: rgba(255,255,255,0.1); }
+        .sub-filter-btn.active {
+            background: var(--brand); color: #fff; border-color: var(--brand);
+        }
+        .btn-export-csv {
+            margin-left: auto; padding: 6px 14px; border-radius: 8px; font-size: 0.8rem;
+            font-weight: 700; border: 1px solid rgba(16,185,129,0.4); cursor: pointer;
+            background: rgba(16,185,129,0.12); color: var(--green); transition: 0.15s;
+        }
+        .btn-export-csv:hover { background: var(--green); color: #fff; }
+
+        /* ── Logs Tab ── */
+        .log-row {
+            display: flex; align-items: center; gap: 12px; padding: 10px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 0.82rem;
+        }
+        .log-row:last-child { border-bottom: none; }
+        .log-time { color: var(--text-muted); white-space: nowrap; min-width: 80px; font-size: 0.72rem; }
+        .log-action {
+            background: rgba(0,112,243,0.12); color: #60a5fa; border: 1px solid rgba(0,112,243,0.25);
+            padding: 2px 8px; border-radius: 6px; font-size: 0.72rem; font-weight: 700;
+            white-space: nowrap;
+        }
+        .log-target { font-weight: 600; color: #fff; flex: 1; }
+        .log-note { color: var(--text-muted); font-size: 0.75rem; }
     </style>
 </head>
 <body>
@@ -285,7 +352,7 @@
     <!-- ── Écran de Verrouillage PIN ── -->
     <div class="login-screen" id="login-screen">
         <div class="login-box">
-            <img src="../favicon.png" alt="BOKK TV" class="login-logo">
+            <img src="/favicon.png" alt="BOKK TV" class="login-logo">
             <h2 class="login-title">Administration BOKK TV</h2>
             <p class="login-sub">Entrez votre code d'accès administrateur</p>
             <input type="password" id="pin-input" class="pin-input" placeholder="••••" maxlength="8" autofocus autocomplete="off">
@@ -297,12 +364,12 @@
     <!-- ── Header ── -->
     <header class="admin-header">
         <div class="admin-brand">
-            <img src="../favicon.png" alt="BOKK TV" class="admin-logo">
+            <img src="/favicon.png" alt="BOKK TV" class="admin-logo">
             <span class="admin-title">BOKK TV <span style="color:var(--brand);">Admin</span></span>
             <span class="admin-badge">🔥 Firebase Connecté</span>
         </div>
         <div class="admin-nav-links">
-            <a href="../" class="btn-view-site">⬅ Retour au site</a>
+            <a href="/" class="btn-view-site">⬅ Retour au site</a>
         </div>
     </header>
 
@@ -323,9 +390,20 @@
             <span>👥 Abonnés & IDs</span>
             <span class="tab-badge" id="badge-subscribers-count" style="background:var(--brand);">0</span>
         </button>
+        <button class="admin-tab-btn" data-tab="payments" style="border-left: 2px solid #22c55e;">
+            <span>💰 Paiements Wave</span>
+            <span class="tab-badge" id="badge-payments-count" style="background:#22c55e; color:#fff;">0</span>
+        </button>
         <button class="admin-tab-btn" data-tab="m3u">
             <span>🔗 Playlists M3U</span>
             <span class="tab-badge" id="badge-m3u-count" style="background:#0070f3;">0</span>
+        </button>
+        <button class="admin-tab-btn" data-tab="messages">
+            <span>📩 Messages</span>
+            <span class="tab-badge" id="badge-msg-count" style="background:#a855f7;">0</span>
+        </button>
+        <button class="admin-tab-btn" data-tab="logs">
+            <span>📋 Logs</span>
         </button>
     </nav>
 
@@ -359,6 +437,37 @@
             </div>
         </div>
 
+        <!-- Analytics Block -->
+        <div id="analytics-block">
+            <p class="analytics-title">📊 Analytics Abonnés</p>
+            <div class="analytics-grid">
+                <div class="analytics-card">
+                    <span class="a-lbl">Actifs</span>
+                    <span class="a-val" id="ana-active" style="color:var(--green);">0</span>
+                </div>
+                <div class="analytics-card">
+                    <span class="a-lbl">Expirés</span>
+                    <span class="a-val" id="ana-expired" style="color:var(--red);">0</span>
+                </div>
+                <div class="analytics-card">
+                    <span class="a-lbl">Suspendus</span>
+                    <span class="a-val" id="ana-suspended" style="color:var(--gold);">0</span>
+                </div>
+                <div class="analytics-card">
+                    <span class="a-lbl">Nouveaux (7j)</span>
+                    <span class="a-val" id="ana-new-week" style="color:#a855f7;">0</span>
+                </div>
+                <div class="analytics-card">
+                    <span class="a-lbl">Revenus estimés / mois</span>
+                    <span class="a-val" id="ana-revenue" style="color:var(--gold); font-size:1.1rem;">0 F CFA</span>
+                </div>
+            </div>
+            <div class="svg-chart-wrap">
+                <p class="svg-chart-title">📅 Inscriptions sur les 7 derniers jours</p>
+                <div id="ana-chart"></div>
+            </div>
+        </div>
+
         <!-- ONGLET 1 : SIGNALEMENTS HS -->
         <section class="admin-card tab-content" id="tab-reports">
             <div class="admin-card-header">
@@ -367,6 +476,9 @@
                     <p style="font-size:0.78rem; color:var(--text-muted); margin-top:2px;">Flux remontés en temps réel via Firebase</p>
                 </div>
                 <div style="display:flex; gap:8px;">
+                    <button class="btn-action btn-action-secondary" id="btn-scan-reported">
+                        🔍 Scanner toutes les chaînes signalées
+                    </button>
                     <button class="btn-action btn-action-danger" id="btn-disable-all-reports">
                         🚫 Tout Masquer pour le public
                     </button>
@@ -431,8 +543,44 @@
                     <input type="text" id="search-subscribers-input" placeholder="Rechercher par ID (ex: BK-4821), prénom ou téléphone...">
                 </div>
             </div>
+            <div class="sub-filter-bar" id="sub-filter-bar">
+                <button class="sub-filter-btn active" data-filter="all">Tous</button>
+                <button class="sub-filter-btn" data-filter="active">Actifs ✅</button>
+                <button class="sub-filter-btn" data-filter="expired">Expirés ⚠️</button>
+                <button class="sub-filter-btn" data-filter="suspended">Suspendus 🚫</button>
+                <button class="sub-filter-btn" data-filter="live">En direct 📺</button>
+                <button class="btn-export-csv" id="btn-export-subs-csv">📥 Exporter CSV</button>
+            </div>
             <div id="subscribers-list" style="max-height:600px; overflow-y:auto;">
                 <p style="text-align:center; color:var(--text-muted); padding:30px;">Chargement des abonnés...</p>
+            </div>
+        </section>
+
+        <!-- ONGLET : DÉCLARATIONS DE PAIEMENTS WAVE (OPTION C - VALIDATION 1-CLIC) -->
+        <section class="admin-card tab-content" id="tab-payments" style="display:none;">
+            <div class="admin-card-header" style="flex-wrap:wrap; gap:12px;">
+                <div>
+                    <h3 class="admin-card-title">💰 Déclarations de Paiements Wave</h3>
+                    <p style="font-size:0.78rem; color:var(--text-muted); margin-top:2px;">
+                        Vérifiez le virement sur votre application Wave et cliquez sur Valider pour créditer l'abonnement en 1 clic (+30j, +90j, +365j)
+                    </p>
+                </div>
+                <div style="display:flex; gap:10px; align-items:center;">
+                    <span style="font-size:0.78rem; background:rgba(34,197,94,0.15); border:1px solid rgba(34,197,94,0.3); color:#22c55e; padding:4px 10px; border-radius:20px; font-weight:700;">
+                        ● Validation 1-Clic Active
+                    </span>
+                </div>
+            </div>
+
+            <!-- Filtres de statut -->
+            <div class="sub-filter-bar" id="payments-filter-bar">
+                <button class="sub-filter-btn active" data-payfilter="pending">⏳ En attente (<span id="count-pay-pending">0</span>)</button>
+                <button class="sub-filter-btn" data-payfilter="approved">✅ Validés (<span id="count-pay-approved">0</span>)</button>
+                <button class="sub-filter-btn" data-payfilter="all">Tous (<span id="count-pay-all">0</span>)</button>
+            </div>
+
+            <div id="payments-list" style="max-height:600px; overflow-y:auto; padding:10px 0;">
+                <p style="text-align:center; color:var(--text-muted); padding:30px;">Chargement des déclarations de paiement...</p>
             </div>
         </section>
 
@@ -500,6 +648,80 @@
                 <p style="text-align:center; color:var(--text-muted); padding:30px;">Chargement des playlists M3U...</p>
             </div>
         </section>
+
+        <!-- ONGLET 6 : MESSAGERIE ADMIN -->
+        <section class="admin-card tab-content" id="tab-messages" style="display:none;">
+            <div class="admin-card-header" style="flex-wrap:wrap; gap:12px;">
+                <div>
+                    <h3 class="admin-card-title">📩 Messages aux Abonnés</h3>
+                    <p style="font-size:0.78rem; color:var(--text-muted); margin-top:2px;">Envoyez un message broadcast (à tous) ou ciblé (par numéro de téléphone). Le message s'affiche en popup avec un bouton OK.</p>
+                </div>
+            </div>
+
+            <!-- Formulaire de composition -->
+            <div style="background:rgba(168,85,247,0.06); border:1px solid rgba(168,85,247,0.25); border-radius:14px; padding:20px; margin-bottom:24px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                    <h4 style="font-size:0.95rem; font-weight:800; color:#fff;">✍️ Nouveau Message</h4>
+                </div>
+
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:14px;">
+                    <div>
+                        <label style="font-size:0.75rem; color:var(--text-muted); display:block; margin-bottom:6px; font-weight:600;">Titre du message</label>
+                        <input type="text" id="msg-input-title" placeholder="Ex: Maintenance prévue" style="width:100%; background:rgba(0,0,0,0.4); border:1px solid var(--border); color:#fff; padding:10px 14px; border-radius:10px; font-size:0.85rem; outline:none;">
+                    </div>
+                    <div>
+                        <label style="font-size:0.75rem; color:var(--text-muted); display:block; margin-bottom:6px; font-weight:600;">Destinataire (vide = tous les abonnés)</label>
+                        <input type="text" id="msg-input-phone" placeholder="Ex: 221771234567 ou laisser vide" style="width:100%; background:rgba(0,0,0,0.4); border:1px solid var(--border); color:#fff; padding:10px 14px; border-radius:10px; font-size:0.85rem; outline:none;">
+                    </div>
+                </div>
+
+                <div style="margin-bottom:14px;">
+                    <label style="font-size:0.75rem; color:var(--text-muted); display:block; margin-bottom:6px; font-weight:600;">Contenu du message</label>
+                    <textarea id="msg-input-body" rows="4" placeholder="Rédigez votre message ici..." style="width:100%; background:rgba(0,0,0,0.4); border:1px solid var(--border); color:#fff; padding:10px 14px; border-radius:10px; font-size:0.85rem; resize:vertical; outline:none; font-family:inherit;"></textarea>
+                </div>
+
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:16px;">
+                    <div>
+                        <label style="font-size:0.75rem; color:var(--text-muted); display:block; margin-bottom:6px; font-weight:600;">Expire le (laisser vide = permanent)</label>
+                        <input type="datetime-local" id="msg-input-expires" style="width:100%; background:rgba(0,0,0,0.4); border:1px solid var(--border); color:#fff; padding:10px 14px; border-radius:10px; font-size:0.85rem; outline:none;">
+                    </div>
+                    <div style="display:flex; align-items:flex-end; padding-bottom:0;">
+                        <button id="btn-send-msg" style="width:100%; height:42px; background:linear-gradient(135deg,#a855f7,#7c3aed); border:none; border-radius:10px; color:#fff; font-weight:800; font-size:0.9rem; cursor:pointer; transition:0.15s;">
+                            📤 Envoyer le Message
+                        </button>
+                    </div>
+                </div>
+                <span id="msg-send-status" style="font-size:0.82rem; font-weight:600;"></span>
+            </div>
+
+            <!-- Liste des messages existants -->
+            <div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+                    <h4 style="font-size:0.9rem; font-weight:700; color:#fff;">📋 Messages Envoyés</h4>
+                    <button id="btn-refresh-msgs" style="background:rgba(255,255,255,0.06); border:1px solid var(--border); color:#fff; padding:6px 14px; border-radius:8px; font-size:0.78rem; cursor:pointer;">🔄 Actualiser</button>
+                </div>
+                <div id="messages-list" style="max-height:500px; overflow-y:auto;">
+                    <p style="text-align:center; color:var(--text-muted); padding:30px;">Chargement des messages...</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ONGLET 7 : LOGS D'ACTIVITÉ -->
+        <section class="admin-card tab-content" id="tab-logs" style="display:none;">
+            <div class="admin-card-header" style="flex-wrap:wrap; gap:12px;">
+                <div>
+                    <h3 class="admin-card-title">📋 Logs d'activité Admin</h3>
+                    <p style="font-size:0.78rem; color:var(--text-muted); margin-top:2px;">Historique des 50 dernières actions admin (Firestore collection admin_logs)</p>
+                </div>
+                <div style="display:flex; gap:8px;">
+                    <button class="btn-action btn-action-secondary" id="btn-refresh-logs">🔄 Actualiser</button>
+                    <button class="btn-action btn-action-danger" id="btn-clear-logs">🗑 Effacer les logs</button>
+                </div>
+            </div>
+            <div id="logs-list" style="max-height:600px; overflow-y:auto;">
+                <p style="text-align:center; color:var(--text-muted); padding:30px;">Chargement des logs...</p>
+            </div>
+        </section>
     </main>
 
     <!-- ── Player Modal de Test ── -->
@@ -521,16 +743,16 @@
     <!-- Scripts -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
-    <script src="../firebase-service.js?v=9978"></script>
-    <script src="../mpegts.js"></script>
-    <script src="../hls.min.js"></script>
-    <script src="../channels.js?v=9978"></script>
+    <script src="/firebase-service.js?v=9995"></script>
+    <script src="/mpegts.js"></script>
+    <script src="/hls.min.js"></script>
+    <script src="/channels.js?v=9995"></script>
 
     <script>
     (function () {
         'use strict';
 
-        const ADMIN_PIN = '2010';
+        const VALID_PINS = ['1234', '2010'];
         let disabledIdsSet = new Set();
         let reportedList = [];
         let hlsInstance = null;
@@ -546,7 +768,7 @@
         }
 
         function checkPin() {
-            if (pinInput.value === ADMIN_PIN) {
+            if (VALID_PINS.includes((pinInput.value || '').trim())) {
                 sessionStorage.setItem('bokk_admin_auth', 'true');
                 loginScreen.style.display = 'none';
                 initAdmin();
@@ -574,6 +796,9 @@
                 btn.classList.add('active');
                 const target = document.getElementById(`tab-${btn.dataset.tab}`);
                 if (target) target.style.display = 'block';
+                if (btn.dataset.tab === 'logs') {
+                    renderAdminLogs();
+                }
             };
         });
 
@@ -619,6 +844,14 @@
                 });
             }
 
+            // Écouter les déclarations de paiements Wave en temps réel (Option C)
+            if (window.BokkFirebase && typeof window.BokkFirebase.listenPaymentClaims === 'function') {
+                window.BokkFirebase.listenPaymentClaims(list => {
+                    paymentClaimsList = list;
+                    renderPaymentClaims();
+                });
+            }
+
             // Récupérer config paywall
             if (window.BokkFirebase && typeof window.BokkFirebase.getPaywallConfig === 'function') {
                 const conf = await window.BokkFirebase.getPaywallConfig();
@@ -657,24 +890,109 @@
             }
 
             setupM3uHandlers();
+            setupMessageHandlers();
+            setupSubFilterHandlers();
+            setupLogsHandlers();
+            setupReportScanHandlers();
         }
-
 
         let subscribersList = [];
         let isPaywallActive = false;
         let m3uPlaylistsList = [];
         let parsedM3uChannelsBuffer = [];
+        let currentSubFilter = 'all';
+        let scanResultsMap = new Map();
+
+        function setupSubFilterHandlers() {
+            document.querySelectorAll('.sub-filter-btn').forEach(btn => {
+                btn.onclick = () => {
+                    document.querySelectorAll('.sub-filter-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    currentSubFilter = btn.dataset.filter || 'all';
+                    const q = document.getElementById('search-subscribers-input')?.value || '';
+                    renderSubscribers(q);
+                };
+            });
+
+            const btnCsv = document.getElementById('btn-export-subs-csv');
+            if (btnCsv) {
+                btnCsv.onclick = exportSubscribersCSV;
+            }
+        }
+
+        function exportSubscribersCSV() {
+            if (!subscribersList || !subscribersList.length) {
+                showToast('Aucun abonné à exporter.');
+                return;
+            }
+            const headers = ['ID', 'Prénom', 'Téléphone', 'Statut', 'Créé le', 'Expire le', 'Appareil'];
+            const now = Date.now();
+            const rows = subscribersList.map(s => {
+                let isExpired = false;
+                if (s.expiresAt) {
+                    const exp = new Date(s.expiresAt).getTime();
+                    if (!isNaN(exp)) isExpired = exp <= now;
+                }
+                let statut = 'Actif';
+                if (s.status === 'suspended') statut = 'Suspendu';
+                else if (isExpired) statut = 'Expiré';
+
+                const created = s.createdAt ? new Date(s.createdAt).toLocaleDateString('fr-FR') : '';
+                const expires = s.expiresAt ? new Date(s.expiresAt).toLocaleDateString('fr-FR') : '';
+
+                return [
+                    s.id || '',
+                    s.prenom || '',
+                    s.phone || '',
+                    statut,
+                    created,
+                    expires,
+                    s.activeDeviceName || ''
+                ];
+            });
+
+            const csvContent = '\uFEFF' + [headers, ...rows]
+                .map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(';'))
+                .join('\r\n');
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `abonnes_bokk_tv_${new Date().toISOString().slice(0, 10)}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showToast('📥 Export CSV téléchargé !');
+        }
 
         function renderSubscribers(query = '') {
             const container = document.getElementById('subscribers-list');
             if (!container) return;
 
             const q = query.toLowerCase().trim();
-            const filtered = subscribersList.filter(s => {
+            const now = Date.now();
+
+            const filtered = subscribersList.filter(sub => {
+                let isExpired = false;
+                if (sub.expiresAt) {
+                    const exp = new Date(sub.expiresAt).getTime();
+                    if (!isNaN(exp)) isExpired = exp <= now;
+                }
+                const isSuspended = sub.status === 'suspended';
+                const isActive = (sub.status === 'active' && !isExpired);
+                const isLive = Boolean(sub.activeSessionId);
+
+                if (currentSubFilter === 'active' && !isActive) return false;
+                if (currentSubFilter === 'expired' && !isExpired) return false;
+                if (currentSubFilter === 'suspended' && !isSuspended) return false;
+                if (currentSubFilter === 'live' && !isLive) return false;
+
                 if (!q) return true;
-                return (s.id || '').toLowerCase().includes(q) ||
-                       (s.prenom || '').toLowerCase().includes(q) ||
-                       (s.phone || '').toLowerCase().includes(q);
+                return (sub.id || '').toLowerCase().includes(q) ||
+                       (sub.prenom || '').toLowerCase().includes(q) ||
+                       (sub.phone || '').toLowerCase().includes(q);
             });
 
             if (filtered.length === 0) {
@@ -691,7 +1009,7 @@
 
                 if (sub.expiresAt) {
                     const exp = new Date(sub.expiresAt);
-                    daysLeft = Math.ceil((exp.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+                    daysLeft = Math.ceil((exp.getTime() - now) / (1000 * 60 * 60 * 24));
                     isExpired = daysLeft <= 0;
                     expiryDateStr = exp.toLocaleDateString('fr-FR');
                 }
@@ -719,16 +1037,24 @@
                     </div>
                     <div class="ch-actions">
                         ${sub.activeSessionId ? '<button class="btn-icon btn-reset-sub-session" data-subid="' + idStr + '" style="background:rgba(245,158,11,0.15); border:1px solid rgba(245,158,11,0.35); color:#f59e0b; padding:4px 8px; font-size:0.72rem; border-radius:6px; cursor:pointer;" title="Déconnecter la session active">🔄 Libérer Écran</button>' : ''}
-                        <button class="btn-icon btn-icon-enable btn-renew-sub" data-subid="${idStr}" title="Prolonger de 30 jours">➕ +30 Jours</button>
+                        <button class="btn-icon btn-icon-enable btn-renew-sub" data-subid="${idStr}" title="Prolonger l'abonnement">➕ Prolonger</button>
                         <button class="btn-icon btn-icon-disable btn-toggle-sub" data-subid="${idStr}">${isSuspended ? '✅ Débloquer' : '🚫 Suspendre'}</button>
                         <button class="btn-icon btn-del-sub" data-subid="${idStr}" style="background:transparent; color:var(--text-muted);" title="Supprimer">✕</button>
                     </div>
                 `;
 
                 row.querySelector('.btn-renew-sub')?.addEventListener('click', async () => {
-                    const res = await window.BokkFirebase.renewSubscriber(idStr, 30);
+                    const input = prompt(`Nombre de jours de prolongation pour ${sub.prenom || idStr} (${idStr}) :`, '30');
+                    if (input === null) return;
+                    const days = parseInt(input, 10);
+                    if (isNaN(days) || days <= 0) {
+                        showToast('❌ Nombre de jours invalide');
+                        return;
+                    }
+                    const res = await window.BokkFirebase.renewSubscriber(idStr, days);
                     if (res && res.success) {
-                        showToast(`✅ Abonnement de ${sub.prenom} (${idStr}) prolongé de 30 jours !`);
+                        logAdminAction('Prolonger abonné', idStr, sub.prenom || 'Abonné', `Prolongation de ${days} jours`);
+                        showToast(`✅ Abonnement de ${sub.prenom || idStr} prolongé de ${days} jours !`);
                     } else {
                         showToast('Erreur lors du renouvellement');
                     }
@@ -737,17 +1063,25 @@
                 row.querySelector('.btn-toggle-sub')?.addEventListener('click', async () => {
                     const newStatus = isSuspended ? 'active' : 'suspended';
                     await window.BokkFirebase.updateSubscriberStatus(idStr, newStatus);
+                    logAdminAction(
+                        isSuspended ? 'Débloquer abonné' : 'Suspendre abonné',
+                        idStr,
+                        sub.prenom || 'Abonné',
+                        `Statut changé vers ${newStatus}`
+                    );
                     showToast(`Statut mis à jour pour ${idStr}`);
                 });
 
                 row.querySelector('.btn-reset-sub-session')?.addEventListener('click', async () => {
                     await window.BokkFirebase.clearActiveSession(idStr);
+                    logAdminAction('Libérer écran', idStr, sub.prenom || 'Abonné', 'Session active déconnectée');
                     showToast(`Écran libéré pour l'abonné ${idStr}`);
                 });
 
                 row.querySelector('.btn-del-sub')?.addEventListener('click', async () => {
-                    if (confirm(`Supprimer définitivement l\'abonné ${sub.prenom} (${idStr}) ?`)) {
+                    if (confirm(`Supprimer définitivement l'abonné ${sub.prenom || idStr} (${idStr}) ?`)) {
                         await window.BokkFirebase.deleteSubscriber(idStr);
+                        logAdminAction('Supprimer abonné', idStr, sub.prenom || 'Abonné', 'Abonné supprimé de la base');
                         showToast(`Abonné ${idStr} supprimé.`);
                     }
                 });
@@ -755,6 +1089,134 @@
                 container.appendChild(row);
             });
         }
+
+        // ── Gestion des Déclarations de Paiements Wave (Option C - 1 Clic) ──
+        let paymentClaimsList = [];
+        let currentPayFilter = 'pending';
+
+        function renderPaymentClaims() {
+            const container = document.getElementById('payments-list');
+            if (!container) return;
+
+            const pendingCount = paymentClaimsList.filter(c => c.status === 'pending').length;
+            const approvedCount = paymentClaimsList.filter(c => c.status === 'approved').length;
+            const allCount = paymentClaimsList.length;
+
+            const badgeTab = document.getElementById('badge-payments-count');
+            if (badgeTab) {
+                badgeTab.textContent = pendingCount;
+                badgeTab.style.display = pendingCount > 0 ? 'inline-block' : 'none';
+            }
+            const cPending = document.getElementById('count-pay-pending');
+            if (cPending) cPending.textContent = pendingCount;
+            const cApproved = document.getElementById('count-pay-approved');
+            if (cApproved) cApproved.textContent = approvedCount;
+            const cAll = document.getElementById('count-pay-all');
+            if (cAll) cAll.textContent = allCount;
+
+            const filtered = paymentClaimsList.filter(c => {
+                if (currentPayFilter === 'pending') return c.status === 'pending';
+                if (currentPayFilter === 'approved') return c.status === 'approved';
+                return true;
+            });
+
+            if (filtered.length === 0) {
+                container.innerHTML = `<p style="text-align:center; color:var(--text-muted); padding:30px;">
+                    ${currentPayFilter === 'pending' ? '🎉 Aucune déclaration Wave en attente.' : 'Aucun paiement dans cette sélection.'}
+                </p>`;
+                return;
+            }
+
+            container.innerHTML = '';
+            filtered.forEach(claim => {
+                const isPending = claim.status === 'pending';
+                const isApproved = claim.status === 'approved';
+                const isRejected = claim.status === 'rejected';
+
+                const planLabel = claim.plan === '12m' ? '12 Mois (25 000 F)' : claim.plan === '3m' ? '3 Mois (7 500 F)' : '1 Mois (3 000 F)';
+                const days = claim.days || (claim.plan === '12m' ? 365 : claim.plan === '3m' ? 90 : 30);
+
+                const card = document.createElement('div');
+                card.className = 'channel-row' + (isPending ? '' : ' is-disabled');
+                card.style.background = isPending ? 'rgba(34, 197, 94, 0.05)' : 'rgba(255,255,255,0.02)';
+                card.style.borderLeft = isPending ? '3px solid #22c55e' : isApproved ? '3px solid #0070f3' : '3px solid #e63946';
+
+                card.innerHTML = `
+                    <div class="ch-info">
+                        <span class="ch-id" style="background:${isPending ? 'rgba(34,197,94,0.2)' : 'rgba(255,255,255,0.08)'}; color:${isPending ? '#22c55e' : '#cbd5e1'}; font-weight:800; font-size:0.85rem;">
+                            ${(claim.amount || 3000).toLocaleString('fr-FR')} F
+                        </span>
+                        <div>
+                            <div class="ch-name" style="display:flex; align-items:center; gap:8px;">
+                                <strong>Compte BOKK TV : ${claim.subscriberId}</strong>
+                                ${claim.subscriberName ? '<span style="color:var(--text-muted);">(' + claim.subscriberName + ')</span>' : ''}
+                                ${isPending ? '<span style="font-size:0.68rem; background:rgba(245,158,11,0.2); color:#f59e0b; padding:2px 7px; border-radius:10px; font-weight:700;">⏳ En attente</span>' :
+                                  isApproved ? '<span style="font-size:0.68rem; background:rgba(34,197,94,0.2); color:#22c55e; padding:2px 7px; border-radius:10px; font-weight:700;">✅ Validé</span>' :
+                                  '<span style="font-size:0.68rem; background:rgba(230,57,70,0.2); color:#e63946; padding:2px 7px; border-radius:10px; font-weight:700;">✕ Rejeté</span>'}
+                            </div>
+                            <div class="ch-group" style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-top:4px;">
+                                <span style="color:#38bdf8; font-weight:700;">🌊 Wave Payeur : <strong>${claim.payerPhone}</strong></span>
+                                <span>Plan : <strong>${planLabel}</strong> (+${days}j)</span>
+                                ${claim.txId ? '<span style="background:rgba(255,255,255,0.06); padding:2px 6px; border-radius:4px;">Réf : <code>' + claim.txId + '</code></span>' : ''}
+                                <span style="color:var(--text-muted); font-size:0.7rem;">${claim.createdAt ? 'Reçu le : ' + claim.createdAt : ''}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="ch-actions">
+                        ${isPending ? `
+                            <button class="btn-icon btn-approve-pay" style="background:#22c55e; color:#fff; border:none; padding:7px 14px; font-weight:800; font-size:0.75rem; border-radius:8px; cursor:pointer;" title="Valider et prolonger immédiatement (+${days} jours)">
+                                ✅ Valider (+${days}j)
+                            </button>
+                            <button class="btn-icon btn-reject-pay" style="background:rgba(230,57,70,0.2); color:#e63946; border:1px solid rgba(230,57,70,0.4); padding:7px 10px; font-size:0.75rem; border-radius:8px; cursor:pointer;" title="Rejeter la demande">
+                                ✕ Rejeter
+                            </button>
+                        ` : `
+                            <span style="font-size:0.75rem; color:var(--text-muted);">
+                                ${isApproved ? 'Abonnement activé ✅' : 'Demande rejetée ✕'}
+                            </span>
+                        `}
+                    </div>
+                `;
+
+                if (isPending) {
+                    card.querySelector('.btn-approve-pay')?.addEventListener('click', async () => {
+                        const btn = card.querySelector('.btn-approve-pay');
+                        if (btn) btn.disabled = true;
+                        showToast(`Validation en cours pour ${claim.subscriberId}...`);
+                        const res = await window.BokkFirebase.approvePaymentClaim(claim.id, claim.subscriberId, days);
+                        if (res && res.success) {
+                            logAdminAction('Validation Paiement Wave', claim.subscriberId, claim.payerPhone, `Prolongation de ${days} jours (${claim.amount} F)`);
+                            showToast(`✅ Paiement Wave validé ! Compte ${claim.subscriberId} prolongé de ${days} jours.`);
+                        } else {
+                            showToast('❌ Erreur lors de la validation');
+                            if (btn) btn.disabled = false;
+                        }
+                    });
+
+                    card.querySelector('.btn-reject-pay')?.addEventListener('click', async () => {
+                        if (!confirm(`Rejeter la déclaration du numéro Wave ${claim.payerPhone} pour le compte ${claim.subscriberId} ?`)) return;
+                        const res = await window.BokkFirebase.rejectPaymentClaim(claim.id, 'Non reçu sur Wave');
+                        if (res && res.success) {
+                            logAdminAction('Rejet Paiement Wave', claim.subscriberId, claim.payerPhone, 'Demande rejetée');
+                            showToast('Demande de paiement rejetée.');
+                        }
+                    });
+                }
+
+                container.appendChild(card);
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('#payments-filter-bar .sub-filter-btn').forEach(btn => {
+                btn.onclick = () => {
+                    document.querySelectorAll('#payments-filter-bar .sub-filter-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    currentPayFilter = btn.dataset.payfilter;
+                    renderPaymentClaims();
+                };
+            });
+        });
 
         function updatePaywallButtonUI() {
             const btn = document.getElementById('btn-toggle-paywall');
@@ -772,6 +1234,45 @@
                 btn.style.background = 'rgba(16,185,129,0.15)';
                 btn.style.borderColor = 'rgba(16,185,129,0.4)';
             }
+        }
+
+        function renderSubscriberChart(counts, labels) {
+            const chartContainer = document.getElementById('ana-chart');
+            if (!chartContainer) return;
+
+            const maxCount = Math.max(...counts, 1);
+            const svgWidth = 460;
+            const step = svgWidth / 7;
+            const barWidth = 32;
+
+            let barsSvg = '';
+            counts.forEach((c, idx) => {
+                const x = Math.round(idx * step + (step - barWidth) / 2);
+                const barHeight = c > 0 ? Math.max(6, Math.round((c / maxCount) * 58)) : 2;
+                const y = 74 - barHeight;
+                const label = labels[idx] || '';
+
+                barsSvg += `
+                    <g class="chart-col">
+                        <rect x="${x}" y="${y}" width="${barWidth}" height="${barHeight}" rx="4" fill="${c > 0 ? 'url(#bar-gradient)' : 'rgba(255,255,255,0.06)'}" />
+                        ${c > 0 ? `<text x="${x + barWidth / 2}" y="${y - 4}" text-anchor="middle" fill="#fff" font-size="10" font-weight="700">${c}</text>` : ''}
+                        <text x="${x + barWidth / 2}" y="92" text-anchor="middle" fill="#8b92a5" font-size="10">${label}</text>
+                    </g>
+                `;
+            });
+
+            chartContainer.innerHTML = `
+                <svg viewBox="0 0 ${svgWidth} 100" width="100%" height="100" style="overflow:visible; display:block;">
+                    <defs>
+                        <linearGradient id="bar-gradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stop-color="#00a8ff" />
+                            <stop offset="100%" stop-color="#0070f3" />
+                        </linearGradient>
+                    </defs>
+                    <line x1="10" y1="76" x2="${svgWidth - 10}" y2="76" stroke="rgba(255,255,255,0.08)" stroke-width="1" />
+                    ${barsSvg}
+                </svg>
+            `;
         }
 
         function updateStats() {
@@ -798,6 +1299,143 @@
             if (statM3uEl) statM3uEl.textContent = m3uPlaylistsList.length;
             const badgeM3uEl = document.getElementById('badge-m3u-count');
             if (badgeM3uEl) badgeM3uEl.textContent = m3uPlaylistsList.length;
+
+            // ── Analytics Abonnés ──
+            const now = Date.now();
+            const sevenDaysAgo = now - 7 * 24 * 60 * 60 * 1000;
+
+            let activeCount = 0;
+            let expiredCount = 0;
+            let suspendedCount = 0;
+            let newThisWeekCount = 0;
+
+            const dailyCounts = [0, 0, 0, 0, 0, 0, 0];
+            const dayLabels = [];
+            for (let i = 6; i >= 0; i--) {
+                const d = new Date(now - i * 24 * 60 * 60 * 1000);
+                dayLabels.push(d.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric' }));
+            }
+
+            subscribersList.forEach(s => {
+                const isSuspended = (s.status === 'suspended');
+                let expTime = 0;
+                let isExpired = false;
+                if (s.expiresAt) {
+                    expTime = new Date(s.expiresAt).getTime();
+                    if (!isNaN(expTime)) {
+                        isExpired = expTime <= now;
+                    }
+                }
+
+                if (isSuspended) {
+                    suspendedCount++;
+                } else if (s.status === 'active' && expTime > now) {
+                    activeCount++;
+                }
+
+                if (isExpired) {
+                    expiredCount++;
+                }
+
+                if (s.createdAt) {
+                    const cTime = new Date(s.createdAt).getTime();
+                    if (!isNaN(cTime)) {
+                        if (cTime >= sevenDaysAgo) {
+                            newThisWeekCount++;
+                        }
+                        const daysDiff = Math.floor((now - cTime) / (24 * 60 * 60 * 1000));
+                        if (daysDiff >= 0 && daysDiff < 7) {
+                            dailyCounts[6 - daysDiff]++;
+                        }
+                    }
+                }
+            });
+
+            const anaActive = document.getElementById('ana-active');
+            if (anaActive) anaActive.textContent = activeCount.toLocaleString('fr-FR');
+
+            const anaExpired = document.getElementById('ana-expired');
+            if (anaExpired) anaExpired.textContent = expiredCount.toLocaleString('fr-FR');
+
+            const anaSuspended = document.getElementById('ana-suspended');
+            if (anaSuspended) anaSuspended.textContent = suspendedCount.toLocaleString('fr-FR');
+
+            const anaNewWeek = document.getElementById('ana-new-week');
+            if (anaNewWeek) anaNewWeek.textContent = newThisWeekCount.toLocaleString('fr-FR');
+
+            const monthlyRevenue = activeCount * 3000;
+            const anaRevenue = document.getElementById('ana-revenue');
+            if (anaRevenue) anaRevenue.textContent = monthlyRevenue.toLocaleString('fr-FR') + ' F CFA';
+
+            renderSubscriberChart(dailyCounts, dayLabels);
+        }
+
+        async function checkStreamHealth(url) {
+            if (!url) return false;
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), 5000);
+            try {
+                const res = await fetch(url, { method: 'HEAD', signal: controller.signal });
+                clearTimeout(timer);
+                return res.ok || (res.status >= 200 && res.status < 400);
+            } catch (e) {
+                clearTimeout(timer);
+                try {
+                    const isLocal = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+                    const proxyBase = (isLocal && window.location.port === '8080') ? '/proxy' : '/api/proxy';
+                    const ctrl2 = new AbortController();
+                    const timer2 = setTimeout(() => ctrl2.abort(), 4000);
+                    const proxyRes = await fetch(`${proxyBase}?url=${encodeURIComponent(url)}&ua=IPTVSmartersPro`, {
+                        method: 'HEAD',
+                        signal: ctrl2.signal
+                    });
+                    clearTimeout(timer2);
+                    return proxyRes.ok || (proxyRes.status >= 200 && proxyRes.status < 400);
+                } catch (e2) {
+                    return false;
+                }
+            }
+        }
+
+        function setupReportScanHandlers() {
+            const btnScan = document.getElementById('btn-scan-reported');
+            if (!btnScan) return;
+
+            btnScan.onclick = async () => {
+                if (!reportedList || !reportedList.length) {
+                    showToast('Aucun flux signalé à scanner.');
+                    return;
+                }
+
+                btnScan.disabled = true;
+                btnScan.textContent = `⏳ Scan en cours (0/${reportedList.length})...`;
+                const allChannels = window.channels || [];
+                let done = 0;
+
+                for (const r of reportedList) {
+                    const idStr = String(r.channelId || r.id);
+                    const badgeEl = document.getElementById('scan-badge-' + idStr);
+                    if (badgeEl) badgeEl.textContent = '⏳';
+
+                    const ch = allChannels.find(c => String(c.id) === idStr);
+                    const streamUrl = (ch && ch.url) ? ch.url : r.url;
+
+                    const isOnline = await checkStreamHealth(streamUrl);
+                    scanResultsMap.set(idStr, isOnline ? 'online' : 'offline');
+
+                    if (badgeEl) {
+                        badgeEl.innerHTML = isOnline
+                            ? '<span style="color:#10b981; font-weight:800; font-size:0.75rem; margin-left:6px; background:rgba(16,185,129,0.15); padding:2px 6px; border-radius:6px;" title="Flux en ligne">✅</span>'
+                            : '<span style="color:#e63946; font-weight:800; font-size:0.75rem; margin-left:6px; background:rgba(230,57,70,0.15); padding:2px 6px; border-radius:6px;" title="Flux HS ou inaccessible">❌</span>';
+                    }
+                    done++;
+                    btnScan.textContent = `⏳ Scan en cours (${done}/${reportedList.length})...`;
+                }
+
+                btnScan.disabled = false;
+                btnScan.textContent = '🔍 Scanner toutes les chaînes signalées';
+                showToast('✅ Scan de santé terminé !');
+            };
         }
 
         // ── Rendu Signalements ──
@@ -814,6 +1452,12 @@
             reportedList.forEach(r => {
                 const idStr = String(r.channelId || r.id);
                 const isDisabled = disabledIdsSet.has(idStr);
+                const scanStatus = scanResultsMap.get(idStr);
+                const scanBadgeHtml = scanStatus === 'online'
+                    ? '<span style="color:#10b981; font-weight:800; font-size:0.75rem; margin-left:6px; background:rgba(16,185,129,0.15); padding:2px 6px; border-radius:6px;" title="Flux en ligne">✅</span>'
+                    : scanStatus === 'offline'
+                    ? '<span style="color:#e63946; font-weight:800; font-size:0.75rem; margin-left:6px; background:rgba(230,57,70,0.15); padding:2px 6px; border-radius:6px;" title="Flux HS ou inaccessible">❌</span>'
+                    : '';
 
                 const row = document.createElement('div');
                 row.className = 'channel-row' + (isDisabled ? ' is-disabled' : '');
@@ -821,7 +1465,10 @@
                     <div class="ch-info">
                         <span class="ch-id">#${idStr}</span>
                         <div>
-                            <div class="ch-name">${r.name || 'Chaîne'}</div>
+                            <div class="ch-name" style="display:flex; align-items:center; gap:6px;">
+                                <span>${r.name || 'Chaîne'}</span>
+                                <span class="scan-badge" id="scan-badge-${idStr}">${scanBadgeHtml}</span>
+                            </div>
                             <div class="ch-group">${r.group || 'Direct'} • Signalé ${r.reportCount || 1} fois</div>
                         </div>
                     </div>
@@ -856,28 +1503,226 @@
             });
         }
 
-        // ── Rendu Toutes les Chaînes (avec pagination de recherche) ──
+        // ── Gestion des Déclarations de Paiements Wave (Option C - 1 Clic) ──
+        let paymentClaimsList = [];
+        let currentPayFilter = 'pending';
+
+        function renderPaymentClaims() {
+            const container = document.getElementById('payments-list');
+            if (!container) return;
+
+            const pendingCount = paymentClaimsList.filter(c => c.status === 'pending').length;
+            const approvedCount = paymentClaimsList.filter(c => c.status === 'approved').length;
+            const allCount = paymentClaimsList.length;
+
+            const badgeTab = document.getElementById('badge-payments-count');
+            if (badgeTab) {
+                badgeTab.textContent = pendingCount;
+                badgeTab.style.display = pendingCount > 0 ? 'inline-block' : 'none';
+            }
+            const cPending = document.getElementById('count-pay-pending');
+            if (cPending) cPending.textContent = pendingCount;
+            const cApproved = document.getElementById('count-pay-approved');
+            if (cApproved) cApproved.textContent = approvedCount;
+            const cAll = document.getElementById('count-pay-all');
+            if (cAll) cAll.textContent = allCount;
+
+            const filtered = paymentClaimsList.filter(c => {
+                if (currentPayFilter === 'pending') return c.status === 'pending';
+                if (currentPayFilter === 'approved') return c.status === 'approved';
+                return true;
+            });
+
+            if (filtered.length === 0) {
+                container.innerHTML = `<p style="text-align:center; color:var(--text-muted); padding:30px;">
+                    ${currentPayFilter === 'pending' ? '🎉 Aucune déclaration Wave en attente.' : 'Aucun paiement dans cette sélection.'}
+                </p>`;
+                return;
+            }
+
+            container.innerHTML = '';
+            filtered.forEach(claim => {
+                const isPending = claim.status === 'pending';
+                const isApproved = claim.status === 'approved';
+                const isRejected = claim.status === 'rejected';
+
+                const planLabel = claim.plan === '12m' ? '12 Mois (25 000 F)' : claim.plan === '3m' ? '3 Mois (7 500 F)' : '1 Mois (3 000 F)';
+                const days = claim.days || (claim.plan === '12m' ? 365 : claim.plan === '3m' ? 90 : 30);
+
+                const card = document.createElement('div');
+                card.className = 'channel-row' + (isPending ? '' : ' is-disabled');
+                card.style.background = isPending ? 'rgba(34, 197, 94, 0.05)' : 'rgba(255,255,255,0.02)';
+                card.style.borderLeft = isPending ? '3px solid #22c55e' : isApproved ? '3px solid #0070f3' : '3px solid #e63946';
+
+                card.innerHTML = `
+                    <div class="ch-info">
+                        <span class="ch-id" style="background:${isPending ? 'rgba(34,197,94,0.2)' : 'rgba(255,255,255,0.08)'}; color:${isPending ? '#22c55e' : '#cbd5e1'}; font-weight:800; font-size:0.85rem;">
+                            ${(claim.amount || 3000).toLocaleString('fr-FR')} F
+                        </span>
+                        <div>
+                            <div class="ch-name" style="display:flex; align-items:center; gap:8px;">
+                                <strong>Compte BOKK TV : ${claim.subscriberId}</strong>
+                                ${claim.subscriberName ? '<span style="color:var(--text-muted);">(' + claim.subscriberName + ')</span>' : ''}
+                                ${isPending ? '<span style="font-size:0.68rem; background:rgba(245,158,11,0.2); color:#f59e0b; padding:2px 7px; border-radius:10px; font-weight:700;">⏳ En attente</span>' :
+                                  isApproved ? '<span style="font-size:0.68rem; background:rgba(34,197,94,0.2); color:#22c55e; padding:2px 7px; border-radius:10px; font-weight:700;">✅ Validé</span>' :
+                                  '<span style="font-size:0.68rem; background:rgba(230,57,70,0.2); color:#e63946; padding:2px 7px; border-radius:10px; font-weight:700;">✕ Rejeté</span>'}
+                            </div>
+                            <div class="ch-group" style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-top:4px;">
+                                <span style="color:#38bdf8; font-weight:700;">🌊 Wave Payeur : <strong>${claim.payerPhone}</strong></span>
+                                <span>Plan : <strong>${planLabel}</strong> (+${days}j)</span>
+                                ${claim.txId ? '<span style="background:rgba(255,255,255,0.06); padding:2px 6px; border-radius:4px;">Réf : <code>' + claim.txId + '</code></span>' : ''}
+                                <span style="color:var(--text-muted); font-size:0.7rem;">${claim.createdAt ? 'Reçu le : ' + claim.createdAt : ''}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="ch-actions">
+                        ${isPending ? `
+                            <button class="btn-icon btn-approve-pay" style="background:#22c55e; color:#fff; border:none; padding:7px 14px; font-weight:800; font-size:0.75rem; border-radius:8px; cursor:pointer;" title="Valider et prolonger immédiatement (+${days} jours)">
+                                ✅ Valider (+${days}j)
+                            </button>
+                            <button class="btn-icon btn-reject-pay" style="background:rgba(230,57,70,0.2); color:#e63946; border:1px solid rgba(230,57,70,0.4); padding:7px 10px; font-size:0.75rem; border-radius:8px; cursor:pointer;" title="Rejeter la demande">
+                                ✕ Rejeter
+                            </button>
+                        ` : `
+                            <span style="font-size:0.75rem; color:var(--text-muted);">
+                                ${isApproved ? 'Abonnement activé ✅' : 'Demande rejetée ✕'}
+                            </span>
+                        `}
+                    </div>
+                `;
+
+                if (isPending) {
+                    card.querySelector('.btn-approve-pay')?.addEventListener('click', async () => {
+                        const btn = card.querySelector('.btn-approve-pay');
+                        if (btn) btn.disabled = true;
+                        showToast(`Validation en cours pour ${claim.subscriberId}...`);
+                        const res = await window.BokkFirebase.approvePaymentClaim(claim.id, claim.subscriberId, days);
+                        if (res && res.success) {
+                            logAdminAction('Validation Paiement Wave', claim.subscriberId, claim.payerPhone, `Prolongation de ${days} jours (${claim.amount} F)`);
+                            showToast(`✅ Paiement Wave validé ! Compte ${claim.subscriberId} prolongé de ${days} jours.`);
+                        } else {
+                            showToast('❌ Erreur lors de la validation');
+                            if (btn) btn.disabled = false;
+                        }
+                    });
+
+                    card.querySelector('.btn-reject-pay')?.addEventListener('click', async () => {
+                        if (!confirm(`Rejeter la déclaration du numéro Wave ${claim.payerPhone} pour le compte ${claim.subscriberId} ?`)) return;
+                        const res = await window.BokkFirebase.rejectPaymentClaim(claim.id, 'Non reçu sur Wave');
+                        if (res && res.success) {
+                            logAdminAction('Rejet Paiement Wave', claim.subscriberId, claim.payerPhone, 'Demande rejetée');
+                            showToast('Demande de paiement rejetée.');
+                        }
+                    });
+                }
+
+                container.appendChild(card);
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('#payments-filter-bar .sub-filter-btn').forEach(btn => {
+                btn.onclick = () => {
+                    document.querySelectorAll('#payments-filter-bar .sub-filter-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    currentPayFilter = btn.dataset.payfilter;
+                    renderPaymentClaims();
+                };
+            });
+        });
+
+        // ── Rendu Toutes les Chaînes (avec filtres par source M3U + catégorie) ──
         function renderAllChannels() {
             const container = document.getElementById('all-channels-list');
             const searchInput = document.getElementById('search-all-input');
-            const allChannels = window.channels || [];
 
-            function renderFiltered(query = '') {
-                container.innerHTML = '';
-                const q = query.toLowerCase().trim();
+            // Injecter les filtres si pas déjà présents
+            if (!document.getElementById('ch-filter-bar')) {
+                const filterBar = document.createElement('div');
+                filterBar.id = 'ch-filter-bar';
+                filterBar.style.cssText = 'display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px; align-items:center;';
+                filterBar.innerHTML = `
+                    <select id="ch-filter-source" style="background:var(--bg-card); color:var(--text); border:1px solid var(--border); border-radius:8px; padding:6px 10px; font-size:0.82rem; cursor:pointer;">
+                        <option value="">🔗 Toutes les sources</option>
+                        <option value="__static__">📌 Chaînes statiques</option>
+                    </select>
+                    <select id="ch-filter-cat" style="background:var(--bg-card); color:var(--text); border:1px solid var(--border); border-radius:8px; padding:6px 10px; font-size:0.82rem; cursor:pointer;">
+                        <option value="">📂 Toutes les catégories</option>
+                        <option value="sport">⚽ Sport</option>
+                        <option value="cinema">🎬 Cinéma/Séries</option>
+                        <option value="senegal">🇸🇳 Sénégal</option>
+                        <option value="francophone">🇫🇷 Francophone</option>
+                        <option value="documentaire">🎙 Documentaire</option>
+                        <option value="jeunesse">👶 Jeunesse</option>
+                        <option value="music">🎵 Musique</option>
+                        <option value="uk">🇬🇧 UK/USA</option>
+                        <option value="tous">🌍 Général</option>
+                    </select>
+                    <span id="ch-filter-count" style="margin-left:auto; font-size:0.8rem; color:var(--text-muted);"></span>
+                `;
+                container.parentElement.insertBefore(filterBar, container);
+
+                // Peupler le select source avec les playlists M3U
+                const srcSelect = filterBar.querySelector('#ch-filter-source');
+                m3uPlaylistsList.forEach(p => {
+                    const opt = document.createElement('option');
+                    opt.value = p.id;
+                    opt.textContent = `🔗 ${p.name} (${(p.channelCount || 0).toLocaleString('fr-FR')} ch.)`;
+                    srcSelect.appendChild(opt);
+                });
+
+                srcSelect.onchange = applyFilters;
+                filterBar.querySelector('#ch-filter-cat').onchange = applyFilters;
+            }
+
+            function getM3uSourcePrefix(ch) {
+                // Les chaînes M3U ont un id de type "m3u_TIMESTAMP_N" ou "m3u_<playlistId>_N"
+                const idStr = String(ch.id || '');
+                if (idStr.startsWith('m3u_')) {
+                    // Trouver quelle playlist
+                    for (const p of m3uPlaylistsList) {
+                        if (ch.sourcePlaylistId === p.id || idStr.includes(p.id)) return p.id;
+                    }
+                    return '__m3u__';
+                }
+                return '__static__';
+            }
+
+            function applyFilters() {
+                const q = (searchInput ? searchInput.value : '').toLowerCase().trim();
+                const srcFilter = document.getElementById('ch-filter-source')?.value || '';
+                const catFilter = document.getElementById('ch-filter-cat')?.value || '';
+
+                const allChannels = window.channels || [];
                 const filtered = allChannels.filter(c => {
-                    if (!q) return true;
-                    return String(c.id).includes(q) || (c.name || '').toLowerCase().includes(q) || (c.group || '').toLowerCase().includes(q);
-                }).slice(0, 150);
+                    if (q && !String(c.id).includes(q) && !(c.name || '').toLowerCase().includes(q) && !(c.group || '').toLowerCase().includes(q)) return false;
+                    if (srcFilter) {
+                        const src = getM3uSourcePrefix(c);
+                        if (srcFilter === '__static__' && src !== '__static__') return false;
+                        if (srcFilter !== '__static__' && src !== srcFilter && !String(c.id || '').includes(srcFilter)) return false;
+                    }
+                    if (catFilter && (c.category || 'tous') !== catFilter) return false;
+                    return true;
+                });
 
+                const countEl = document.getElementById('ch-filter-count');
+                if (countEl) countEl.textContent = `${filtered.length.toLocaleString('fr-FR')} chaîne(s)`;
+
+                container.innerHTML = '';
                 if (filtered.length === 0) {
-                    container.innerHTML = '<p style="text-align:center; color:var(--text-muted); padding:30px;">Aucune chaîne trouvée.</p>';
+                    container.innerHTML = '<p style="text-align:center; color:var(--text-muted); padding:30px;">Aucune chaîne trouvée pour ces filtres.</p>';
                     return;
                 }
 
-                filtered.forEach(ch => {
+                filtered.slice(0, 200).forEach(ch => {
                     const idStr = String(ch.id);
                     const isDisabled = disabledIdsSet.has(idStr);
+                    const srcLabel = (() => {
+                        const src = getM3uSourcePrefix(ch);
+                        if (src === '__static__') return '<span style="font-size:0.65rem; background:rgba(16,185,129,0.15); color:#10b981; padding:2px 6px; border-radius:6px;">📌 Statique</span>';
+                        const pl = m3uPlaylistsList.find(p => src === p.id || String(ch.id).includes(p.id));
+                        return `<span style="font-size:0.65rem; background:rgba(0,112,243,0.12); color:#60a5fa; padding:2px 6px; border-radius:6px; max-width:140px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; display:inline-block;" title="${pl ? pl.url || pl.name : 'M3U'}">🔗 ${pl ? pl.name : 'M3U'}</span>`;
+                    })();
 
                     const row = document.createElement('div');
                     row.className = 'channel-row' + (isDisabled ? ' is-disabled' : '');
@@ -885,7 +1730,7 @@
                         <div class="ch-info">
                             <span class="ch-id">#${idStr}</span>
                             <div>
-                                <div class="ch-name">${ch.name}</div>
+                                <div class="ch-name" style="display:flex; align-items:center; gap:6px;">${ch.name} ${srcLabel}</div>
                                 <div class="ch-group">${ch.group || ch.category || 'Direct'}</div>
                             </div>
                         </div>
@@ -906,8 +1751,8 @@
                 });
             }
 
-            renderFiltered();
-            searchInput.oninput = (e) => renderFiltered(e.target.value);
+            applyFilters();
+            if (searchInput) searchInput.oninput = applyFilters;
         }
 
         // ── Rendu Chaînes Masquées ──
@@ -943,16 +1788,147 @@
             });
         }
 
+        // ── Gestion des Déclarations de Paiements Wave (Option C - 1 Clic) ──
+        let paymentClaimsList = [];
+        let currentPayFilter = 'pending';
+
+        function renderPaymentClaims() {
+            const container = document.getElementById('payments-list');
+            if (!container) return;
+
+            const pendingCount = paymentClaimsList.filter(c => c.status === 'pending').length;
+            const approvedCount = paymentClaimsList.filter(c => c.status === 'approved').length;
+            const allCount = paymentClaimsList.length;
+
+            const badgeTab = document.getElementById('badge-payments-count');
+            if (badgeTab) {
+                badgeTab.textContent = pendingCount;
+                badgeTab.style.display = pendingCount > 0 ? 'inline-block' : 'none';
+            }
+            const cPending = document.getElementById('count-pay-pending');
+            if (cPending) cPending.textContent = pendingCount;
+            const cApproved = document.getElementById('count-pay-approved');
+            if (cApproved) cApproved.textContent = approvedCount;
+            const cAll = document.getElementById('count-pay-all');
+            if (cAll) cAll.textContent = allCount;
+
+            const filtered = paymentClaimsList.filter(c => {
+                if (currentPayFilter === 'pending') return c.status === 'pending';
+                if (currentPayFilter === 'approved') return c.status === 'approved';
+                return true;
+            });
+
+            if (filtered.length === 0) {
+                container.innerHTML = `<p style="text-align:center; color:var(--text-muted); padding:30px;">
+                    ${currentPayFilter === 'pending' ? '🎉 Aucune déclaration Wave en attente.' : 'Aucun paiement dans cette sélection.'}
+                </p>`;
+                return;
+            }
+
+            container.innerHTML = '';
+            filtered.forEach(claim => {
+                const isPending = claim.status === 'pending';
+                const isApproved = claim.status === 'approved';
+                const isRejected = claim.status === 'rejected';
+
+                const planLabel = claim.plan === '12m' ? '12 Mois (25 000 F)' : claim.plan === '3m' ? '3 Mois (7 500 F)' : '1 Mois (3 000 F)';
+                const days = claim.days || (claim.plan === '12m' ? 365 : claim.plan === '3m' ? 90 : 30);
+
+                const card = document.createElement('div');
+                card.className = 'channel-row' + (isPending ? '' : ' is-disabled');
+                card.style.background = isPending ? 'rgba(34, 197, 94, 0.05)' : 'rgba(255,255,255,0.02)';
+                card.style.borderLeft = isPending ? '3px solid #22c55e' : isApproved ? '3px solid #0070f3' : '3px solid #e63946';
+
+                card.innerHTML = `
+                    <div class="ch-info">
+                        <span class="ch-id" style="background:${isPending ? 'rgba(34,197,94,0.2)' : 'rgba(255,255,255,0.08)'}; color:${isPending ? '#22c55e' : '#cbd5e1'}; font-weight:800; font-size:0.85rem;">
+                            ${(claim.amount || 3000).toLocaleString('fr-FR')} F
+                        </span>
+                        <div>
+                            <div class="ch-name" style="display:flex; align-items:center; gap:8px;">
+                                <strong>Compte BOKK TV : ${claim.subscriberId}</strong>
+                                ${claim.subscriberName ? '<span style="color:var(--text-muted);">(' + claim.subscriberName + ')</span>' : ''}
+                                ${isPending ? '<span style="font-size:0.68rem; background:rgba(245,158,11,0.2); color:#f59e0b; padding:2px 7px; border-radius:10px; font-weight:700;">⏳ En attente</span>' :
+                                  isApproved ? '<span style="font-size:0.68rem; background:rgba(34,197,94,0.2); color:#22c55e; padding:2px 7px; border-radius:10px; font-weight:700;">✅ Validé</span>' :
+                                  '<span style="font-size:0.68rem; background:rgba(230,57,70,0.2); color:#e63946; padding:2px 7px; border-radius:10px; font-weight:700;">✕ Rejeté</span>'}
+                            </div>
+                            <div class="ch-group" style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-top:4px;">
+                                <span style="color:#38bdf8; font-weight:700;">🌊 Wave Payeur : <strong>${claim.payerPhone}</strong></span>
+                                <span>Plan : <strong>${planLabel}</strong> (+${days}j)</span>
+                                ${claim.txId ? '<span style="background:rgba(255,255,255,0.06); padding:2px 6px; border-radius:4px;">Réf : <code>' + claim.txId + '</code></span>' : ''}
+                                <span style="color:var(--text-muted); font-size:0.7rem;">${claim.createdAt ? 'Reçu le : ' + claim.createdAt : ''}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="ch-actions">
+                        ${isPending ? `
+                            <button class="btn-icon btn-approve-pay" style="background:#22c55e; color:#fff; border:none; padding:7px 14px; font-weight:800; font-size:0.75rem; border-radius:8px; cursor:pointer;" title="Valider et prolonger immédiatement (+${days} jours)">
+                                ✅ Valider (+${days}j)
+                            </button>
+                            <button class="btn-icon btn-reject-pay" style="background:rgba(230,57,70,0.2); color:#e63946; border:1px solid rgba(230,57,70,0.4); padding:7px 10px; font-size:0.75rem; border-radius:8px; cursor:pointer;" title="Rejeter la demande">
+                                ✕ Rejeter
+                            </button>
+                        ` : `
+                            <span style="font-size:0.75rem; color:var(--text-muted);">
+                                ${isApproved ? 'Abonnement activé ✅' : 'Demande rejetée ✕'}
+                            </span>
+                        `}
+                    </div>
+                `;
+
+                if (isPending) {
+                    card.querySelector('.btn-approve-pay')?.addEventListener('click', async () => {
+                        const btn = card.querySelector('.btn-approve-pay');
+                        if (btn) btn.disabled = true;
+                        showToast(`Validation en cours pour ${claim.subscriberId}...`);
+                        const res = await window.BokkFirebase.approvePaymentClaim(claim.id, claim.subscriberId, days);
+                        if (res && res.success) {
+                            logAdminAction('Validation Paiement Wave', claim.subscriberId, claim.payerPhone, `Prolongation de ${days} jours (${claim.amount} F)`);
+                            showToast(`✅ Paiement Wave validé ! Compte ${claim.subscriberId} prolongé de ${days} jours.`);
+                        } else {
+                            showToast('❌ Erreur lors de la validation');
+                            if (btn) btn.disabled = false;
+                        }
+                    });
+
+                    card.querySelector('.btn-reject-pay')?.addEventListener('click', async () => {
+                        if (!confirm(`Rejeter la déclaration du numéro Wave ${claim.payerPhone} pour le compte ${claim.subscriberId} ?`)) return;
+                        const res = await window.BokkFirebase.rejectPaymentClaim(claim.id, 'Non reçu sur Wave');
+                        if (res && res.success) {
+                            logAdminAction('Rejet Paiement Wave', claim.subscriberId, claim.payerPhone, 'Demande rejetée');
+                            showToast('Demande de paiement rejetée.');
+                        }
+                    });
+                }
+
+                container.appendChild(card);
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('#payments-filter-bar .sub-filter-btn').forEach(btn => {
+                btn.onclick = () => {
+                    document.querySelectorAll('#payments-filter-bar .sub-filter-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    currentPayFilter = btn.dataset.payfilter;
+                    renderPaymentClaims();
+                };
+            });
+        });
+
         // ── Action : Masquer / Réactiver une chaîne ──
         async function toggleDisableChannel(channelId, channelData, disable) {
             const idStr = String(channelId);
+            const chName = channelData?.name || `Chaîne #${idStr}`;
             if (disable) {
                 disabledIdsSet.add(idStr);
                 await window.BokkFirebase.disableChannel(idStr, channelData);
+                logAdminAction('Masquer chaîne', idStr, chName, 'Chaîne masquée du catalogue');
                 showToast(`🚫 Chaîne #${idStr} masquée pour tous les utilisateurs !`);
             } else {
                 disabledIdsSet.delete(idStr);
                 await window.BokkFirebase.enableChannel(idStr);
+                logAdminAction('Réactiver chaîne', idStr, chName, 'Chaîne rétablie');
                 showToast(`✅ Chaîne #${idStr} réactivée !`);
             }
             updateStats();
@@ -1071,6 +2047,248 @@
                 }
             }
             return list;
+        }
+
+        // ══════════════════════════════════════════
+        // MESSAGERIE ADMIN — Firestore admin_messages
+        // ══════════════════════════════════════════
+        const FIRESTORE_BASE = 'https://firestore.googleapis.com/v1/projects/bokk-tv/databases/(default)/documents';
+        const FIRESTORE_MSG = `${FIRESTORE_BASE}/admin_messages`;
+        const FIRESTORE_LOGS = `${FIRESTORE_BASE}/admin_logs`;
+
+        // ══════════════════════════════════════════
+        // LOGS D'ACTIVITÉ ADMIN — Firestore admin_logs
+        // ══════════════════════════════════════════
+
+        async function logAdminAction(action, targetId, targetName, note = '') {
+            try {
+                const docId = `log_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+                const nowIso = new Date().toISOString();
+                const fields = {
+                    action: { stringValue: String(action || '') },
+                    targetId: { stringValue: String(targetId || '') },
+                    targetName: { stringValue: String(targetName || '') },
+                    adminNote: { stringValue: String(note || '') },
+                    createdAt: { timestampValue: nowIso }
+                };
+                await fetch(`${FIRESTORE_LOGS}/${docId}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ fields })
+                });
+            } catch (err) {
+                console.warn('[BOKK ADMIN] Erreur logAdminAction:', err);
+            }
+        }
+
+        async function fetchAdminLogs() {
+            try {
+                const res = await fetch(`${FIRESTORE_LOGS}?pageSize=50&_t=${Date.now()}`);
+                if (!res.ok) return [];
+                const data = await res.json();
+                if (!data.documents) return [];
+                return data.documents.map(doc => {
+                    const f = doc.fields || {};
+                    const parts = doc.name.split('/');
+                    return {
+                        id: parts[parts.length - 1],
+                        name: doc.name,
+                        action: f.action?.stringValue || '',
+                        targetId: f.targetId?.stringValue || '',
+                        targetName: f.targetName?.stringValue || '',
+                        adminNote: f.adminNote?.stringValue || '',
+                        createdAt: f.createdAt?.timestampValue || ''
+                    };
+                }).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+            } catch (e) {
+                console.warn('[BOKK ADMIN] Erreur fetchAdminLogs:', e);
+                return [];
+            }
+        }
+
+        async function renderAdminLogs() {
+            const container = document.getElementById('logs-list');
+            if (!container) return;
+            container.innerHTML = '<p style="text-align:center; color:var(--text-muted); padding:30px;">Chargement des logs...</p>';
+            const logs = await fetchAdminLogs();
+            if (!logs.length) {
+                container.innerHTML = '<p style="text-align:center; color:var(--text-muted); padding:30px;">Aucun log d\'activité enregistré.</p>';
+                return;
+            }
+            container.innerHTML = logs.map(l => {
+                const timeStr = l.createdAt ? new Date(l.createdAt).toLocaleString('fr-FR', {
+                    day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit'
+                }) : '—';
+                const targetStr = l.targetName ? `${l.targetName} (${l.targetId})` : (l.targetId || '—');
+                return `
+                    <div class="log-row">
+                        <span class="log-time">🕒 ${timeStr}</span>
+                        <span class="log-action">${l.action || 'Action'}</span>
+                        <span class="log-target">🎯 ${targetStr}</span>
+                        <span class="log-note">${l.adminNote || ''}</span>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function clearAllLogs() {
+            if (!confirm('Voulez-vous vraiment effacer tous les logs d\'activité ?')) return;
+            try {
+                const res = await fetch(`${FIRESTORE_LOGS}?pageSize=100&_t=${Date.now()}`);
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                const data = await res.json();
+                if (data.documents && data.documents.length) {
+                    await Promise.all(data.documents.map(d => fetch(`https://firestore.googleapis.com/v1/${d.name}`, { method: 'DELETE' })));
+                }
+                showToast('🗑 Tous les logs ont été effacés');
+                renderAdminLogs();
+            } catch (e) {
+                console.warn('[BOKK ADMIN] Erreur clearAllLogs:', e);
+                showToast('Erreur lors de la suppression des logs');
+            }
+        }
+
+        function setupLogsHandlers() {
+            const btnRefresh = document.getElementById('btn-refresh-logs');
+            if (btnRefresh) btnRefresh.onclick = renderAdminLogs;
+
+            const btnClear = document.getElementById('btn-clear-logs');
+            if (btnClear) btnClear.onclick = clearAllLogs;
+        }
+
+        async function fetchAdminMessages() {
+            const res = await fetch(`${FIRESTORE_MSG}?pageSize=50&_t=${Date.now()}`);
+            if (!res.ok) return [];
+            const data = await res.json();
+            if (!data.documents) return [];
+            return data.documents.map(doc => {
+                const f = doc.fields || {};
+                const parts = doc.name.split('/');
+                return {
+                    id: parts[parts.length - 1],
+                    name: doc.name,
+                    title: f.title?.stringValue || '',
+                    body: f.body?.stringValue || '',
+                    targetPhone: f.targetPhone?.stringValue || '',
+                    createdAt: f.createdAt?.timestampValue || '',
+                    expiresAt: f.expiresAt?.timestampValue || '',
+                };
+            }).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        }
+
+        async function renderAdminMessages() {
+            const container = document.getElementById('messages-list');
+            if (!container) return;
+            container.innerHTML = '<p style="text-align:center;color:var(--text-muted);padding:20px;">Chargement...</p>';
+            const msgs = await fetchAdminMessages();
+            document.getElementById('badge-msg-count').textContent = msgs.length;
+            if (!msgs.length) {
+                container.innerHTML = '<p style="text-align:center;color:var(--text-muted);padding:30px;">Aucun message envoyé pour le moment.</p>';
+                return;
+            }
+            container.innerHTML = msgs.map(m => {
+                const dateStr = m.createdAt ? new Date(m.createdAt).toLocaleString('fr-FR') : '—';
+                const expStr = m.expiresAt ? new Date(m.expiresAt).toLocaleString('fr-FR') : 'Permanent';
+                const target = m.targetPhone ? `📱 ${m.targetPhone}` : '📢 Tous les abonnés';
+                return `
+                <div style="display:flex;align-items:flex-start;gap:14px;padding:14px 0;border-bottom:1px solid rgba(255,255,255,0.06);">
+                    <div style="flex:1;min-width:0;">
+                        <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;flex-wrap:wrap;">
+                            <span style="font-weight:800;font-size:0.95rem;color:#fff;">${m.title || '(Sans titre)'}</span>
+                            <span style="font-size:0.72rem;background:rgba(168,85,247,0.15);color:#a855f7;border:1px solid rgba(168,85,247,0.3);padding:2px 8px;border-radius:8px;">${target}</span>
+                        </div>
+                        <p style="font-size:0.82rem;color:#9ba3b8;margin:4px 0;white-space:pre-wrap;">${m.body}</p>
+                        <div style="display:flex;gap:16px;font-size:0.72rem;color:var(--text-muted);margin-top:6px;">
+                            <span>📅 Envoyé le ${dateStr}</span>
+                            <span>⏰ Expire : ${expStr}</span>
+                        </div>
+                    </div>
+                    <button onclick="deleteAdminMessage('${m.id}')" style="flex-shrink:0;background:rgba(230,57,70,0.1);border:1px solid rgba(230,57,70,0.3);color:var(--red);padding:7px 14px;border-radius:8px;font-size:0.78rem;font-weight:700;cursor:pointer;">🗑 Supprimer</button>
+                </div>`;
+            }).join('');
+        }
+
+        async function deleteAdminMessage(docId) {
+            if (!confirm('Supprimer ce message ? Il disparaîtra des popups des abonnés.')) return;
+            const res = await fetch(`${FIRESTORE_MSG}/${docId}`, { method: 'DELETE' });
+            if (res.ok) {
+                logAdminAction('Supprimer message', docId, 'Message broadcast/ciblé', 'Message supprimé');
+                showToast('✅ Message supprimé');
+                renderAdminMessages();
+            } else {
+                showToast('❌ Erreur lors de la suppression');
+            }
+        }
+        window.deleteAdminMessage = deleteAdminMessage;
+
+        function setupMessageHandlers() {
+            renderAdminMessages();
+
+            const btnSend = document.getElementById('btn-send-msg');
+            const btnRefresh = document.getElementById('btn-refresh-msgs');
+            const statusEl = document.getElementById('msg-send-status');
+
+            if (btnRefresh) btnRefresh.onclick = renderAdminMessages;
+
+            if (btnSend) {
+                btnSend.onclick = async () => {
+                    const title = document.getElementById('msg-input-title').value.trim();
+                    const body = document.getElementById('msg-input-body').value.trim();
+                    const phone = document.getElementById('msg-input-phone').value.trim();
+                    const expiresVal = document.getElementById('msg-input-expires').value;
+
+                    if (!title || !body) {
+                        statusEl.style.color = 'var(--red)';
+                        statusEl.textContent = '❌ Le titre et le contenu sont obligatoires.';
+                        return;
+                    }
+
+                    btnSend.disabled = true;
+                    statusEl.style.color = 'var(--gold)';
+                    statusEl.textContent = '⏳ Envoi en cours...';
+
+                    const fields = {
+                        title: { stringValue: title },
+                        body: { stringValue: body },
+                        targetPhone: { stringValue: phone },
+                        createdAt: { timestampValue: new Date().toISOString() },
+                    };
+                    if (expiresVal) {
+                        fields.expiresAt = { timestampValue: new Date(expiresVal).toISOString() };
+                    }
+
+                    const docId = `msg_${Date.now()}`;
+                    const res = await fetch(`${FIRESTORE_MSG}/${docId}`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ fields })
+                    });
+
+                    btnSend.disabled = false;
+                    if (res.ok) {
+                        statusEl.style.color = 'var(--green)';
+                        statusEl.textContent = phone
+                            ? `✅ Message envoyé à ${phone}`
+                            : '✅ Message broadcast envoyé à tous les abonnés';
+                        logAdminAction(
+                            'Envoyer message',
+                            phone || 'TOUS',
+                            title,
+                            body.length > 60 ? body.substring(0, 60) + '...' : body
+                        );
+                        document.getElementById('msg-input-title').value = '';
+                        document.getElementById('msg-input-body').value = '';
+                        document.getElementById('msg-input-phone').value = '';
+                        document.getElementById('msg-input-expires').value = '';
+                        renderAdminMessages();
+                        showToast(phone ? `📩 Message envoyé à ${phone}` : '📢 Broadcast envoyé à tous');
+                    } else {
+                        statusEl.style.color = 'var(--red)';
+                        statusEl.textContent = '❌ Erreur Firestore. Vérifiez les règles de sécurité.';
+                    }
+                    setTimeout(() => { statusEl.textContent = ''; }, 5000);
+                };
+            }
         }
 
         function setupM3uHandlers() {
@@ -1236,7 +2454,14 @@
                             </div>
                             <div class="m3u-card-meta">
                                 <span>Ajoutée le : <strong>${p.createdAt || 'Récemment'}</strong></span>
-                                ${p.url ? `<span style="max-width:350px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">Source : <code style="color:#60a5fa;">${p.url}</code></span>` : '<span>Source : Import texte direct</span>'}
+                                ${p.url 
+                                    ? `<div style="display:flex; align-items:center; gap:6px; margin-top:4px; flex-wrap:wrap;">
+                                        <span style="font-size:0.75rem; color:var(--text-muted);">🔗 Source :</span>
+                                        <code style="color:#60a5fa; font-size:0.72rem; background:rgba(96,165,250,0.08); padding:3px 8px; border-radius:6px; max-width:320px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; display:inline-block;" title="${p.url}">${p.url}</code>
+                                        <button onclick="navigator.clipboard.writeText('${p.url.replace(/'/g,"\\'")}'); showToast('🔗 Lien copié !')" style="background:transparent; border:1px solid var(--border); color:var(--text-muted); font-size:0.68rem; padding:2px 7px; border-radius:5px; cursor:pointer;">📋 Copier</button>
+                                       </div>`
+                                    : '<span style="font-size:0.75rem; color:var(--text-muted);">📄 Source : Import texte direct</span>'
+                                }
                             </div>
                         </div>
                         <div style="display:flex; gap:8px; align-items:center;">

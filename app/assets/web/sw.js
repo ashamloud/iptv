@@ -44,16 +44,18 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
   // RÈGLE CRUCIALE : Ne JAMAIS intercepter ni cacher les flux vidéo en direct,
-  // les proxies (/proxy?), les segments (.ts, .m3u8) ni les requêtes API
+  // les proxies (/proxy?), l'administration (/admin, /adminee), les segments (.ts, .m3u8) ni les requêtes API
   if (
     url.pathname.includes('/proxy') ||
+    url.pathname.includes('/admin') ||
+    url.pathname.includes('/adminee') ||
     url.pathname.endsWith('.ts') ||
     url.pathname.endsWith('.m3u8') ||
     url.searchParams.has('url') ||
     url.hostname !== self.location.hostname ||
     event.request.method !== 'GET'
   ) {
-    return; // Laisser passer sans intercepter
+    return; // Laisser passer directement au serveur sans intercepter
   }
 
   // RÈGLE 2 : Les fichiers critiques (racine /, index.html, JS et CSS) → Network-First TOUJOURS

@@ -186,6 +186,16 @@ class BOKKStreamProxyHandler(SimpleHTTPRequestHandler):
 
     def do_GET(self):
         parsed = urllib.parse.urlparse(self.path)
+        if parsed.path in ('/admin', '/admin/', '/adminee', '/adminee/'):
+            filepath = os.path.join(SITE_DIR, 'adminee', 'index.html')
+            if os.path.isfile(filepath):
+                self.send_response(200)
+                self.send_header('Content-Type', 'text/html; charset=utf-8')
+                self.send_header('Cache-Control', 'no-cache, no-store, must-revalidate')
+                self.end_headers()
+                with open(filepath, 'rb') as f:
+                    self.wfile.write(f.read())
+                return
         if parsed.path == '/proxy':
             self.handle_proxy(parsed, is_head=False)
         elif parsed.path == '/api/epg':
