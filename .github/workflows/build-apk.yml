@@ -1,0 +1,59 @@
+name: Build Android APK (BOKK TV)
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'app/**'
+      - '.github/workflows/build-apk.yml'
+  workflow_dispatch:
+
+jobs:
+  build-apk:
+    name: Compiler APK Android (Mobile & TV)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Récupérer le code source
+        uses: actions/checkout@v4
+
+      - name: ☕ Configurer Java JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: 🟢 Configurer Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: app/package-lock.json
+
+      - name: 📦 Installer les dépendances NPM
+        working-directory: ./app
+        run: npm ci --legacy-peer-deps || npm install --legacy-peer-deps
+
+      - name: ⚙️ Générer le projet natif Android (Expo Prebuild)
+        working-directory: ./app
+        run: npx expo prebuild --platform android --clean
+
+      - name: 🤖 Donner les permissions à Gradlew
+        working-directory: ./app/android
+        run: chmod +x gradlew
+
+      - name: 🔨 Compiler l'APK Android (Debug universel installable sans signature)
+        working-directory: ./app/android
+        run: ./gradlew assembleDebug --no-daemon --stacktrace
+
+      - name: 📦 Renommer et préparer l'APK
+        run: |
+          mkdir -p build-output
+          cp app/android/app/build/outputs/apk/debug/app-debug.apk build-output/BOKK-TV-v2.0.0.apk
+
+      - name: 🚀 Mettre à disposition l'APK (Artifact)
+        uses: actions/upload-artifact@v4
+        with:
+          name: BOKK-TV-Android-APK
+          path: build-output/BOKK-TV-v2.0.0.apk
+          retention-days: 30
