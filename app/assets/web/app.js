@@ -12,10 +12,12 @@
         else document.addEventListener('DOMContentLoaded', () => document.body.classList.add('is-native-app'));
     }
 
-    // Catalogue des chaînes (résolu depuis window.channels ou global)
+    // Catalogue des chaînes (résolu depuis window.channels, window.CHANNELS ou global)
     var resolvedChannels = (typeof window !== 'undefined' && Array.isArray(window.channels) && window.channels.length > 0)
         ? window.channels
-        : ((typeof window !== 'undefined' && window.channels) || (typeof globalThis !== 'undefined' && globalThis.channels) || []);
+        : ((typeof window !== 'undefined' && Array.isArray(window.CHANNELS) && window.CHANNELS.length > 0)
+            ? window.CHANNELS
+            : ((typeof window !== 'undefined' && window.channels) || (typeof globalThis !== 'undefined' && globalThis.channels) || []));
 
     // ── Déduplication & Liaison des Flux de Secours (Regroupement des chaînes de même nom) ──
     function groupChannelsWithBackups(rawList) {

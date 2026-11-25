@@ -1,5 +1,5 @@
 // Catalogue Global BOKK TV — Synchronisé & Enrichi (2392 Chaînes Actives)
-const channels = [
+var channels = [
   {
     "id": 1,
     "stream_id": 1,
@@ -33578,5 +33578,10 @@ const channels = [
   }
 ];
 
-if (typeof module !== 'undefined') { module.exports = channels; }
-if (typeof window !== 'undefined') { window.CHANNELS = channels; }
+if (typeof window !== 'undefined') {
+  window.channels = channels;
+  window.CHANNELS = channels;
+}
+if (typeof module !== 'undefined') {
+  module.exports = channels;
+}
