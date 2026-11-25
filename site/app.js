@@ -1023,6 +1023,9 @@
             streamType = 'ts';
         } else if (channel.type === 'hls' || channel._forceHls) {
             streamType = 'hls';
+        } else if (/barrelastv|ottcst\.org|novatv\.xyz|megatv5074|xtream|\/live\/[^/]+\/[^/]+\/\d+$/.test(lowerUrl)) {
+            // Flux Xtream Codes sans extension = MPEG-TS direct → mpegts.js
+            streamType = 'ts';
         }
 
         const finalUrl = resolveStreamUrl(activeUrl, retryStage, channel);
