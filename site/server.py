@@ -186,7 +186,7 @@ class BOKKStreamProxyHandler(SimpleHTTPRequestHandler):
 
     def do_GET(self):
         parsed = urllib.parse.urlparse(self.path)
-        if parsed.path in ('/admin', '/admin/', '/adminee', '/adminee/'):
+        if parsed.path in ('/adminee', '/adminee/'):
             filepath = os.path.join(SITE_DIR, 'adminee', 'index.html')
             if os.path.isfile(filepath):
                 self.send_response(200)

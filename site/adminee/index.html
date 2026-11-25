@@ -355,10 +355,86 @@
             <img src="/favicon.png" alt="BOKK TV" class="login-logo">
             <h2 class="login-title">Administration BOKK TV</h2>
             <p class="login-sub">Entrez votre code d'accès administrateur</p>
-            <input type="password" id="pin-input" class="pin-input" placeholder="••••" maxlength="8" autofocus autocomplete="off">
-            <button class="btn-login" id="btn-login">Déverrouiller</button>
-            <p class="login-hint">Accès strictement réservé à la direction BOKK TV</p>
+            <form id="login-form" onsubmit="event.preventDefault(); return false;" style="margin:0; padding:0;">
+                <input type="password" id="pin-input" class="pin-input" placeholder="••••" maxlength="8" inputmode="numeric" pattern="[0-9]*" autofocus autocomplete="current-password">
+                <button type="submit" class="btn-login" id="btn-login">Déverrouiller</button>
+            </form>
+            <div id="login-msg" style="font-size:0.8rem; font-weight:600; min-height:20px; margin-top:10px;"></div>
+            <p class="login-hint">Accès strictement réservé à la direction BOKK TV (Code : 1234)</p>
         </div>
+        <script>
+        (function () {
+            var VALID_PINS = ['1234', '2010'];
+            var screen = document.getElementById('login-screen');
+            var input = document.getElementById('pin-input');
+            var btn = document.getElementById('btn-login');
+            var form = document.getElementById('login-form');
+            var msg = document.getElementById('login-msg');
+
+            if (sessionStorage.getItem('bokk_admin_auth') === 'true') {
+                if (screen) screen.style.display = 'none';
+            }
+
+            function doUnlock() {
+                var val = (input && input.value ? input.value : '').trim();
+                if (VALID_PINS.indexOf(val) !== -1) {
+                    sessionStorage.setItem('bokk_admin_auth', 'true');
+                    if (msg) {
+                        msg.style.color = '#10b981';
+                        msg.textContent = '✓ Déverrouillage réussi...';
+                    }
+                    if (btn) btn.disabled = true;
+                    setTimeout(function () {
+                        if (screen) screen.style.display = 'none';
+                        if (typeof window.initAdmin === 'function') {
+                            window.initAdmin();
+                        }
+                    }, 120);
+                } else {
+                    if (msg) {
+                        msg.style.color = '#ef4444';
+                        msg.textContent = '❌ Code incorrect ! Réessayez.';
+                    }
+                    if (input) {
+                        input.value = '';
+                        input.focus();
+                    }
+                }
+            }
+
+            window.triggerAdminUnlock = doUnlock;
+
+            if (btn) {
+                btn.onclick = function (e) {
+                    if (e) e.preventDefault();
+                    doUnlock();
+                };
+            }
+            if (form) {
+                form.onsubmit = function (e) {
+                    if (e) e.preventDefault();
+                    doUnlock();
+                    return false;
+                };
+            }
+            if (input) {
+                // Déverrouillage automatique instantané dès la saisie du 4ème chiffre
+                input.oninput = function () {
+                    if (msg) msg.textContent = '';
+                    var val = input.value.trim();
+                    if (VALID_PINS.indexOf(val) !== -1) {
+                        doUnlock();
+                    }
+                };
+                input.onkeydown = function (e) {
+                    if (e.key === 'Enter') {
+                        if (e) e.preventDefault();
+                        doUnlock();
+                    }
+                };
+            }
+        })();
+        </script>
     </div>
 
     <!-- ── Header ── -->
@@ -764,21 +840,25 @@
         const btnLogin = document.getElementById('btn-login');
 
         if (sessionStorage.getItem('bokk_admin_auth') === 'true') {
-            loginScreen.style.display = 'none';
+            if (loginScreen) loginScreen.style.display = 'none';
         }
 
         function checkPin() {
+            if (typeof window.triggerAdminUnlock === 'function') {
+                window.triggerAdminUnlock();
+                return;
+            }
             if (VALID_PINS.includes((pinInput.value || '').trim())) {
                 sessionStorage.setItem('bokk_admin_auth', 'true');
-                loginScreen.style.display = 'none';
+                if (loginScreen) loginScreen.style.display = 'none';
                 initAdmin();
             } else {
                 showToast('❌ Code d\'accès incorrect !');
-                pinInput.value = '';
+                if (pinInput) pinInput.value = '';
             }
         }
-        btnLogin.onclick = checkPin;
-        pinInput.onkeydown = (e) => { if (e.key === 'Enter') checkPin(); };
+        if (btnLogin) btnLogin.onclick = checkPin;
+        if (pinInput) pinInput.onkeydown = (e) => { if (e.key === 'Enter') checkPin(); };
 
         // ── Toast ──
         function showToast(msg) {
@@ -801,6 +881,8 @@
                 }
             };
         });
+
+        window.initAdmin = initAdmin;
 
         // ── Init Admin ──
         async function initAdmin() {

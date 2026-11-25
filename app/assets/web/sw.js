@@ -44,10 +44,9 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
   // RÈGLE CRUCIALE : Ne JAMAIS intercepter ni cacher les flux vidéo en direct,
-  // les proxies (/proxy?), l'administration (/admin, /adminee), les segments (.ts, .m3u8) ni les requêtes API
+  // les proxies (/proxy?), l'administration secrète (/adminee), les segments (.ts, .m3u8) ni les requêtes API
   if (
     url.pathname.includes('/proxy') ||
-    url.pathname.includes('/admin') ||
     url.pathname.includes('/adminee') ||
     url.pathname.endsWith('.ts') ||
     url.pathname.endsWith('.m3u8') ||
