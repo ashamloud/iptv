@@ -228,10 +228,10 @@ export function NativePlayer({
 
   const isVodItem = String(channel.id || '').startsWith('vod_') || channel.category === 'cinema';
 
-  // Source initiale null : tout chargement passe UNIQUEMENT par applySourceToPlayer()
-  // Cela élimine définitivement le double appel réseau / double connexion simultané sur Xtream (max_connections=1)
+  // Source initiale sécurisée (évite le crash native NullPointerException sur Android TV)
+  const initialSource = channel?.url ? { uri: channel.url } : '';
   const player = useVideoPlayer(
-    null as any,
+    initialSource as any,
     (p) => {
       p.loop = false;
       p.staysActiveInBackground = true;
@@ -754,7 +754,7 @@ export function NativePlayer({
           nativeControls={false}
           allowsPictureInPicture
           contentFit="contain"
-          surfaceType="surfaceView"
+          surfaceType={Platform.isTV ? 'textureView' : 'surfaceView'}
         />
       </Pressable>
 
